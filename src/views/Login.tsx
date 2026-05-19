@@ -1,117 +1,150 @@
-import { User, Lock, ArrowRight, Languages, ShieldCheck } from 'lucide-react';
-
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { usePos } from '../contexts/PosContext';
+import { showNotification } from '../utils/toast';
 
 export default function Login() {
-  const navigate = useNavigate();
+  const { users, setCurrentUser, addStaffLogToDB, getNow } = usePos();
+  const [selectedUser, setSelectedUser] = useState<typeof users[0] | null>(null);
+  const [pinInput, setPinInput] = useState('');
+  const [loginError, setLoginError] = useState('');
+
+
+
+  const addPin = (num: number) => {
+    if (pinInput.length < 4) setPinInput(prev => prev + num);
+  };
+
+  const clearPin = () => {
+    setPinInput(prev => prev.slice(0, -1));
+    setLoginError('');
+  };
+
+  const login = async () => {
+    if (!selectedUser) return;
+    if (pinInput === selectedUser.pin || !selectedUser.pin) {
+      setCurrentUser(selectedUser);
+      try {
+        await addStaffLogToDB({
+          userId: selectedUser.id,
+          name: selectedUser.name,
+          role: selectedUser.role,
+          loginTime: getNow(true),
+          logoutTime: null,
+        });
+        showNotification(`Xin chào ${selectedUser.name} · Ca làm việc bắt đầu!`, 'success');
+      } catch (e) {
+        console.error('Failed to log login:', e);
+      }
+      setPinInput('');
+      setSelectedUser(null);
+    } else {
+      setLoginError('Mã PIN không đúng!');
+      setPinInput('');
+    }
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!selectedUser) return;
+      if (e.key >= '0' && e.key <= '9') {
+        if (pinInput.length < 4) setPinInput(prev => prev + e.key);
+      } else if (e.key === 'Backspace') {
+        setPinInput(prev => prev.slice(0, -1));
+      } else if (e.key === 'Enter') {
+        login();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedUser, pinInput, login]);
+
   return (
-    <div className="bg-surface text-on-background min-h-screen flex w-full">
-      <main className="flex w-full min-h-screen">
-        {/* Left Side: Medical Visual */}
-        <section className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-primary-container">
-          <div className="absolute inset-0 z-10 bg-gradient-to-tr from-primary-container/80 to-transparent"></div>
-          <img 
-            alt="Medical Laboratory" 
-            className="absolute inset-0 object-cover w-full h-full"
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZiWIofhbJ6nmmhPeFrnQJ9LTGaKctZrA1onSq1YXJHOn9Q9UQZBRY54AeT6Maq84UPmBiaLpfU9GFLWZ__dSIVjLIxscOAl7X9PR9_Cv9TXK98PwSH9EkKNUgipeVqhFqyJXfRBW_97lCJiNkgzWG1GERFEBG6uEgU_oPEQ1ahEClj4EUidYRqCCh4Tfapa2Eb9h5mdn2y8twCo8_jVejyNhib3MlyOpgP3XCb2CdisoRIJN4ZBQZNL4JbEDKTH1dR3KE5E1Uw2Q"
-          />
-          <div className="relative z-20 flex flex-col justify-end p-xl h-full text-white">
-            <div className="max-w-md">
-              <h2 className="text-4xl font-bold mb-6">Giải pháp quản lý nhà thuốc toàn diện</h2>
-              <p className="text-lg opacity-90 leading-relaxed">
-                Hệ thống MedPoint POS cung cấp độ chính xác tối đa và hiệu suất vượt trội cho các cơ sở y tế hiện đại.
-              </p>
-            </div>
-            <div className="mt-xl flex gap-12">
-              <div className="flex flex-col">
-                <span className="text-3xl font-bold">10k+</span>
-                <span className="text-xs uppercase tracking-wider opacity-75">Người dùng tin dùng</span>
-              </div>
-              <div className="w-px bg-white/20 h-12 self-center"></div>
-              <div className="flex flex-col">
-                <span className="text-3xl font-bold">99.9%</span>
-                <span className="text-xs uppercase tracking-wider opacity-75">Độ ổn định</span>
-              </div>
-            </div>
-          </div>
-        </section>
+    <div className="h-screen flex items-center justify-center bg-gray-200 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl flex flex-col md:flex-row w-full max-w-4xl overflow-hidden">
+        {/* Left: user selection */}
+        <div className="bg-teal-600 p-10 text-white flex flex-col justify-center w-full md:w-1/2">
+          <i className="fa-solid fa-notes-medical text-6xl mb-6"></i>
+          <h1 className="text-4xl font-bold mb-2">MediPOS System</h1>
+          <p className="text-teal-100 mb-6">Chọn nhân viên và nhập PIN để bắt đầu</p>
 
-        {/* Right Side: Login Card */}
-        <section className="w-full lg:w-1/2 flex items-center justify-center p-lg bg-white">
-          <div className="w-full max-w-[440px] bg-white border border-outline-variant rounded-2xl p-xl shadow-sm">
-            <div className="flex flex-col items-center mb-xl">
-              <div className="w-16 h-16 bg-primary-container rounded-2xl flex items-center justify-center mb-6 shadow-lg">
-                <span className="material-symbols-outlined text-white text-4xl fill-icon">medical_services</span>
-              </div>
-              <h1 className="text-3xl font-bold text-primary-container tracking-tight">MedPoint POS</h1>
-              <p className="text-on-surface-variant font-medium mt-1">Pharmacy Solutions</p>
-            </div>
-
-            <form className="space-y-6">
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-on-surface uppercase tracking-wider" htmlFor="username">Tên đăng nhập</label>
-                <div className="relative group">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors">person</span>
-                  <input 
-                    className="w-full pl-11 pr-4 py-3.5 rounded-xl border border-outline-variant bg-surface-container-low focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium" 
-                    id="username" 
-                    placeholder="Nhập tên đăng nhập" 
-                    type="text"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-on-surface uppercase tracking-wider" htmlFor="password">Mật khẩu</label>
-                <div className="relative group">
-                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline group-focus-within:text-primary transition-colors">lock</span>
-                  <input 
-                    className="w-full pl-11 pr-4 py-3.5 rounded-xl border border-outline-variant bg-surface-container-low focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all font-medium" 
-                    id="password" 
-                    placeholder="Nhập mật khẩu" 
-                    type="password"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 cursor-pointer group">
-                  <input className="peer h-5 w-5 rounded border-outline-variant text-primary focus:ring-primary/20 cursor-pointer" type="checkbox"/>
-                  <span className="text-sm font-medium text-on-surface-variant group-hover:text-on-surface transition-colors">Ghi nhớ đăng nhập</span>
-                </label>
-                <a className="text-xs font-bold text-primary hover:underline underline-offset-4" href="#">Quên mật khẩu?</a>
-              </div>
-
-              <button 
-                className="w-full h-14 bg-primary-container text-white font-bold rounded-xl hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 shadow-md"
-                onClick={(e) => { e.preventDefault(); navigate('/pos'); }}
+          <div className="grid grid-cols-2 gap-3 mt-4">
+            {users.map(u => (
+              <div
+                key={u.id}
+                onClick={() => setSelectedUser(u)}
+                className={[
+                  'p-3 rounded-lg border-2 cursor-pointer transition text-center',
+                  selectedUser?.id === u.id
+                    ? 'border-white bg-teal-700'
+                    : 'border-teal-500 bg-teal-500 hover:bg-teal-700',
+                ].join(' ')}
               >
-                <span>Đăng Nhập</span>
-                <span className="material-symbols-outlined text-xl">login</span>
-              </button>
-            </form>
-
-            <div className="mt-12 pt-8 border-t border-outline-variant text-center">
-              <p className="text-sm text-on-surface-variant">
-                Bạn chưa có tài khoản? 
-                <a className="text-primary font-bold hover:underline underline-offset-4 ml-1" href="#">Yêu cầu cấp quyền</a>
-              </p>
-              <div className="mt-8 flex justify-center items-center gap-6 text-outline">
-                <div className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-sm">language</span>
-                  <span className="text-xs font-bold">Tiếng Việt</span>
-                </div>
-                <div className="w-1 h-1 rounded-full bg-outline-variant"></div>
-                <div className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-sm">verified</span>
-                  <span className="text-xs font-bold">v2.4.0</span>
-                </div>
+                <div className="font-bold">{u.name}</div>
+                <div className="text-xs opacity-75">{u.role === 'admin' ? 'Quản lý' : 'Nhân viên'}</div>
               </div>
-            </div>
+            ))}
           </div>
-        </section>
-      </main>
-      <div className="fixed top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-secondary to-primary-container z-50"></div>
+        </div>
+
+        {/* Right: PIN pad */}
+        <div className="p-10 w-full md:w-1/2 flex flex-col items-center justify-center">
+          <h2 className="text-2xl font-bold mb-6 text-gray-700">
+            {selectedUser ? `Mã PIN của ${selectedUser.name}` : 'Vui lòng chọn nhân viên'}
+          </h2>
+
+          {/* PIN dots */}
+          <div className="flex gap-4 mb-8">
+            {[1, 2, 3, 4].map(n => (
+              <div
+                key={n}
+                className="w-12 h-12 rounded-full border-2 border-teal-600 flex items-center justify-center text-2xl"
+              >
+                {pinInput.length >= n ? '•' : ''}
+              </div>
+            ))}
+          </div>
+
+          {/* Numpad */}
+          <div
+            className={[
+              'grid grid-cols-3 gap-4 w-full max-w-xs',
+              !selectedUser ? 'opacity-50 pointer-events-none' : '',
+            ].join(' ')}
+          >
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => (
+              <button
+                key={n}
+                onClick={() => addPin(n)}
+                className="bg-gray-100 hover:bg-teal-100 active:bg-teal-200 p-4 rounded-xl text-2xl font-bold transition touch-manipulation"
+              >
+                {n}
+              </button>
+            ))}
+            <button
+              onClick={clearPin}
+              className="bg-red-100 hover:bg-red-200 text-red-600 p-4 rounded-xl font-bold transition touch-manipulation"
+            >
+              <i className="fa-solid fa-delete-left"></i>
+            </button>
+            <button
+              onClick={() => addPin(0)}
+              className="bg-gray-100 hover:bg-teal-100 active:bg-teal-200 p-4 rounded-xl text-2xl font-bold transition touch-manipulation"
+            >
+              0
+            </button>
+            <button
+              onClick={login}
+              className="bg-teal-600 hover:bg-teal-700 text-white p-4 rounded-xl font-bold transition touch-manipulation"
+            >
+              <i className="fa-solid fa-right-to-bracket"></i>
+            </button>
+          </div>
+
+          {loginError && (
+            <div className="text-red-500 mt-4 font-semibold">{loginError}</div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

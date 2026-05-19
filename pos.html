@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MediPOS - Hệ thống quản lý bán hàng Y Tế</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Tối ưu thanh cuộn và touch */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        body { -webkit-tap-highlight-color: transparent; }
+        .touch-action-manipulation { touch-action: manipulation; }
+        
+        /* Modal Transitions */
+        .modal-enter-active, .modal-leave-active { transition: opacity 0.3s ease; }
+        .modal-enter-from, .modal-leave-to { opacity: 0; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 font-sans h-screen overflow-hidden">
+    <div id="app" class="h-full">
+
+        <div v-if="isCustomerView" class="h-full flex bg-white">
+            <div class="w-1/2 bg-teal-600 text-white p-10 flex flex-col justify-center items-center">
+                <h1 class="text-5xl font-bold mb-4">MediPOS</h1>
+                <p class="text-xl opacity-80">Kính chúc Quý khách nhiều sức khỏe!</p>
+                
+                <div v-if="customerState.paymentMethod === 'transfer'" class="mt-12 bg-white text-gray-800 p-6 rounded-2xl shadow-xl flex flex-col items-center">
+                    <h3 class="text-xl font-bold mb-4 text-teal-600">Quét mã QR để thanh toán</h3>
+                    <div class="w-48 h-48 bg-gray-200 border-4 border-teal-600 rounded-lg flex items-center justify-center">
+                        <i class="fa-solid fa-qrcode text-8xl text-gray-800"></i>
+                    </div>
+                    <p class="mt-4 font-bold text-2xl text-red-600">{{ formatPrice(customerState.total) }}</p>
+                </div>
+                <div v-else-if="customerState.paymentMethod === 'cash'" class="mt-12 text-center">
+                    <i class="fa-solid fa-money-bill-wave text-8xl mb-4 text-green-300"></i>
+                    <h3 class="text-2xl font-bold">Thanh toán Tiền mặt</h3>
+                    <p class="text-xl mt-2">Vui lòng thanh toán: {{ formatPrice(customerState.total) }}</p>
+                </div>
+            </div>
+            <div class="w-1/2 p-10 flex flex-col">
+                <h2 class="text-3xl font-bold border-b pb-4 mb-6">Đơn hàng của bạn</h2>
+                <div class="flex-1 overflow-y-auto">
+                    <div v-if="customerState.cart.length === 0" class="text-gray-400 text-center text-xl mt-10">
+                        Chưa có sản phẩm nào
+                    </div>
+                    <div v-for="item in customerState.cart" class="flex justify-between py-4 border-b text-xl">
+                        <div class="flex-1">
+                            <div class="font-bold">{{ item.name }}</div>
+                            <div class="text-sm text-gray-500">{{ formatPrice(item.price) }} x {{ item.qty }} {{ item.unit }}</div>
+                        </div>
+                        <div class="font-bold text-teal-700">{{ formatPrice(item.price * item.qty) }}</div>
+                    </div>
+                </div>
+                <div class="mt-6 pt-6 border-t-2 border-gray-800">
+                    <div v-if="customerState.otherCosts > 0" class="flex justify-between items-end mb-2">
+                        <span class="text-lg text-gray-600">Chi phí khác:</span>
+                        <span class="text-xl font-bold">{{ formatPrice(customerState.otherCosts) }}</span>
+                    </div>
+                    <div class="flex justify-between items-end">
+                        <span class="text-2xl font-bold">Tổng thanh toán:</span>
+                        <span class="text-5xl font-bold text-red-600">{{ formatPrice(customerState.total) }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div v-else-if="!currentUser" class="h-full flex items-center justify-center bg-gray-200 p-4 relative z-50">
+            <div class="bg-white rounded-2xl shadow-2xl flex flex-col md:flex-row w-full max-w-4xl overflow-hidden">
+                <div class="bg-teal-600 p-10 text-white flex flex-col justify-center w-full md:w-1/2">
+                    <i class="fa-solid fa-notes-medical text-6xl mb-6"></i>
+                    <h1 class="text-4xl font-bold mb-2">MediPOS System</h1>
+                    <p class="text-teal-100 mb-6">Chọn nhân viên và nhập PIN để bắt đầu</p>
+                    
+                    <div class="grid grid-cols-2 gap-3 mt-4">
+                        <div v-for="u in users" @click="selectedUserForLogin = u" 
+                            :class="['p-3 rounded-lg border-2 cursor-pointer transition text-center', selectedUserForLogin?.id === u.id ? 'border-white bg-teal-700' : 'border-teal-500 bg-teal-500 hover:bg-teal-700']">
+                            <div class="font-bold">{{ u.name }}</div>
+                            <div class="text-xs opacity-75">{{ u.role === 'admin' ? 'Quản lý' : 'Nhân viên' }}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="p-10 w-full md:w-1/2 flex flex-col items-center justify-center">
+                    <h2 class="text-2xl font-bold mb-6 text-gray-700">
+                        {{ selectedUserForLogin ? `Mã PIN của ${selectedUserForLogin.name}` : 'Vui lòng chọn nhân viên' }}
+                    </h2>
+                    <div class="flex gap-4 mb-8">
+                        <div v-for="n in 4" :key="n" class="w-12 h-12 rounded-full border-2 border-teal-600 flex items-center justify-center text-2xl">
+                            <span v-if="pinInput.length >= n">•</span>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-4 w-full max-w-xs" :class="{'opacity-50 pointer-events-none': !selectedUserForLogin}">
+                        <button v-for="n in [1,2,3,4,5,6,7,8,9]" @click="addPin(n)" class="bg-gray-100 hover:bg-teal-100 active:bg-teal-200 p-4 rounded-xl text-2xl font-bold transition touch-action-manipulation">{{ n }}</button>
+                        <button @click="clearPin" class="bg-red-100 hover:bg-red-200 text-red-600 p-4 rounded-xl font-bold transition touch-action-manipulation"><i class="fa-solid fa-delete-left"></i></button>
+                        <button @click="addPin(0)" class="bg-gray-100 hover:bg-teal-100 active:bg-teal-200 p-4 rounded-xl text-2xl font-bold transition touch-action-manipulation">0</button>
+                        <button @click="login" class="bg-teal-600 hover:bg-teal-700 text-white p-4 rounded-xl font-bold transition touch-action-manipulation"><i class="fa-solid fa-right-to-bracket"></i></button>
+                    </div>
+                    <div v-if="loginError" class="text-red-500 mt-4 font-semibold">{{ loginError }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div v-else class="h-full flex flex-col">
+            <nav class="bg-teal-700 text-white p-2 flex justify-between items-center shadow-md z-10">
+                <div class="flex items-center gap-2 px-4 overflow-x-auto whitespace-nowrap">
+                    <div class="font-bold text-xl mr-4 flex items-center gap-2 border-r border-teal-500 pr-4">
+                        <i class="fa-solid fa-notes-medical"></i> MediPOS
+                    </div>
+                    <button @click="currentTab = 'pos'" :class="['px-4 py-2 rounded-lg font-bold transition', currentTab === 'pos' ? 'bg-teal-900' : 'hover:bg-teal-600']">
+                        <i class="fa-solid fa-cash-register mr-2"></i> Bán Hàng
+                    </button>
+                    <button @click="currentTab = 'inventory'" :class="['px-4 py-2 rounded-lg font-bold transition', currentTab === 'inventory' ? 'bg-teal-900' : 'hover:bg-teal-600']">
+                        <i class="fa-solid fa-boxes-stacked mr-2"></i> Kho Hàng
+                    </button>
+                    <button @click="currentTab = 'import'" :class="['px-4 py-2 rounded-lg font-bold transition', currentTab === 'import' ? 'bg-teal-900' : 'hover:bg-teal-600']">
+                        <i class="fa-solid fa-truck-ramp-box mr-2"></i> Nhập Hàng
+                    </button>
+                    <button @click="currentTab = 'reports'" :class="['px-4 py-2 rounded-lg font-bold transition', currentTab === 'reports' ? 'bg-teal-900' : 'hover:bg-teal-600']">
+                        <i class="fa-solid fa-chart-line mr-2"></i> Báo Cáo
+                    </button>
+                    <button v-if="currentUser.role === 'admin'" @click="currentTab = 'employees'" :class="['px-4 py-2 rounded-lg font-bold transition', currentTab === 'employees' ? 'bg-teal-900' : 'hover:bg-teal-600']">
+                        <i class="fa-solid fa-users mr-2"></i> Nhân Viên
+                    </button>
+                </div>
+                <div class="flex items-center gap-4 pr-4">
+                    <div class="text-sm font-mono opacity-80 hidden md:block">{{ currentTime }}</div>
+                    <div class="flex items-center gap-2 bg-teal-800 px-3 py-1.5 rounded-lg border border-teal-600">
+                        <div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm bg-white text-teal-800">
+                            {{ currentUser.name.charAt(0) }}
+                        </div>
+                        <div class="text-sm">
+                            <div class="font-bold leading-none">{{ currentUser.name }}</div>
+                            <div class="text-xs opacity-75">{{ currentUser.role === 'admin' ? 'Quản lý' : 'Nhân viên' }}</div>
+                        </div>
+                    </div>
+                    <button @click="logout" class="bg-red-500 hover:bg-red-600 w-9 h-9 rounded-lg flex items-center justify-center font-bold transition" title="Kết thúc ca">
+                        <i class="fa-solid fa-power-off"></i>
+                    </button>
+                </div>
+            </nav>
+
+            <main class="flex-1 overflow-hidden bg-gray-100 flex relative">
+                
+                <div v-if="currentTab === 'pos'" class="flex-1 flex flex-col md:flex-row h-full">
+                    <div class="w-full md:w-7/12 lg:w-2/3 p-4 flex flex-col h-1/2 md:h-full">
+                        <div class="mb-4 flex gap-2">
+                            <div class="relative flex-1">
+                                <i class="fa-solid fa-search absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"></i>
+                                <input type="text" v-model="posSearchQuery" placeholder="Tìm sản phẩm y tế..." class="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-teal-500 shadow-sm text-lg">
+                            </div>
+                            <button @click="openCustomerScreen" class="bg-blue-600 hover:bg-blue-700 text-white px-4 rounded-xl shadow-sm font-bold transition whitespace-nowrap">
+                                <i class="fa-solid fa-tv mr-2"></i>Màn Khách Hàng
+                            </button>
+                        </div>
+                        <div class="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto pb-4 content-start">
+                            <div v-for="product in filteredPosProducts" :key="product.id" @click="addToCart(product)" 
+                                :class="['bg-white p-4 rounded-xl shadow-sm border cursor-pointer hover:border-teal-500 hover:shadow-md transition flex flex-col justify-between touch-action-manipulation', getStock(product) <= 0 ? 'opacity-50 border-red-300' : 'border-gray-200 active:bg-gray-50']">
+                                <div>
+                                    <h3 class="font-bold text-gray-800 leading-tight mb-1">{{ product.name }}</h3>
+                                    <span class="text-xs text-gray-500">{{ product.category }} · {{ product.unit }}</span>
+                                </div>
+                                <div class="mt-4 flex justify-between items-end">
+                                    <span class="text-xs font-semibold" :class="getStock(product) <= 5 ? 'text-red-500' : 'text-gray-500'">Tồn: {{ getStock(product) }}</span>
+                                    <span class="text-teal-700 font-bold text-lg font-mono">{{ formatPrice(product.sellPrice) }}</span>
+                                </div>
+                                <div v-if="getStock(product) <= 0" class="absolute top-2 right-2 bg-red-100 text-red-700 text-xs px-2 py-0.5 rounded font-bold">Hết hàng</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="w-full md:w-5/12 lg:w-1/3 bg-white border-l shadow-xl flex flex-col h-1/2 md:h-full z-10">
+                        <div class="p-4 border-b bg-gray-50 flex justify-between items-center text-sm">
+                            <div class="font-bold text-teal-700 text-lg"><i class="fa-solid fa-cart-shopping mr-2"></i>Đơn hàng</div>
+                            <button @click="cart = []; otherCosts = 0; paymentMethod = null" class="text-red-500 hover:bg-red-50 px-2 py-1 rounded text-xs font-bold border border-red-200"><i class="fa-solid fa-trash mr-1"></i>Xóa trắng</button>
+                        </div>
+                        
+                        <div class="p-3 border-b grid grid-cols-2 gap-2 bg-white">
+                            <input type="text" v-model="posCustomer.name" placeholder="👤 Tên khách hàng" class="p-2 border rounded-lg text-sm w-full focus:ring-teal-500">
+                            <input type="text" v-model="posCustomer.phone" placeholder="📞 Số điện thoại" class="p-2 border rounded-lg text-sm w-full focus:ring-teal-500">
+                        </div>
+
+                        <div class="flex-1 overflow-y-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-100 text-gray-600 sticky top-0 text-xs uppercase shadow-sm z-10">
+                                    <tr>
+                                        <th class="p-2 text-left w-5/12">Sản phẩm</th>
+                                        <th class="p-2 text-center w-3/12">SL</th>
+                                        <th class="p-2 text-right w-4/12">Thành tiền</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-if="cart.length === 0">
+                                        <td colspan="3" class="p-10 text-center text-gray-400">
+                                            <i class="fa-solid fa-box-open text-3xl mb-2"></i><br>Chưa có sản phẩm
+                                        </td>
+                                    </tr>
+                                    <tr v-for="(item, index) in cart" :key="item.id" class="border-b hover:bg-gray-50">
+                                        <td class="p-2">
+                                            <div class="font-medium text-gray-800 leading-tight">{{ item.name }}</div>
+                                            <div class="text-xs text-gray-500 mt-1">{{ formatPrice(item.price) }}/{{ item.unit }}</div>
+                                        </td>
+                                        <td class="p-2 text-center align-middle">
+                                            <div class="flex items-center justify-center gap-1 bg-gray-100 rounded-lg p-1 border">
+                                                <button @click="updateQty(index, -1)" class="w-6 h-6 flex items-center justify-center bg-white rounded shadow-sm text-gray-600 hover:text-teal-600"><i class="fa-solid fa-minus text-xs"></i></button>
+                                                <span class="font-bold w-6 text-center font-mono">{{ item.qty }}</span>
+                                                <button @click="updateQty(index, 1)" class="w-6 h-6 flex items-center justify-center bg-white rounded shadow-sm text-gray-600 hover:text-teal-600"><i class="fa-solid fa-plus text-xs"></i></button>
+                                            </div>
+                                        </td>
+                                        <td class="p-2 text-right font-mono font-semibold text-teal-700 align-middle">
+                                            <div class="flex items-center justify-end gap-2">
+                                                {{ formatPrice(item.price * item.qty) }}
+                                                <button @click="removeFromCart(index)" class="text-gray-400 hover:text-red-500 p-1"><i class="fa-solid fa-xmark"></i></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="p-4 border-t bg-gray-50">
+                            <div class="flex justify-between mb-2 text-sm">
+                                <span class="text-gray-600">Số lượng SP:</span>
+                                <span class="font-bold">{{ cartTotalQty }}</span>
+                            </div>
+                            <div class="flex justify-between items-center mb-4 text-sm">
+                                <span class="text-gray-600 font-bold">CHI PHÍ KHÁC:</span>
+                                <input type="number" v-model.number="otherCosts" class="w-32 p-1.5 text-right border rounded-lg focus:ring-teal-500 font-mono" placeholder="0">
+                            </div>
+                            <div class="flex justify-between items-end mb-4 border-t-2 border-gray-300 pt-3">
+                                <span class="text-lg font-bold text-gray-800">TỔNG CỘNG:</span>
+                                <span class="text-3xl font-bold text-red-600 font-mono">{{ formatPrice(finalTotal) }}</span>
+                            </div>
+
+                            <div class="grid grid-cols-2 gap-2 mb-4">
+                                <button @click="paymentMethod = 'cash'" 
+                                    :class="['py-3 rounded-lg font-bold border-2 transition touch-action-manipulation', paymentMethod === 'cash' ? 'bg-teal-600 text-white border-teal-600 shadow-inner' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50', paymentMethod === 'transfer' ? 'opacity-50 grayscale' : '']"
+                                    :disabled="paymentMethod === 'transfer'">
+                                    <i class="fa-solid fa-money-bill-wave mr-1"></i> TIỀN MẶT
+                                </button>
+                                
+                                <button @click="paymentMethod = 'transfer'" 
+                                    :class="['py-3 rounded-lg font-bold border-2 transition touch-action-manipulation', paymentMethod === 'transfer' ? 'bg-blue-600 text-white border-blue-600 shadow-inner' : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50', paymentMethod === 'cash' ? 'opacity-50 grayscale' : '']"
+                                    :disabled="paymentMethod === 'cash'">
+                                    <i class="fa-solid fa-qrcode mr-1"></i> CHUYỂN KHOẢN
+                                </button>
+                            </div>
+                            <div v-if="paymentMethod" class="text-center mb-3 text-xs text-gray-500 cursor-pointer hover:text-red-500" @click="paymentMethod = null">
+                                <i class="fa-solid fa-rotate-left"></i> Chọn lại phương thức
+                            </div>
+
+                            <button @click="checkout" :disabled="!canCheckout" :class="['w-full p-4 rounded-xl text-lg font-bold uppercase transition touch-action-manipulation flex items-center justify-center gap-2', canCheckout ? 'bg-green-500 hover:bg-green-600 text-white shadow-lg active:scale-95' : 'bg-gray-300 text-gray-500 cursor-not-allowed']">
+                                <i class="fa-solid fa-check-double"></i> Thanh Toán
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="currentTab === 'inventory'" class="flex-1 p-6 overflow-y-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800">Quản lý Kho hàng</h2>
+                            <p class="text-gray-500 text-sm">Quản lý sản phẩm và tồn kho hiện tại</p>
+                        </div>
+                        <button @click="openProductModal(null)" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg font-bold shadow-sm transition">
+                            <i class="fa-solid fa-plus mr-2"></i>Thêm sản phẩm
+                        </button>
+                    </div>
+                    
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div class="p-4 border-b bg-gray-50">
+                            <input type="text" v-model="invSearchQuery" placeholder="Tìm sản phẩm..." class="w-64 p-2 border rounded-lg focus:ring-teal-500 text-sm">
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="bg-gray-100 text-gray-600 uppercase text-xs">
+                                        <th class="p-3 border-b">Tên sản phẩm</th>
+                                        <th class="p-3 border-b text-center">ĐVT</th>
+                                        <th class="p-3 border-b text-right">Giá nhập</th>
+                                        <th class="p-3 border-b text-right">Giá bán</th>
+                                        <th class="p-3 border-b text-center" title="Tồn đầu">T.Đầu</th>
+                                        <th class="p-3 border-b text-center text-blue-600" title="Tổng nhập">T.Nhập</th>
+                                        <th class="p-3 border-b text-center text-red-600" title="Tổng xuất">T.Xuất</th>
+                                        <th class="p-3 border-b text-center font-bold text-teal-700">Tồn kho</th>
+                                        <th class="p-3 border-b text-center">Trạng thái</th>
+                                        <th class="p-3 border-b text-center">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="p in filteredInvProducts" :key="p.id" class="border-b hover:bg-gray-50">
+                                        <td class="p-3">
+                                            <div class="font-bold text-gray-800">{{ p.name }}</div>
+                                            <div class="text-xs text-gray-500">{{ p.category }}</div>
+                                        </td>
+                                        <td class="p-3 text-center text-gray-500">{{ p.unit }}</td>
+                                        <td class="p-3 text-right font-mono">{{ formatPrice(p.importPrice) }}</td>
+                                        <td class="p-3 text-right font-mono">{{ formatPrice(p.sellPrice) }}</td>
+                                        <td class="p-3 text-center">{{ p.initialStock }}</td>
+                                        <td class="p-3 text-center text-blue-600">{{ p.totalIn }}</td>
+                                        <td class="p-3 text-center text-red-600">{{ p.totalOut }}</td>
+                                        <td class="p-3 text-center font-bold text-teal-700 text-base">{{ getStock(p) }}</td>
+                                        <td class="p-3 text-center">
+                                            <span v-if="getStock(p) <= 0" class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold">Hết hàng</span>
+                                            <span v-else-if="getStock(p) <= 10" class="bg-amber-100 text-amber-700 px-2 py-1 rounded text-xs font-bold">Sắp hết</span>
+                                            <span v-else class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs font-bold">Còn hàng</span>
+                                        </td>
+                                        <td class="p-3 text-center">
+                                            <button @click="openProductModal(p)" class="text-blue-500 hover:text-blue-700 bg-blue-50 px-3 py-1 rounded border border-blue-200 text-xs font-bold transition">Sửa</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="currentTab === 'import'" class="flex-1 p-6 overflow-y-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800">Lịch sử Nhập hàng</h2>
+                            <p class="text-gray-500 text-sm">Quản lý các phiếu nhập hàng từ nhà cung cấp</p>
+                        </div>
+                        <button @click="openPoModal" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg font-bold shadow-sm transition">
+                            <i class="fa-solid fa-file-invoice mr-2"></i>Tạo phiếu nhập
+                        </button>
+                    </div>
+
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm">
+                                <thead>
+                                    <tr class="bg-gray-100 text-gray-600 uppercase text-xs">
+                                        <th class="p-3 border-b">Mã phiếu</th>
+                                        <th class="p-3 border-b">Ngày tạo</th>
+                                        <th class="p-3 border-b">Nhà cung cấp</th>
+                                        <th class="p-3 border-b text-center">Số SP</th>
+                                        <th class="p-3 border-b text-right">Tổng tiền nhập</th>
+                                        <th class="p-3 border-b text-center">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-if="purchases.length === 0"><td colspan="6" class="p-8 text-center text-gray-400">Chưa có phiếu nhập nào</td></tr>
+                                    <tr v-for="po in purchases" :key="po.id" class="border-b hover:bg-gray-50">
+                                        <td class="p-3 font-bold text-teal-600">{{ po.id }}</td>
+                                        <td class="p-3 text-gray-600">{{ po.date }}</td>
+                                        <td class="p-3 font-medium">{{ po.supplier }}</td>
+                                        <td class="p-3 text-center"><span class="bg-gray-200 px-2 py-0.5 rounded text-xs">{{ po.items.length }}</span></td>
+                                        <td class="p-3 text-right font-bold text-red-600 font-mono">{{ formatPrice(po.total) }}</td>
+                                        <td class="p-3 text-center">
+                                            <button @click="viewPo(po)" class="text-teal-600 hover:text-teal-800 bg-teal-50 px-2 py-1 rounded border border-teal-200 text-xs font-bold transition">Chi tiết</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="currentTab === 'reports'" class="flex-1 p-6 overflow-y-auto">
+                    <div class="flex gap-2 mb-6 bg-white p-1 rounded-lg w-fit shadow-sm border">
+                        <button @click="reportTab = 'overview'" :class="['px-4 py-2 rounded-md font-bold text-sm transition', reportTab === 'overview' ? 'bg-teal-50 text-teal-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50']">Tổng quan</button>
+                        <button @click="reportTab = 'orders'" :class="['px-4 py-2 rounded-md font-bold text-sm transition', reportTab === 'orders' ? 'bg-teal-50 text-teal-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50']">Danh sách đơn hàng</button>
+                    </div>
+
+                    <div v-if="reportTab === 'overview'">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                            <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-teal-500">
+                                <h3 class="text-gray-500 text-xs font-bold mb-1 uppercase">Doanh thu</h3>
+                                <div class="text-2xl font-bold text-teal-700 font-mono">{{ formatPrice(totalRevenue) }}</div>
+                                <div class="text-xs text-gray-400 mt-2">{{ invoices.length }} hóa đơn</div>
+                            </div>
+                            <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-purple-500">
+                                <h3 class="text-gray-500 text-xs font-bold mb-1 uppercase">Lợi nhuận gộp</h3>
+                                <div class="text-2xl font-bold text-purple-700 font-mono">{{ formatPrice(totalProfit) }}</div>
+                                <div class="text-xs text-gray-400 mt-2">Doanh thu - Giá vốn</div>
+                            </div>
+                            <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-500">
+                                <h3 class="text-gray-500 text-xs font-bold mb-1 uppercase">Số đơn hàng</h3>
+                                <div class="text-2xl font-bold text-blue-700 font-mono">{{ invoices.length }}</div>
+                                <div class="text-xs text-gray-400 mt-2">Đã thanh toán</div>
+                            </div>
+                            <div class="bg-white p-5 rounded-xl shadow-sm border-l-4 border-amber-500">
+                                <h3 class="text-gray-500 text-xs font-bold mb-1 uppercase">Giá trị tồn kho</h3>
+                                <div class="text-2xl font-bold text-amber-700 font-mono">{{ formatPrice(inventoryValue) }}</div>
+                                <div class="text-xs text-gray-400 mt-2">Tính theo giá nhập</div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <div class="bg-white rounded-xl shadow-sm border p-5">
+                                <h3 class="font-bold text-lg mb-4 text-gray-800">Top Sản phẩm bán chạy (Theo Doanh thu)</h3>
+                                <div v-if="topProducts.length === 0" class="text-gray-400 text-sm">Chưa có dữ liệu</div>
+                                <div v-for="tp in topProducts" class="mb-3">
+                                    <div class="flex justify-between text-sm mb-1">
+                                        <span class="font-medium truncate pr-2">{{ tp.name }}</span>
+                                        <span class="font-mono font-bold text-teal-600">{{ formatPrice(tp.revenue) }}</span>
+                                    </div>
+                                    <div class="w-full bg-gray-100 rounded-full h-2">
+                                        <div class="bg-teal-500 h-2 rounded-full" :style="{ width: (tp.revenue / topProducts[0].revenue * 100) + '%' }"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-white rounded-xl shadow-sm border p-5">
+                                <h3 class="font-bold text-lg mb-4 text-gray-800">Đơn hàng gần đây</h3>
+                                <div v-if="invoices.length === 0" class="text-gray-400 text-sm">Chưa có dữ liệu</div>
+                                <div v-for="inv in invoices.slice(0,5)" class="flex justify-between items-center py-2 border-b last:border-0">
+                                    <div>
+                                        <div class="font-bold text-sm text-gray-700">{{ inv.id }}</div>
+                                        <div class="text-xs text-gray-500">{{ inv.customer.name }}</div>
+                                    </div>
+                                    <div class="font-mono font-bold text-green-600 text-sm">{{ formatPrice(inv.total) }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="reportTab === 'orders'" class="bg-white rounded-xl shadow-sm border p-1">
+                        <div class="p-3 border-b flex gap-2">
+                            <input type="text" v-model="orderSearchQuery" placeholder="Tìm theo mã đơn hoặc khách..." class="p-2 border rounded-lg text-sm w-64 focus:ring-teal-500">
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-gray-50 text-gray-600 text-xs uppercase">
+                                    <tr>
+                                        <th class="p-3">Mã HD</th>
+                                        <th class="p-3">Thời gian</th>
+                                        <th class="p-3">Khách hàng</th>
+                                        <th class="p-3">Nhân viên</th>
+                                        <th class="p-3">Thanh toán</th>
+                                        <th class="p-3 text-right">Tổng tiền</th>
+                                        <th class="p-3 text-center">Chi tiết</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-if="filteredInvoices.length === 0"><td colspan="7" class="p-8 text-center text-gray-400">Không tìm thấy đơn hàng</td></tr>
+                                    <tr v-for="inv in filteredInvoices" class="border-b hover:bg-gray-50">
+                                        <td class="p-3 font-mono font-bold text-teal-600">{{ inv.id }}</td>
+                                        <td class="p-3 text-xs text-gray-500">{{ inv.time }}</td>
+                                        <td class="p-3">{{ inv.customer.name }}</td>
+                                        <td class="p-3"><span class="bg-gray-100 px-2 py-1 rounded text-xs border">{{ inv.employeeName }}</span></td>
+                                        <td class="p-3">
+                                            <span v-if="inv.method === 'cash'" class="text-green-600 font-bold text-xs bg-green-50 px-2 py-1 rounded"><i class="fa-solid fa-money-bill"></i> Tiền mặt</span>
+                                            <span v-else class="text-blue-600 font-bold text-xs bg-blue-50 px-2 py-1 rounded"><i class="fa-solid fa-qrcode"></i> CK</span>
+                                        </td>
+                                        <td class="p-3 text-right font-bold text-red-600 font-mono">{{ formatPrice(inv.total) }}</td>
+                                        <td class="p-3 text-center">
+                                            <button @click="viewOrder(inv)" class="text-blue-500 hover:text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-200 text-xs font-bold transition">Xem</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="currentTab === 'employees' && currentUser.role === 'admin'" class="flex-1 p-6 overflow-y-auto">
+                    <div class="flex justify-between items-center mb-6">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800">Quản lý Nhân Sự</h2>
+                            <p class="text-gray-500 text-sm">Theo dõi hoạt động và phân quyền nhân viên</p>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 mb-4 bg-white p-1 rounded-lg w-fit shadow-sm border">
+                        <button @click="staffTab = 'logs'" :class="['px-4 py-2 rounded-md font-bold text-sm transition', staffTab === 'logs' ? 'bg-teal-50 text-teal-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50']">Lịch sử In/Out</button>
+                        <button @click="staffTab = 'revenue'" :class="['px-4 py-2 rounded-md font-bold text-sm transition', staffTab === 'revenue' ? 'bg-teal-50 text-teal-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50']">Doanh thu NV</button>
+                        <button @click="staffTab = 'edit'" :class="['px-4 py-2 rounded-md font-bold text-sm transition', staffTab === 'edit' ? 'bg-teal-50 text-teal-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50']">Tài khoản</button>
+                    </div>
+
+                    <div v-if="staffTab === 'logs'" class="bg-white rounded-xl shadow-sm border p-4">
+                        <div v-if="staffLogs.length === 0" class="p-8 text-center text-gray-400">Chưa có dữ liệu đăng nhập</div>
+                        <div v-for="log in [...staffLogs].reverse()" class="flex items-center gap-4 p-3 border-b last:border-0 hover:bg-gray-50">
+                            <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm" :class="log.role==='admin'?'bg-red-500':'bg-teal-500'">
+                                {{ log.name.charAt(0) }}
+                            </div>
+                            <div class="flex-1">
+                                <div class="font-bold text-sm">{{ log.name }} <span class="text-xs font-normal text-gray-500 ml-1 bg-gray-100 px-1 rounded">{{ log.role }}</span></div>
+                                <div class="text-xs text-gray-500 mt-1">
+                                    Vào: {{ log.loginTime }} 
+                                    <span v-if="log.logoutTime"> · Ra: {{ log.logoutTime }}</span>
+                                    <span v-else class="text-green-600 font-bold ml-1">· Đang làm việc</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="staffTab === 'revenue'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div v-for="u in users" class="bg-white p-5 rounded-xl shadow-sm border flex flex-col">
+                            <div class="flex items-center gap-3 mb-4">
+                                <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm" :class="u.role==='admin'?'bg-red-500':'bg-teal-500'">
+                                    {{ u.name.charAt(0) }}
+                                </div>
+                                <div>
+                                    <div class="font-bold text-gray-800">{{ u.name }}</div>
+                                    <div class="text-xs text-gray-500">{{ u.role === 'admin' ? 'Quản lý' : 'Nhân viên' }}</div>
+                                </div>
+                            </div>
+                            <div class="mt-auto pt-4 border-t border-gray-100 flex justify-between items-end">
+                                <div>
+                                    <div class="text-xs text-gray-500 uppercase font-bold mb-1">Doanh thu tạo ra</div>
+                                    <div class="font-mono font-bold text-xl text-teal-700">{{ formatPrice(getRevenueByEmployee(u.name)) }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div v-if="staffTab === 'edit'" class="bg-white rounded-xl shadow-sm border p-4">
+                        <button @click="openStaffModal(null)" class="mb-4 bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 px-4 py-2 rounded-lg text-sm font-bold transition">
+                            <i class="fa-solid fa-user-plus mr-1"></i> Thêm tài khoản
+                        </button>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left text-sm">
+                                <thead class="bg-gray-50 text-gray-600 text-xs uppercase">
+                                    <tr>
+                                        <th class="p-3">Họ tên</th>
+                                        <th class="p-3">Quyền hạn</th>
+                                        <th class="p-3">Mã PIN</th>
+                                        <th class="p-3 text-center">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="u in users" class="border-b hover:bg-gray-50">
+                                        <td class="p-3 font-bold flex items-center gap-2">
+                                            <div class="w-6 h-6 rounded-full flex items-center justify-center text-[10px] text-white" :class="u.role==='admin'?'bg-red-500':'bg-teal-500'">{{ u.name.charAt(0) }}</div>
+                                            {{ u.name }}
+                                        </td>
+                                        <td class="p-3">
+                                            <span :class="['px-2 py-1 text-xs rounded font-bold border', u.role === 'admin' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-teal-50 text-teal-600 border-teal-200']">
+                                                {{ u.role.toUpperCase() }}
+                                            </span>
+                                        </td>
+                                        <td class="p-3 font-mono text-gray-500">{{ u.pin ? '••••' : 'Chưa cài' }}</td>
+                                        <td class="p-3 text-center">
+                                            <button @click="openStaffModal(u)" class="text-blue-500 hover:text-blue-700 px-2"><i class="fa-solid fa-pen"></i></button>
+                                            <button v-if="u.id !== currentUser.id" @click="deleteStaff(u.id)" class="text-red-500 hover:text-red-700 px-2"><i class="fa-solid fa-trash"></i></button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+
+        <div v-if="showProductModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-lg overflow-hidden">
+                <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+                    <h3 class="font-bold text-lg text-gray-800">{{ editingProduct ? 'Sửa sản phẩm' : 'Thêm sản phẩm mới' }}</h3>
+                    <button @click="showProductModal = false" class="text-gray-400 hover:text-gray-700"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Tên sản phẩm *</label>
+                            <input type="text" v-model="productForm.name" class="w-full p-2 border rounded-lg focus:ring-teal-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Đơn vị tính *</label>
+                            <input type="text" v-model="productForm.unit" class="w-full p-2 border rounded-lg focus:ring-teal-500 text-sm">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Danh mục</label>
+                            <select v-model="productForm.category" class="w-full p-2 border rounded-lg focus:ring-teal-500 text-sm bg-white">
+                                <option>Thuốc</option><option>Vật tư y tế</option><option>Thiết bị</option><option>Thực phẩm bổ sung</option><option>Khác</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Tồn đầu kỳ</label>
+                            <input type="number" v-model.number="productForm.initialStock" :disabled="editingProduct" class="w-full p-2 border rounded-lg focus:ring-teal-500 text-sm disabled:bg-gray-100 disabled:text-gray-400">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Giá nhập (₫)</label>
+                            <input type="number" v-model.number="productForm.importPrice" class="w-full p-2 border rounded-lg focus:ring-teal-500 text-sm font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-gray-500 mb-1 uppercase">Giá bán (₫) *</label>
+                            <input type="number" v-model.number="productForm.sellPrice" class="w-full p-2 border rounded-lg focus:ring-teal-500 text-sm font-mono">
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 border-t bg-gray-50 flex justify-end gap-2">
+                    <button @click="showProductModal = false" class="px-4 py-2 rounded-lg border bg-white text-gray-600 font-bold hover:bg-gray-100 text-sm">Hủy</button>
+                    <button @click="saveProduct" class="px-4 py-2 rounded-lg bg-teal-600 text-white font-bold hover:bg-teal-700 text-sm">Lưu sản phẩm</button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="showPoModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col" style="max-height: 90vh;">
+                <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+                    <h3 class="font-bold text-lg text-gray-800">Tạo Phiếu Nhập Hàng</h3>
+                    <button @click="showPoModal = false" class="text-gray-400 hover:text-gray-700"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <div class="p-5 flex-1 overflow-y-auto space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div><label class="block text-xs font-bold text-gray-500 mb-1">NHÀ CUNG CẤP</label><input type="text" v-model="poForm.supplier" class="w-full p-2 border rounded-lg text-sm"></div>
+                        <div><label class="block text-xs font-bold text-gray-500 mb-1">GHI CHÚ</label><input type="text" v-model="poForm.note" class="w-full p-2 border rounded-lg text-sm"></div>
+                    </div>
+                    <div class="border rounded-lg overflow-hidden">
+                        <div class="bg-gray-100 p-2 text-xs font-bold flex justify-between items-center">
+                            <span>CHI TIẾT HÀNG NHẬP</span>
+                            <button @click="poForm.items.push({productId: '', qty: 1, cost: 0})" class="bg-white border px-2 py-1 rounded text-teal-600 hover:bg-teal-50"><i class="fa-solid fa-plus mr-1"></i>Thêm dòng</button>
+                        </div>
+                        <table class="w-full text-sm text-left">
+                            <thead class="border-b bg-gray-50 text-xs text-gray-500">
+                                <tr>
+                                    <th class="p-2 w-5/12">Sản phẩm</th><th class="p-2 w-2/12 text-center">SL</th><th class="p-2 w-2/12 text-right">Giá nhập</th><th class="p-2 w-2/12 text-right">Thành tiền</th><th class="p-2 w-1/12"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(row, idx) in poForm.items" :key="idx" class="border-b">
+                                    <td class="p-2">
+                                        <select v-model="row.productId" @change="onPoProductSelect(row)" class="w-full p-1 border rounded text-xs bg-white">
+                                            <option value="" disabled>-- Chọn --</option>
+                                            <option v-for="p in products" :value="p.id">{{ p.name }}</option>
+                                        </select>
+                                    </td>
+                                    <td class="p-2"><input type="number" v-model.number="row.qty" min="1" class="w-full p-1 border rounded text-xs text-center"></td>
+                                    <td class="p-2"><input type="number" v-model.number="row.cost" min="0" class="w-full p-1 border rounded text-xs text-right font-mono"></td>
+                                    <td class="p-2 text-right font-mono font-bold text-teal-700">{{ formatPrice(row.qty * row.cost) }}</td>
+                                    <td class="p-2 text-center"><button @click="poForm.items.splice(idx, 1)" class="text-red-400 hover:text-red-600"><i class="fa-solid fa-trash"></i></button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <div class="bg-gray-50 p-3 text-right text-sm">
+                            <span class="font-bold mr-4">Tổng tiền nhập:</span>
+                            <span class="text-xl font-bold text-red-600 font-mono">{{ formatPrice(poTotalCalc) }}</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4 border-t bg-gray-50 flex justify-end gap-2">
+                    <button @click="showPoModal = false" class="px-4 py-2 rounded-lg border bg-white font-bold hover:bg-gray-100 text-sm">Hủy</button>
+                    <button @click="savePo" class="px-4 py-2 rounded-lg bg-teal-600 text-white font-bold hover:bg-teal-700 text-sm">Xác nhận nhập hàng</button>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="viewingDetailObj" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
+                <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+                    <h3 class="font-bold text-lg text-gray-800">{{ viewingDetailObj.type === 'PO' ? 'Chi tiết Phiếu Nhập' : 'Chi tiết Hóa Đơn' }} {{ viewingDetailObj.data.id }}</h3>
+                    <button @click="viewingDetailObj = null" class="text-gray-400 hover:text-gray-700"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <div class="p-5 text-sm">
+                    <div v-if="viewingDetailObj.type === 'PO'" class="grid grid-cols-2 gap-4 mb-4 bg-gray-50 p-3 rounded-lg border">
+                        <div><span class="text-gray-500 text-xs font-bold block">NHÀ CUNG CẤP</span>{{ viewingDetailObj.data.supplier || '—' }}</div>
+                        <div><span class="text-gray-500 text-xs font-bold block">NGÀY TẠO</span>{{ viewingDetailObj.data.date }}</div>
+                        <div class="col-span-2"><span class="text-gray-500 text-xs font-bold block">GHI CHÚ</span>{{ viewingDetailObj.data.note || '—' }}</div>
+                    </div>
+                    <div v-else class="grid grid-cols-2 gap-4 mb-4 bg-gray-50 p-3 rounded-lg border">
+                        <div><span class="text-gray-500 text-xs font-bold block">KHÁCH HÀNG</span>{{ viewingDetailObj.data.customer.name }} {{ viewingDetailObj.data.customer.phone ? ' - '+viewingDetailObj.data.customer.phone : '' }}</div>
+                        <div><span class="text-gray-500 text-xs font-bold block">THỜI GIAN</span>{{ viewingDetailObj.data.time }}</div>
+                        <div><span class="text-gray-500 text-xs font-bold block">NHÂN VIÊN</span>{{ viewingDetailObj.data.employeeName }}</div>
+                        <div><span class="text-gray-500 text-xs font-bold block">THANH TOÁN</span>{{ viewingDetailObj.data.method === 'cash' ? 'Tiền mặt' : 'Chuyển khoản' }}</div>
+                    </div>
+
+                    <table class="w-full text-left border">
+                        <thead class="bg-gray-100 text-xs uppercase text-gray-600">
+                            <tr>
+                                <th class="p-2 border-b">Sản phẩm</th><th class="p-2 border-b text-center">SL</th><th class="p-2 border-b text-right">Đơn giá</th><th class="p-2 border-b text-right">Thành tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="item in viewingDetailObj.data.items" class="border-b">
+                                <td class="p-2">{{ item.name }}<br><span class="text-xs text-gray-500">{{ item.unit }}</span></td>
+                                <td class="p-2 text-center font-bold">{{ item.qty }}</td>
+                                <td class="p-2 text-right font-mono">{{ formatPrice(item.price || item.cost) }}</td>
+                                <td class="p-2 text-right font-mono font-bold">{{ formatPrice((item.price || item.cost) * item.qty) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <div v-if="viewingDetailObj.type === 'INV' && viewingDetailObj.data.otherCosts > 0" class="flex justify-between items-center mt-2 text-gray-600">
+                        <span>Chi phí khác:</span><span class="font-mono">{{ formatPrice(viewingDetailObj.data.otherCosts) }}</span>
+                    </div>
+                    <div class="flex justify-between items-center mt-4 pt-4 border-t-2">
+                        <span class="font-bold text-lg">TỔNG CỘNG:</span>
+                        <span class="font-bold text-2xl text-red-600 font-mono">{{ formatPrice(viewingDetailObj.data.total) }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div v-if="showStaffModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden">
+                <div class="p-4 border-b flex justify-between items-center bg-gray-50">
+                    <h3 class="font-bold text-lg text-gray-800">{{ editingStaff ? 'Sửa tài khoản' : 'Thêm tài khoản' }}</h3>
+                    <button @click="showStaffModal = false" class="text-gray-400 hover:text-gray-700"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <div class="p-5 space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">HỌ VÀ TÊN *</label>
+                        <input type="text" v-model="staffForm.name" class="w-full p-2 border rounded-lg focus:ring-teal-500 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">QUYỀN HẠN</label>
+                        <select v-model="staffForm.role" class="w-full p-2 border rounded-lg focus:ring-teal-500 text-sm bg-white">
+                            <option value="staff">Nhân viên</option>
+                            <option value="admin">Quản lý (Admin)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 mb-1">MÃ PIN ĐĂNG NHẬP (4 số)</label>
+                        <input type="password" v-model="staffForm.pin" maxlength="4" placeholder="Ví dụ: 1234" class="w-full p-2 border rounded-lg focus:ring-teal-500 text-sm font-mono tracking-widest text-center">
+                    </div>
+                </div>
+                <div class="p-4 border-t bg-gray-50 flex justify-end gap-2">
+                    <button @click="showStaffModal = false" class="px-4 py-2 rounded-lg border bg-white font-bold hover:bg-gray-100 text-sm">Hủy</button>
+                    <button @click="saveStaff" class="px-4 py-2 rounded-lg bg-teal-600 text-white font-bold hover:bg-teal-700 text-sm">Lưu</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+
+        createApp({
+            data() {
+                return {
+                    // Cờ check Màn hình khách
+                    isCustomerView: false,
+                    customerState: { cart: [], total: 0, paymentMethod: null, otherCosts: 0 },
+
+                    // Auth State
+                    selectedUserForLogin: null,
+                    pinInput: '',
+                    loginError: '',
+                    currentUser: null,
+                    currentTime: this.getNow(),
+                    
+                    // App State
+                    currentTab: 'pos',
+                    
+                    // POS State
+                    posSearchQuery: '',
+                    posCustomer: { name: '', phone: '' },
+                    otherCosts: 0,
+                    paymentMethod: null,
+                    cart: [],
+                    
+                    // Data Base
+                    users: [
+                        { id: 1, pin: '1234', name: 'Lê Hoa', role: 'admin' },
+                        { id: 2, pin: '0000', name: 'Trần Minh', role: 'staff' }
+                    ],
+                    staffLogs: [], // Lịch sử In/Out {name, role, loginTime, logoutTime}
+                    
+                    products: [
+                        { id: 1, name: 'Paracetamol 500mg', category: 'Thuốc', unit: 'Hộp', importPrice: 15000, sellPrice: 25000, initialStock: 50, totalIn: 200, totalOut: 0 },
+                        { id: 2, name: 'Amoxicillin 500mg', category: 'Thuốc', unit: 'Hộp', importPrice: 45000, sellPrice: 75000, initialStock: 30, totalIn: 100, totalOut: 0 },
+                        { id: 3, name: 'Vitamin C 1000mg', category: 'Thực phẩm bổ sung', unit: 'Hộp', importPrice: 35000, sellPrice: 55000, initialStock: 40, totalIn: 150, totalOut: 0 },
+                        { id: 4, name: 'Bông Y Tế 500g', category: 'Vật tư y tế', unit: 'Túi', importPrice: 22000, sellPrice: 35000, initialStock: 25, totalIn: 60, totalOut: 0 },
+                    ],
+                    invoices: [],
+                    purchases: [], // Các phiếu nhập hàng
+                    
+                    // Inventory State
+                    invSearchQuery: '',
+                    showProductModal: false,
+                    editingProduct: false,
+                    productForm: { id: '', name: '', category: 'Thuốc', unit: '', importPrice: 0, sellPrice: 0, initialStock: 0 },
+                    
+                    // PO State
+                    showPoModal: false,
+                    poForm: { supplier: '', note: '', items: [] },
+
+                    // Shared Modal State (Xem Chi tiết)
+                    viewingDetailObj: null, // { type: 'PO' | 'INV', data: {...} }
+
+                    // Reports State
+                    reportTab: 'overview',
+                    orderSearchQuery: '',
+
+                    // Staff State
+                    staffTab: 'logs',
+                    showStaffModal: false,
+                    editingStaff: false,
+                    staffForm: { id: '', name: '', role: 'staff', pin: '' }
+                }
+            },
+            computed: {
+                // POS Computeds
+                filteredPosProducts() {
+                    const q = this.posSearchQuery.toLowerCase();
+                    return this.products.filter(p => p.name.toLowerCase().includes(q));
+                },
+                cartTotalQty() { return this.cart.reduce((sum, item) => sum + item.qty, 0); },
+                cartTotalBase() { return this.cart.reduce((sum, item) => sum + (item.price * item.qty), 0); },
+                finalTotal() { return this.cartTotalBase + (Number(this.otherCosts) || 0); },
+                canCheckout() { return this.cart.length > 0 && this.paymentMethod !== null; },
+
+                // Inventory Computeds
+                filteredInvProducts() {
+                    const q = this.invSearchQuery.toLowerCase();
+                    return this.products.filter(p => p.name.toLowerCase().includes(q));
+                },
+
+                // Purchase Computeds
+                poTotalCalc() {
+                    return this.poForm.items.reduce((s, i) => s + ((i.qty || 0) * (i.cost || 0)), 0);
+                },
+
+                // Report Computeds
+                totalRevenue() { return this.invoices.reduce((sum, inv) => sum + inv.total, 0); },
+                totalProfit() {
+                    return this.invoices.reduce((sum, inv) => {
+                        let costOfGoods = inv.items.reduce((s, i) => {
+                            const p = this.products.find(x => x.id === i.id);
+                            return s + (p ? p.importPrice : 0) * i.qty;
+                        }, 0);
+                        return sum + (inv.total - costOfGoods);
+                    }, 0);
+                },
+                inventoryValue() {
+                    return this.products.reduce((sum, p) => sum + (this.getStock(p) * p.importPrice), 0);
+                },
+                topProducts() {
+                    const salesMap = {};
+                    this.invoices.forEach(inv => {
+                        inv.items.forEach(i => {
+                            salesMap[i.name] = (salesMap[i.name] || 0) + (i.price * i.qty);
+                        });
+                    });
+                    return Object.entries(salesMap)
+                        .map(([name, revenue]) => ({ name, revenue }))
+                        .sort((a, b) => b.revenue - a.revenue)
+                        .slice(0, 5);
+                },
+                filteredInvoices() {
+                    const q = this.orderSearchQuery.toLowerCase();
+                    return this.invoices.filter(i => i.id.toLowerCase().includes(q) || i.customer.name.toLowerCase().includes(q));
+                }
+            },
+            watch: {
+                cart: { handler: 'syncToCustomerView', deep: true },
+                finalTotal: 'syncToCustomerView',
+                paymentMethod: 'syncToCustomerView',
+                otherCosts: 'syncToCustomerView'
+            },
+            created() {
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('view') === 'customer') {
+                    this.isCustomerView = true;
+                    this.loadCustomerState();
+                    window.addEventListener('storage', (e) => {
+                        if (e.key === 'mediPosSync') this.loadCustomerState();
+                    });
+                } else {
+                    setInterval(() => { this.currentTime = this.getNow(true) }, 1000);
+                }
+            },
+            methods: {
+                // COMMON UTILS
+                formatPrice(val) { return new Intl.NumberFormat('vi-VN').format(val || 0) + ' ₫'; },
+                getNow(includeSec = false) {
+                    const now = new Date();
+                    return includeSec ? now.toLocaleString('vi-VN') : now.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
+                },
+                getStock(p) { return p.initialStock + p.totalIn - p.totalOut; },
+
+                // AUTH
+                addPin(num) { if (this.pinInput.length < 4) this.pinInput += num; },
+                clearPin() { this.pinInput = this.pinInput.slice(0, -1); this.loginError = ''; },
+                login() {
+                    if(!this.selectedUserForLogin) return;
+                    if (this.pinInput === this.selectedUserForLogin.pin || !this.selectedUserForLogin.pin) {
+                        this.currentUser = this.selectedUserForLogin;
+                        this.staffLogs.push({ name: this.currentUser.name, role: this.currentUser.role, loginTime: this.getNow(true), logoutTime: null, userId: this.currentUser.id });
+                        this.pinInput = '';
+                        this.selectedUserForLogin = null;
+                        this.currentTab = 'pos';
+                    } else {
+                        this.loginError = 'Mã PIN không đúng!';
+                        this.pinInput = '';
+                    }
+                },
+                logout() {
+                    const log = this.staffLogs.find(l => l.userId === this.currentUser.id && !l.logoutTime);
+                    if (log) log.logoutTime = this.getNow(true);
+                    this.currentUser = null;
+                    this.posCustomer = { name: '', phone: '' };
+                    this.cart = [];
+                    this.otherCosts = 0;
+                    this.paymentMethod = null;
+                },
+
+                // POS
+                addToCart(product) {
+                    if(this.getStock(product) <= 0) return alert('Sản phẩm đã hết hàng!');
+                    const existing = this.cart.find(item => item.id === product.id);
+                    if (existing) {
+                        if(existing.qty >= this.getStock(product)) return alert('Không đủ tồn kho!');
+                        existing.qty++;
+                    } else {
+                        this.cart.push({ id: product.id, name: product.name, unit: product.unit, price: product.sellPrice, qty: 1 });
+                    }
+                },
+                updateQty(index, delta) {
+                    const item = this.cart[index];
+                    const p = this.products.find(x => x.id === item.id);
+                    const newQty = item.qty + delta;
+                    if (newQty <= 0) this.cart.splice(index, 1);
+                    else if (p && newQty > this.getStock(p)) alert('Không đủ tồn kho!');
+                    else item.qty = newQty;
+                },
+                removeFromCart(index) { this.cart.splice(index, 1); },
+                checkout() {
+                    const inv = {
+                        id: 'HD' + Date.now().toString().slice(-6),
+                        time: this.getNow(true),
+                        employeeName: this.currentUser.name,
+                        employeeId: this.currentUser.id,
+                        customer: { name: this.posCustomer.name || 'Khách lẻ', phone: this.posCustomer.phone },
+                        items: JSON.parse(JSON.stringify(this.cart)),
+                        method: this.paymentMethod,
+                        otherCosts: Number(this.otherCosts) || 0,
+                        total: this.finalTotal
+                    };
+                    this.invoices.unshift(inv);
+
+                    // Trừ kho
+                    inv.items.forEach(item => {
+                        const p = this.products.find(x => x.id === item.id);
+                        if(p) p.totalOut += item.qty;
+                    });
+
+                    alert(`Thanh toán thành công đơn ${inv.id}`);
+                    this.cart = [];
+                    this.otherCosts = 0;
+                    this.paymentMethod = null;
+                    this.posCustomer = { name: '', phone: '' };
+                },
+
+                // INVENTORY
+                openProductModal(p) {
+                    if (p) {
+                        this.editingProduct = true;
+                        this.productForm = { ...p };
+                    } else {
+                        this.editingProduct = false;
+                        this.productForm = { id: '', name: '', category: 'Thuốc', unit: '', importPrice: 0, sellPrice: 0, initialStock: 0 };
+                    }
+                    this.showProductModal = true;
+                },
+                saveProduct() {
+                    if(!this.productForm.name || !this.productForm.unit || !this.productForm.sellPrice) return alert('Vui lòng điền đủ thông tin bắt buộc (*)');
+                    if (this.editingProduct) {
+                        const idx = this.products.findIndex(x => x.id === this.productForm.id);
+                        if(idx !== -1) {
+                            // Giữ nguyên in/out khi edit
+                            this.productForm.totalIn = this.products[idx].totalIn;
+                            this.productForm.totalOut = this.products[idx].totalOut;
+                            this.products.splice(idx, 1, { ...this.productForm });
+                        }
+                    } else {
+                        this.productForm.id = Date.now();
+                        this.productForm.totalIn = 0;
+                        this.productForm.totalOut = 0;
+                        this.products.push({ ...this.productForm });
+                    }
+                    this.showProductModal = false;
+                },
+
+                // PURCHASE
+                openPoModal() {
+                    this.poForm = { supplier: '', note: '', items: [{productId: '', qty: 1, cost: 0}] };
+                    this.showPoModal = true;
+                },
+                onPoProductSelect(row) {
+                    const p = this.products.find(x => x.id === row.productId);
+                    if(p) row.cost = p.importPrice;
+                },
+                savePo() {
+                    const validItems = this.poForm.items.filter(i => i.productId && i.qty > 0);
+                    if(validItems.length === 0) return alert('Vui lòng chọn ít nhất 1 sản phẩm hợp lệ!');
+                    
+                    const enrichedItems = validItems.map(i => {
+                        const p = this.products.find(x => x.id === i.productId);
+                        return { ...i, name: p.name, unit: p.unit };
+                    });
+
+                    const poId = 'PN' + Date.now().toString().slice(-6);
+                    this.purchases.unshift({
+                        id: poId,
+                        date: this.getNow(true),
+                        supplier: this.poForm.supplier || 'Khách vãng lai',
+                        note: this.poForm.note,
+                        items: enrichedItems,
+                        total: this.poTotalCalc
+                    });
+
+                    // Cộng kho & Update giá nhập
+                    enrichedItems.forEach(item => {
+                        const p = this.products.find(x => x.id === item.productId);
+                        if(p) {
+                            p.totalIn += item.qty;
+                            p.importPrice = item.cost;
+                        }
+                    });
+
+                    alert(`Tạo phiếu nhập ${poId} thành công!`);
+                    this.showPoModal = false;
+                },
+                viewPo(po) {
+                    this.viewingDetailObj = { type: 'PO', data: po };
+                },
+
+                // REPORT
+                viewOrder(inv) {
+                    this.viewingDetailObj = { type: 'INV', data: inv };
+                },
+
+                // STAFF
+                getRevenueByEmployee(name) {
+                    return this.invoices.filter(i => i.employeeName === name).reduce((sum, i) => sum + i.total, 0);
+                },
+                openStaffModal(u) {
+                    if (u) {
+                        this.editingStaff = true;
+                        this.staffForm = { ...u };
+                    } else {
+                        this.editingStaff = false;
+                        this.staffForm = { id: '', name: '', role: 'staff', pin: '' };
+                    }
+                    this.showStaffModal = true;
+                },
+                saveStaff() {
+                    if(!this.staffForm.name) return alert('Vui lòng nhập họ tên!');
+                    if(this.staffForm.pin && this.staffForm.pin.length !== 4) return alert('Mã PIN phải đúng 4 số hợp lệ!');
+                    
+                    if (this.editingStaff) {
+                        const idx = this.users.findIndex(x => x.id === this.staffForm.id);
+                        if(idx !== -1) this.users.splice(idx, 1, { ...this.staffForm });
+                    } else {
+                        this.staffForm.id = Date.now();
+                        this.users.push({ ...this.staffForm });
+                    }
+                    this.showStaffModal = false;
+                },
+                deleteStaff(id) {
+                    if(confirm('Bạn có chắc chắn muốn xóa nhân viên này?')) {
+                        this.users = this.users.filter(u => u.id !== id);
+                    }
+                },
+
+                // CUSTOMER SCREEN SYNC
+                openCustomerScreen() {
+                    window.open(window.location.href.split('?')[0] + '?view=customer', '_blank', 'width=1024,height=768');
+                    this.syncToCustomerView();
+                },
+                syncToCustomerView() {
+                    if(this.isCustomerView) return;
+                    const state = {
+                        cart: this.cart,
+                        total: this.finalTotal,
+                        otherCosts: Number(this.otherCosts) || 0,
+                        paymentMethod: this.paymentMethod
+                    };
+                    localStorage.setItem('mediPosSync', JSON.stringify(state));
+                },
+                loadCustomerState() {
+                    const raw = localStorage.getItem('mediPosSync');
+                    if(raw) this.customerState = JSON.parse(raw);
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

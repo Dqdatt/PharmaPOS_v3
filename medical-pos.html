@@ -1,0 +1,1746 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MediPOS — Quản lý bán hàng y tế</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f0f4f8;--surface:#fff;--surface2:#f8fafc;--surface3:#f1f5f9;
+  --border:#e2e8f0;--border2:#cbd5e1;
+  --text:#0f172a;--text2:#475569;--text3:#94a3b8;
+  --primary:#0369a1;--primary-bg:#e0f2fe;--primary-light:#38bdf8;
+  --green:#059669;--green-bg:#d1fae5;
+  --amber:#d97706;--amber-bg:#fef3c7;
+  --red:#dc2626;--red-bg:#fee2e2;
+  --purple:#7c3aed;--purple-bg:#ede9fe;
+  --radius:10px;--radius-sm:6px;--radius-lg:14px;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 6px -1px rgba(0,0,0,.08),0 2px 4px -1px rgba(0,0,0,.04);
+}
+body{font-family:'Be Vietnam Pro',sans-serif;background:var(--bg);color:var(--text);font-size:14px;min-height:100vh;display:flex;flex-direction:column;-webkit-tap-highlight-color:transparent}
+.app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.topbar{background:var(--primary);color:#fff;padding:0 20px;display:flex;align-items:center;gap:16px;height:52px;flex-shrink:0;box-shadow:0 2px 8px rgba(3,105,161,.3)}
+.topbar-logo{font-weight:700;font-size:18px;letter-spacing:-.5px;display:flex;align-items:center;gap:8px}
+.topbar-logo span{font-size:11px;font-weight:400;opacity:.7;background:rgba(255,255,255,.15);padding:2px 8px;border-radius:20px}
+.nav{display:flex;gap:2px;flex:1;margin-left:16px}
+.nav-btn{padding:6px 14px;border-radius:var(--radius-sm);cursor:pointer;font-family:inherit;font-size:13px;font-weight:500;border:none;background:transparent;color:rgba(255,255,255,.75);display:flex;align-items:center;gap:6px;transition:.15s;white-space:nowrap;min-height:40px;touch-action:manipulation}
+.nav-btn:hover{background:rgba(255,255,255,.15);color:#fff}
+.nav-btn.active{background:rgba(255,255,255,.2);color:#fff}
+.nav-btn svg{width:15px;height:15px;stroke-width:2}
+.topbar-time{font-family:'JetBrains Mono',monospace;font-size:12px;opacity:.8;margin-left:auto}
+.main{flex:1;overflow:hidden;display:flex}
+.panel{flex:1;overflow-y:auto;padding:20px;display:none}
+.panel.active{display:block}
+.panel-2col{display:none;flex:1;overflow:hidden}
+.panel-2col.active{display:flex}
+.card{background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);padding:20px;box-shadow:var(--shadow)}
+.card+.card{margin-top:16px}
+.card-title{font-weight:600;font-size:15px;color:var(--text);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-title svg{width:18px;height:18px;color:var(--primary)}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+.stat-label{font-size:12px;color:var(--text2);font-weight:500;margin-bottom:6px}
+.stat-value{font-size:22px;font-weight:700;color:var(--text)}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:4px}
+.stat-card.green{border-left:3px solid var(--green)}
+.stat-card.blue{border-left:3px solid var(--primary)}
+.stat-card.amber{border-left:3px solid var(--amber)}
+.stat-card.purple{border-left:3px solid var(--purple)}
+.table-wrap{overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead{background:var(--surface3)}
+th{padding:10px 14px;text-align:left;font-weight:600;font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text)}
+tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--surface2)}
+td.num,th.num{text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px}
+.badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-green{background:var(--green-bg);color:#065f46}
+.badge-red{background:var(--red-bg);color:#991b1b}
+.badge-amber{background:var(--amber-bg);color:#92400e}
+.badge-blue{background:var(--primary-bg);color:#075985}
+.badge-purple{background:var(--purple-bg);color:#5b21b6}
+/* Buttons — touch-friendly */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 18px;border-radius:var(--radius-sm);font-family:inherit;font-size:13px;font-weight:500;cursor:pointer;border:none;transition:.15s;touch-action:manipulation;min-height:42px}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:#0284c7}
+.btn-green{background:var(--green);color:#fff}
+.btn-green:hover{background:#047857}
+.btn-outline{background:var(--surface);color:var(--text);border:1px solid var(--border2)}
+.btn-outline:hover{background:var(--surface3)}
+.btn-red{background:var(--red);color:#fff}
+.btn-red:hover{background:#b91c1c}
+.btn-sm{padding:7px 14px;font-size:12px;min-height:34px}
+.btn svg{width:15px;height:15px;stroke-width:2}
+/* Pay button — big and touch-friendly */
+.btn-pay{width:100%;justify-content:center;padding:16px;font-size:16px;font-weight:700;letter-spacing:.3px;border-radius:var(--radius);margin-top:12px;min-height:56px}
+.btn-pay:active{transform:scale(.98)}
+/* Payment method toggle */
+.payment-toggle{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.pay-method-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:14px 10px;border-radius:var(--radius);border:2px solid var(--border2);background:var(--surface2);cursor:pointer;font-family:inherit;font-size:13px;font-weight:600;color:var(--text2);transition:.15s;touch-action:manipulation;min-height:64px}
+.pay-method-btn svg{width:22px;height:22px;stroke-width:1.8}
+.pay-method-btn:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-bg)}
+.pay-method-btn.selected{border-color:var(--primary);color:#fff;background:var(--primary)}
+.pay-method-btn.selected svg{stroke:currentColor}
+/* Forms */
+.form-group{margin-bottom:14px}
+.form-label{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px}
+.form-input,.form-select{width:100%;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border2);font-family:inherit;font-size:13px;color:var(--text);background:var(--surface);transition:.15s;outline:none}
+.form-input:focus,.form-select:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(3,105,161,.1)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+/* POS Layout */
+.pos-left{flex:1;overflow-y:auto;padding:16px;background:var(--surface2);display:flex;flex-direction:column;gap:12px}
+.pos-right{width:420px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.pos-search{position:relative}
+.pos-search input{padding-left:36px}
+.pos-search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);width:16px;height:16px}
+.product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.product-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;cursor:pointer;transition:.15s;position:relative;overflow:hidden;touch-action:manipulation;user-select:none}
+.product-card:hover{border-color:var(--primary);box-shadow:0 0 0 2px rgba(3,105,161,.1);transform:translateY(-1px)}
+.product-card:active{transform:scale(.97)}
+.product-card.low-stock::after{content:'Sắp hết';position:absolute;top:6px;right:6px;background:var(--amber-bg);color:#92400e;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px}
+.product-card.out-stock{opacity:.5;pointer-events:none}
+.product-card.out-stock::after{content:'Hết hàng';position:absolute;top:6px;right:6px;background:var(--red-bg);color:#991b1b;font-size:9px;font-weight:700;padding:2px 6px;border-radius:10px}
+.pc-name{font-weight:600;font-size:13px;color:var(--text);margin-bottom:4px;line-height:1.3}
+.pc-unit{font-size:11px;color:var(--text3);margin-bottom:8px}
+.pc-price{font-weight:700;font-size:15px;color:var(--primary);font-family:'JetBrains Mono',monospace}
+.pc-stock{font-size:11px;color:var(--text2);margin-top:4px}
+/* Cart */
+.cart-header{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.cart-title{font-weight:700;font-size:15px}
+.cart-items{flex:1;overflow-y:auto;padding:12px}
+.cart-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;height:200px;color:var(--text3);gap:8px}
+.cart-empty svg{width:40px;height:40px;stroke-width:1}
+.cart-item{display:flex;align-items:flex-start;gap:10px;padding:10px;background:var(--surface2);border-radius:var(--radius-sm);margin-bottom:8px}
+.ci-name{font-weight:500;font-size:13px;flex:1}
+.ci-unit{font-size:11px;color:var(--text3)}
+.ci-qty{display:flex;align-items:center;gap:6px;margin-top:6px}
+.qty-btn{width:32px;height:32px;border-radius:6px;border:1px solid var(--border2);background:var(--surface);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:var(--text2);touch-action:manipulation}
+.qty-btn:hover,.qty-btn:active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.qty-val{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;min-width:28px;text-align:center}
+.ci-price{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--green)}
+.ci-del{cursor:pointer;color:var(--text3);margin-left:4px;padding:4px;touch-action:manipulation}
+.ci-del:hover{color:var(--red)}
+.ci-del svg{width:15px;height:15px}
+.cart-footer{padding:16px;border-top:1px solid var(--border);background:var(--surface)}
+.cart-row{display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;color:var(--text2)}
+.cart-total{display:flex;justify-content:space-between;font-weight:700;font-size:18px;color:var(--text);margin-top:10px;padding-top:10px;border-top:2px solid var(--border)}
+.cart-total span:last-child{color:var(--green);font-family:'JetBrains Mono',monospace}
+.cart-customer{margin-bottom:12px}
+/* Receipt — new layout */
+.receipt{background:var(--surface);border:1px dashed var(--border2);border-radius:var(--radius);padding:16px;font-size:13px}
+.receipt-header{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.receipt-header-left .receipt-title{font-weight:700;font-size:16px}
+.receipt-header-left .receipt-time{font-size:11px;color:var(--text2);margin-top:2px}
+.receipt-header-right{text-align:right}
+.receipt-header-right .receipt-staff{font-size:13px;font-weight:600;color:var(--primary)}
+.receipt-header-right .receipt-customer{font-size:12px;color:var(--text2);margin-top:2px}
+.receipt-divider{border:none;border-top:1px dashed var(--border2);margin:10px 0}
+.receipt-row{display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px}
+.receipt-total{display:flex;justify-content:space-between;font-weight:700;font-size:15px;margin-top:8px}
+/* Cart item list with SL column */
+.cart-list-header{display:grid;grid-template-columns:1fr 52px 80px 28px;gap:4px;padding:4px 10px;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px}
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px}
+.modal-overlay.hidden{display:none}
+.modal{background:var(--surface);border-radius:var(--radius-lg);width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)}
+.modal-header{padding:20px 24px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-weight:700;font-size:16px}
+.modal-close{cursor:pointer;color:var(--text3);padding:4px;touch-action:manipulation}
+.modal-close:hover{color:var(--text)}
+.modal-close svg{width:20px;height:20px}
+.modal-body{padding:24px}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+/* Tabs */
+.tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--surface3);padding:4px;border-radius:var(--radius);width:fit-content;flex-wrap:wrap}
+.tab{padding:7px 18px;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;font-weight:500;color:var(--text2);border:none;background:none;font-family:inherit;transition:.15s;touch-action:manipulation}
+.tab.active{background:var(--surface);color:var(--primary);box-shadow:var(--shadow)}
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.toolbar-right{margin-left:auto;display:flex;gap:8px}
+.section-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.section-title{font-size:18px;font-weight:700;color:var(--text)}
+.section-sub{font-size:13px;color:var(--text2);margin-top:2px}
+.chart-bar-wrap{display:flex;flex-direction:column;gap:10px}
+.chart-bar-row{display:flex;align-items:center;gap:12px}
+.chart-bar-label{width:120px;font-size:12px;color:var(--text2);text-align:right;flex-shrink:0}
+.chart-bar-track{flex:1;height:8px;background:var(--surface3);border-radius:4px;overflow:hidden}
+.chart-bar-fill{height:100%;border-radius:4px;background:var(--primary);transition:.3s}
+.chart-bar-val{width:80px;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text);font-weight:500}
+.alert{padding:12px 16px;border-radius:var(--radius-sm);font-size:13px;margin-bottom:16px}
+.alert-success{background:var(--green-bg);color:#065f46;border-left:3px solid var(--green)}
+.alert-warning{background:var(--amber-bg);color:#92400e;border-left:3px solid var(--amber)}
+
+/* ===== CUSTOMER DISPLAY POPUP ===== */
+#customer-display-popup{
+  display:none;position:fixed;inset:0;z-index:2000;
+  background:linear-gradient(160deg,#0c4a6e 0%,#0369a1 60%,#0284c7 100%);
+  flex-direction:column;align-items:center;justify-content:flex-start;
+  padding:32px 24px 24px;overflow-y:auto;
+}
+#customer-display-popup.active{display:flex;}
+.cdp-header{width:100%;max-width:680px;display:flex;align-items:center;justify-content:space-between;margin-bottom:28px}
+.cdp-logo{display:flex;align-items:center;gap:10px;color:#fff}
+.cdp-logo-icon{width:48px;height:48px;background:rgba(255,255,255,.2);border-radius:12px;display:flex;align-items:center;justify-content:center;}
+.cdp-logo-icon svg{width:26px;height:26px;color:#fff}
+.cdp-logo-text{font-size:20px;font-weight:700;letter-spacing:-.3px}
+.cdp-logo-sub{font-size:12px;font-weight:400;opacity:.65;margin-top:1px}
+.cdp-close-btn{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);color:#fff;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:inherit}
+.cdp-close-btn:hover{background:rgba(255,255,255,.25)}
+.cdp-body{width:100%;max-width:680px;display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+@media(max-width:700px){.cdp-body{grid-template-columns:1fr}}
+.cdp-card{background:rgba(255,255,255,.97);border-radius:16px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+.cdp-card-header{padding:18px 20px 14px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;gap:8px}
+.cdp-card-title{font-weight:700;font-size:16px;color:#0f172a}
+.cdp-card-header svg{width:20px;height:20px;color:#0369a1}
+.cdp-items-list{padding:14px 20px;max-height:360px;overflow-y:auto}
+.cdp-item-row{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid #f1f5f9;font-size:14px}
+.cdp-item-row:last-child{border-bottom:none}
+.cdp-item-name{font-weight:600;color:#0f172a;font-size:13px;line-height:1.35}
+.cdp-item-unit{font-size:11px;color:#94a3b8;margin-top:1px}
+.cdp-item-qty{background:#e0f2fe;color:#0369a1;border-radius:20px;padding:3px 12px;font-weight:700;font-size:13px;white-space:nowrap;text-align:center}
+.cdp-item-total{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:14px;color:#059669;text-align:right;white-space:nowrap}
+.cdp-empty{padding:48px 24px;text-align:center;color:#94a3b8}
+.cdp-empty svg{width:52px;height:52px;margin-bottom:12px;display:block;margin-left:auto;margin-right:auto}
+.cdp-empty-text{font-size:15px;font-weight:500}
+.cdp-totals{padding:14px 20px;background:#f8fafc;border-top:1px solid #e2e8f0}
+.cdp-total-row{display:flex;justify-content:space-between;font-size:13px;color:#475569;margin-bottom:6px}
+.cdp-grand-total{display:flex;justify-content:space-between;font-size:26px;font-weight:800;color:#0f172a;margin-top:12px;padding-top:12px;border-top:2px solid #e2e8f0}
+.cdp-grand-total span:last-child{color:#059669;font-family:'JetBrains Mono',monospace}
+.cdp-qr-card{display:flex;flex-direction:column;align-items:center}
+.cdp-qr-inner{padding:24px 20px;display:flex;flex-direction:column;align-items:center;gap:12px}
+.cdp-qr-label{font-size:13px;font-weight:700;color:#0369a1;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.cdp-qr-wrap{background:#fff;border-radius:12px;padding:12px;border:2px solid #e0f2fe;box-shadow:0 2px 12px rgba(3,105,161,.12)}
+.cdp-qr-img{width:200px;height:200px;display:block;border-radius:6px}
+.cdp-qr-amount{font-size:22px;font-weight:800;color:#059669;font-family:'JetBrains Mono',monospace;margin-top:4px}
+.cdp-qr-info{width:100%;background:#f0f9ff;border-radius:10px;padding:12px 14px;font-size:12px;color:#0369a1;line-height:1.8}
+.cdp-qr-info b{display:block;font-size:13px;color:#0f172a;margin-bottom:4px}
+.cdp-method-badge{display:inline-flex;align-items:center;gap:6px;background:#e0f2fe;color:#0369a1;border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;border:1.5px solid #bae6fd;margin-top:2px}
+.cdp-thankyou{width:100%;max-width:680px;text-align:center;color:rgba(255,255,255,.6);font-size:13px;margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,.12)}
+.cdp-cash-card{padding:32px 20px;display:flex;flex-direction:column;align-items:center;gap:14px}
+.cdp-cash-icon{width:72px;height:72px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;}
+.cdp-cash-icon svg{width:36px;height:36px;color:#059669}
+.cdp-cash-text{font-size:18px;font-weight:700;color:#059669;text-align:center}
+.cdp-cash-sub{font-size:13px;color:#94a3b8;text-align:center}
+.cdp-waiting{padding:40px 20px;display:flex;flex-direction:column;align-items:center;gap:14px}
+.cdp-waiting-anim{width:64px;height:64px;border-radius:50%;border:5px solid #bae6fd;border-top-color:#0369a1;animation:spin 1s linear infinite;display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.cdp-waiting-text{font-size:16px;font-weight:600;color:#475569;text-align:center}
+.cdp-waiting-sub{font-size:13px;color:#94a3b8;text-align:center}
+
+.login-overlay{position:fixed;inset:0;z-index:1000;background:linear-gradient(135deg,#0c4a6e 0%,#0369a1 50%,#0284c7 100%);display:flex;align-items:center;justify-content:center;padding:16px}
+.login-overlay.hidden{display:none!important}
+.login-box{background:#fff;border-radius:20px;padding:32px;width:100%;max-width:720px;box-shadow:0 25px 80px rgba(0,0,0,.3);display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:start}
+.login-left{}
+.login-right{border-left:1px solid var(--border);padding-left:28px}
+.login-logo{margin-bottom:24px}
+.login-logo-icon{width:56px;height:56px;background:var(--primary);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:10px;box-shadow:0 8px 24px rgba(3,105,161,.35)}
+.login-logo-icon svg{color:#fff;width:30px;height:30px}
+.login-title{font-size:20px;font-weight:700;color:var(--text);margin-bottom:3px}
+.login-sub{font-size:13px;color:var(--text2)}
+.login-label{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px}
+.staff-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px}
+.staff-card{border:2px solid var(--border);border-radius:10px;padding:12px 8px;text-align:center;cursor:pointer;transition:.15s;background:var(--surface2);touch-action:manipulation}
+.staff-card:hover{border-color:var(--primary);background:var(--primary-bg);transform:translateY(-1px)}
+.staff-card.selected{border-color:var(--primary);background:var(--primary-bg)}
+.staff-avatar{width:40px;height:40px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#fff;margin-bottom:6px}
+.staff-card-name{font-size:11px;font-weight:600;color:var(--text);line-height:1.3}
+.staff-card-role{font-size:10px;color:var(--text3);margin-top:2px}
+/* PIN Numpad */
+.pin-display{background:var(--surface3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;letter-spacing:8px;text-align:center;margin-bottom:12px;min-height:52px;color:var(--text)}
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.numpad-btn{aspect-ratio:1.3;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface2);font-family:inherit;font-size:18px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.1s;color:var(--text);touch-action:manipulation}
+.numpad-btn:hover,.numpad-btn:active{background:var(--primary);color:#fff;border-color:var(--primary)}
+.numpad-btn.del{background:var(--red-bg);color:var(--red);border-color:#fca5a5;font-size:14px}
+.numpad-btn.del:hover{background:var(--red);color:#fff}
+.numpad-btn.enter{background:var(--green);color:#fff;border-color:var(--green);font-size:13px;font-weight:700}
+.numpad-btn.enter:hover{background:#047857}
+.pin-hint{font-size:11px;color:var(--text3);text-align:center;margin-top:8px}
+/* Topbar staff info */
+.topbar-staff{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.15);border-radius:8px;padding:5px 12px;cursor:pointer;transition:.15s;margin-left:8px;touch-action:manipulation}
+.topbar-staff:hover{background:rgba(255,255,255,.25)}
+.topbar-staff-avatar{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+.topbar-staff-name{font-size:12px;font-weight:500;color:#fff;white-space:nowrap}
+.topbar-staff-role{font-size:10px;color:rgba(255,255,255,.65);white-space:nowrap}
+.cart-customer{padding:12px 16px 0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cart-customer-full{grid-column:1/-1}
+/* Other cost field */
+.other-cost-row{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.other-cost-row label{font-size:12px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+.other-cost-row input{flex:1;padding:8px 12px;border-radius:var(--radius-sm);border:1px solid var(--border2);font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:600;color:var(--text);background:var(--surface);outline:none}
+.other-cost-row input:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(3,105,161,.1)}
+
+/* Staff management panel */
+.staff-log-row{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--border)}
+.staff-log-row:last-child{border-bottom:none}
+.staff-log-avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:#fff;flex-shrink:0}
+.staff-log-info{flex:1}
+.staff-log-name{font-weight:600;font-size:13px}
+.staff-log-detail{font-size:11px;color:var(--text2);margin-top:2px}
+.staff-log-revenue{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--green)}
+/* Login error */
+#login-error{color:var(--red);font-size:12px;margin-top:6px;display:none;text-align:center}
+
+@media(max-width:1100px){.pos-right{width:360px}}
+@media(max-width:900px){.pos-right{width:300px}.product-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}.nav-btn span{display:none}.topbar-time{display:none}}
+@media(max-width:720px){.login-box{grid-template-columns:1fr;max-width:380px}.login-right{border-left:none;padding-left:0;border-top:1px solid var(--border);padding-top:20px}}
+@media(max-width:680px){.panel-2col.active{flex-direction:column}.pos-left{overflow-y:visible}.pos-right{width:100%;border-left:none;border-top:1px solid var(--border)}.form-row{grid-template-columns:1fr}.stats-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){.topbar{padding:0 12px}.nav-btn{padding:6px 10px}.panel,.pos-left{padding:12px}.stats-grid{grid-template-columns:1fr 1fr}.product-grid{grid-template-columns:repeat(2,1fr)}}
+.hidden{display:none!important}
+.text-right{text-align:right}
+.text-muted{color:var(--text2)}
+.mono{font-family:'JetBrains Mono',monospace}
+.fw-bold{font-weight:700}
+.color-green{color:var(--green)}
+.color-red{color:var(--red)}
+.color-primary{color:var(--primary)}
+.mt-4{margin-top:4px}
+.mb-0{margin-bottom:0}
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div class="login-overlay" id="login-overlay">
+  <div class="login-box">
+    <!-- LEFT: staff grid -->
+    <div class="login-left">
+      <div class="login-logo">
+        <div class="login-logo-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>
+        </div>
+        <div class="login-title">MediPOS Y Tế</div>
+        <div class="login-sub">Chọn nhân viên để bắt đầu ca làm việc</div>
+      </div>
+      <div class="login-label">Chọn nhân viên</div>
+      <div class="staff-grid" id="staff-grid"></div>
+      <div id="login-error">⚠ <span id="login-error-text">Mã PIN không đúng!</span></div>
+    </div>
+    <!-- RIGHT: numpad PIN -->
+    <div class="login-right">
+      <div class="login-label">Nhập mã PIN</div>
+      <div class="pin-display" id="pin-display">——</div>
+      <div class="numpad" id="numpad">
+        <button class="numpad-btn" onclick="pinKey('1')">1</button>
+        <button class="numpad-btn" onclick="pinKey('2')">2</button>
+        <button class="numpad-btn" onclick="pinKey('3')">3</button>
+        <button class="numpad-btn" onclick="pinKey('4')">4</button>
+        <button class="numpad-btn" onclick="pinKey('5')">5</button>
+        <button class="numpad-btn" onclick="pinKey('6')">6</button>
+        <button class="numpad-btn" onclick="pinKey('7')">7</button>
+        <button class="numpad-btn" onclick="pinKey('8')">8</button>
+        <button class="numpad-btn" onclick="pinKey('9')">9</button>
+        <button class="numpad-btn del" onclick="pinKey('del')">⌫ Xóa</button>
+        <button class="numpad-btn" onclick="pinKey('0')">0</button>
+        <button class="numpad-btn enter" onclick="doLogin()">✓ Vào</button>
+      </div>
+      <div class="pin-hint">Nhân viên không có PIN → chọn và bấm ✓ Vào</div>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-logo">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>
+    MediPOS <span>Y Tế</span>
+  </div>
+  <nav class="nav">
+    <button class="nav-btn active" onclick="showPanel('pos')" id="nav-pos">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+      <span>Bán hàng</span>
+    </button>
+    <button class="nav-btn" onclick="showPanel('inventory')" id="nav-inventory">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+      <span>Kho hàng</span>
+    </button>
+    <button class="nav-btn" onclick="showPanel('purchase')" id="nav-purchase">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2"/><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>
+      <span>Nhập hàng</span>
+    </button>
+    <button class="nav-btn" onclick="showPanel('report')" id="nav-report">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      <span>Báo cáo</span>
+    </button>
+    <button class="nav-btn hidden" onclick="showPanel('staffmgmt')" id="nav-staffmgmt">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+      <span>Nhân viên</span>
+    </button>
+  </nav>
+  <button class="btn" id="btn-customer-display" onclick="openCustomerDisplay()" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);padding:6px 14px;font-size:12px;min-height:36px;gap:6px;border-radius:8px;margin-left:auto;white-space:nowrap" title="Mở màn hình khách hàng">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/><path d="M7 7h10M7 11h6"/></svg>
+    <span>Màn hình khách</span>
+  </button>
+  <div class="topbar-time" id="clock">--:--:--</div>
+  <div class="topbar-staff" id="topbar-staff" onclick="openLogout()">
+    <div class="topbar-staff-avatar" id="topbar-avatar" style="background:#38bdf8">N</div>
+    <div>
+      <div class="topbar-staff-name" id="topbar-staff-name">Nhân viên</div>
+      <div class="topbar-staff-role" id="topbar-staff-role">Ca làm việc</div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+<!-- POS PANEL -->
+<div class="panel-2col active" id="panel-pos">
+  <div class="pos-left">
+    <div class="pos-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+      <input class="form-input" type="text" id="pos-search" placeholder="Tìm sản phẩm..." oninput="renderProducts()">
+    </div>
+    <div class="product-grid" id="product-grid"></div>
+  </div>
+  <div class="pos-right">
+    <div class="cart-header">
+      <div class="cart-title">🛒 Đơn hàng</div>
+      <button class="btn btn-outline btn-sm" onclick="clearCart()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+        Xóa
+      </button>
+    </div>
+    <div class="cart-customer" id="cart-customer-section">
+      <input class="form-input cart-customer-full" type="text" id="customer-name" placeholder="👤 Tên khách hàng (tuỳ chọn)">
+      <input class="form-input" type="text" id="customer-phone" placeholder="📞 Số điện thoại">
+      <select class="form-select" id="customer-type">
+        <option value="Khách lẻ">Khách lẻ</option>
+        <option value="Khách quen">Khách quen</option>
+        <option value="Bảo hiểm">Bảo hiểm</option>
+      </select>
+    </div>
+    <!-- Cart items header with SL column -->
+    <div class="cart-list-header" id="cart-list-header" style="display:none">
+      <span>Sản phẩm</span><span style="text-align:center">SL</span><span style="text-align:right">Thành tiền</span><span></span>
+    </div>
+    <div class="cart-items" id="cart-items">
+      <div class="cart-empty" id="cart-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 001.99 1.61h9.72a2 2 0 001.99-1.61L23 6H6"/></svg>
+        <span style="font-size:13px">Chưa có sản phẩm</span>
+      </div>
+    </div>
+    <div class="cart-footer">
+      <div class="cart-row"><span>Số mặt hàng</span><span id="cart-count">0</span></div>
+      <div class="cart-row"><span>Tổng SL</span><span id="cart-qty">0</span></div>
+      <div class="cart-total">
+        <span>Tổng tiền</span>
+        <span id="cart-total">0 ₫</span>
+      </div>
+      <button class="btn btn-green btn-pay" onclick="checkout()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:20px;height:20px"><path d="M5 13l4 4L19 7"/></svg>
+        Thanh toán
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- INVENTORY PANEL -->
+<div class="panel" id="panel-inventory">
+  <div class="section-header">
+    <div>
+      <div class="section-title">Kho hàng</div>
+      <div class="section-sub">Quản lý sản phẩm và tồn kho</div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="openAddProduct()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Thêm sản phẩm
+      </button>
+    </div>
+  </div>
+  <div class="toolbar">
+    <input class="form-input" style="width:240px" type="text" id="inv-search" placeholder="Tìm sản phẩm..." oninput="renderInventory()">
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>Tên sản phẩm</th><th>ĐVT</th>
+          <th class="num">Giá nhập</th><th class="num">Giá bán</th>
+          <th class="num">Tồn đầu</th><th class="num">Tổng nhập</th>
+          <th class="num">Tổng xuất</th><th class="num">Tồn kho</th>
+          <th>Trạng thái</th><th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody id="inventory-table"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- PURCHASE PANEL -->
+<div class="panel" id="panel-purchase">
+  <div class="section-header">
+    <div>
+      <div class="section-title">Nhập hàng</div>
+      <div class="section-sub">Tạo phiếu nhập và quản lý lịch sử</div>
+    </div>
+    <button class="btn btn-primary" onclick="openNewPurchase()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+      Tạo phiếu nhập
+    </button>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Mã phiếu</th><th>Ngày nhập</th><th>Nhà cung cấp</th>
+          <th>Số mặt hàng</th><th class="num">Tổng tiền nhập</th>
+          <th>Trạng thái</th><th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody id="purchase-table"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- REPORT PANEL -->
+<div class="panel" id="panel-report">
+  <div class="section-title" style="margin-bottom:20px">Báo cáo & Thống kê</div>
+  <div class="tabs">
+    <button class="tab active" onclick="showReportTab('overview',event)">Tổng quan</button>
+    <button class="tab" onclick="showReportTab('orders',event)">Danh sách đơn</button>
+  </div>
+  <div id="report-overview">
+    <div class="stats-grid" id="report-stats"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="card">
+        <div class="card-title">Top sản phẩm bán chạy</div>
+        <div class="chart-bar-wrap" id="top-products"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Đơn hàng gần đây</div>
+        <div id="recent-orders-mini"></div>
+      </div>
+    </div>
+  </div>
+  <div id="report-orders" class="hidden">
+    <div class="toolbar">
+      <input class="form-input" style="width:200px" type="text" id="order-search" placeholder="Tìm đơn hàng..." oninput="renderOrderList()">
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Mã đơn</th><th>Thời gian</th><th>Khách hàng</th>
+            <th>Nhân viên</th><th>SP</th>
+            <th class="num">Tổng tiền</th><th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="order-table"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- STAFF MGMT PANEL (Quản lý only) -->
+<div class="panel" id="panel-staffmgmt">
+  <div class="section-title" style="margin-bottom:20px">Quản lý Nhân viên</div>
+  <div class="tabs">
+    <button class="tab active" onclick="showStaffTab('logs',event)">Lịch sử In/Out</button>
+    <button class="tab" onclick="showStaffTab('revenue',event)">Doanh thu</button>
+    <button class="tab" onclick="showStaffTab('edit',event)">Chỉnh sửa NV</button>
+  </div>
+  <!-- Logs tab -->
+  <div id="stafftab-logs">
+    <div class="card">
+      <div class="card-title">Lịch sử đăng nhập / đăng xuất</div>
+      <div id="staff-logs-list" style="max-height:400px;overflow-y:auto"></div>
+    </div>
+  </div>
+  <!-- Revenue tab -->
+  <div id="stafftab-revenue" class="hidden">
+    <div class="stats-grid" id="staff-revenue-stats"></div>
+  </div>
+  <!-- Edit tab -->
+  <div id="stafftab-edit" class="hidden">
+    <div class="card">
+      <div class="card-title">Danh sách nhân viên</div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>#</th><th>Họ tên</th><th>Chức vụ</th><th>Màu</th><th>PIN</th><th>Thao tác</th></tr></thead>
+          <tbody id="staff-edit-table"></tbody>
+        </table>
+      </div>
+      <button class="btn btn-primary" style="margin-top:14px" onclick="openAddStaff()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+        Thêm nhân viên
+      </button>
+    </div>
+  </div>
+</div>
+</div><!-- end .main -->
+</div><!-- end .app -->
+
+<!-- MODAL: Add/Edit Product -->
+<div class="modal-overlay hidden" id="modal-product">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-product-title">Thêm sản phẩm</div>
+      <div class="modal-close" onclick="closeModal('modal-product')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+      </div>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-product-id">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Tên sản phẩm *</label>
+          <input class="form-input" type="text" id="p-name" placeholder="VD: Paracetamol 500mg">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Đơn vị tính *</label>
+          <input class="form-input" type="text" id="p-unit" placeholder="VD: Viên, Hộp, Chai">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Giá nhập (₫)</label>
+          <input class="form-input" type="number" id="p-cost" placeholder="0" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Giá bán (₫) *</label>
+          <input class="form-input" type="number" id="p-price" placeholder="0" min="0">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Tồn đầu kỳ</label>
+          <input class="form-input" type="number" id="p-opening" placeholder="0" min="0">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Danh mục</label>
+          <select class="form-select" id="p-category">
+            <option value="Thuốc">Thuốc</option>
+            <option value="Vật tư y tế">Vật tư y tế</option>
+            <option value="Thiết bị">Thiết bị</option>
+            <option value="Thực phẩm bổ sung">Thực phẩm bổ sung</option>
+            <option value="Khác">Khác</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-product')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveProduct()">Lưu sản phẩm</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: New Purchase -->
+<div class="modal-overlay hidden" id="modal-purchase">
+  <div class="modal" style="max-width:700px">
+    <div class="modal-header">
+      <div class="modal-title">Tạo phiếu nhập hàng</div>
+      <div class="modal-close" onclick="closeModal('modal-purchase')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Nhà cung cấp</label>
+          <input class="form-input" type="text" id="pur-supplier" placeholder="Tên nhà cung cấp">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ngày nhập</label>
+          <input class="form-input" type="date" id="pur-date">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ghi chú</label>
+        <input class="form-input" type="text" id="pur-note" placeholder="Ghi chú phiếu nhập">
+      </div>
+      <div style="border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:14px">
+        <div style="padding:12px 14px;background:var(--surface3);font-weight:600;font-size:13px;display:flex;justify-content:space-between;align-items:center">
+          <span>Chi tiết hàng nhập</span>
+          <button class="btn btn-outline btn-sm" onclick="addPurchaseRow()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px"><path d="M12 5v14M5 12h14"/></svg>
+            Thêm dòng
+          </button>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:13px">
+          <thead>
+            <tr style="background:var(--surface2)">
+              <th style="padding:8px 12px;text-align:left;font-size:12px;color:var(--text2)">Sản phẩm</th>
+              <th style="padding:8px 12px;text-align:right;font-size:12px;color:var(--text2)">SL nhập</th>
+              <th style="padding:8px 12px;text-align:right;font-size:12px;color:var(--text2)">Giá nhập</th>
+              <th style="padding:8px 12px;text-align:right;font-size:12px;color:var(--text2)">Thành tiền</th>
+              <th style="padding:8px 12px"></th>
+            </tr>
+          </thead>
+          <tbody id="purchase-rows"></tbody>
+          <tfoot>
+            <tr style="background:var(--surface3)">
+              <td colspan="3" style="padding:10px 14px;font-weight:700;text-align:right;font-size:13px">Tổng tiền nhập:</td>
+              <td style="padding:10px 14px;font-weight:700;font-size:15px;color:var(--green);text-align:right;font-family:'JetBrains Mono',monospace" id="pur-total">0 ₫</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-purchase')">Hủy</button>
+      <button class="btn btn-primary" onclick="savePurchase()">Xác nhận nhập hàng</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Checkout -->
+<div class="modal-overlay hidden" id="modal-checkout">
+  <div class="modal" style="max-width:460px">
+    <div class="modal-header">
+      <div class="modal-title">Thanh toán</div>
+      <div class="modal-close" onclick="closeModal('modal-checkout')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div id="checkout-receipt"></div>
+      <!-- Chi phí khác -->
+      <div class="other-cost-row" style="margin-top:16px">
+        <label>CHI PHÍ KHÁC (₫)</label>
+        <input type="number" id="other-cost" placeholder="0" min="0" oninput="calcTotal()" value="0">
+      </div>
+      <!-- Payment method as two buttons -->
+      <div class="form-label" style="margin-bottom:8px;margin-top:4px">PHƯƠNG THỨC THANH TOÁN</div>
+      <div class="payment-toggle">
+        <button class="pay-method-btn" id="pay-cash" onclick="selectPayMethod('Tiền mặt')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
+          TIỀN MẶT
+        </button>
+        <button class="pay-method-btn" id="pay-bank" onclick="selectPayMethod('Chuyển khoản')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          CHUYỂN KHOẢN
+        </button>
+      </div>
+      <div id="pay-method-warning" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none">⚠ Vui lòng chọn phương thức thanh toán!</div>
+      <!-- Total with other cost -->
+      <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:700;margin-top:8px;padding-top:10px;border-top:2px solid var(--border)">
+        <span>Tổng thanh toán:</span>
+        <span class="color-green mono" id="checkout-final-total">0 ₫</span>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-checkout')">Hủy</button>
+      <button class="btn btn-green" onclick="confirmCheckout()" style="padding:12px 28px;font-size:14px">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M5 13l4 4L19 7"/></svg>
+        Xác nhận thanh toán
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Order Detail -->
+<div class="modal-overlay hidden" id="modal-order-detail">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-header">
+      <div class="modal-title" id="order-detail-title">Chi tiết đơn hàng</div>
+      <div class="modal-close" onclick="closeModal('modal-order-detail')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+      </div>
+    </div>
+    <div class="modal-body" id="order-detail-body"></div>
+  </div>
+</div>
+
+<!-- MODAL: Purchase Detail -->
+<div class="modal-overlay hidden" id="modal-purchase-detail">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <div class="modal-title" id="pur-detail-title">Chi tiết phiếu nhập</div>
+      <div class="modal-close" onclick="closeModal('modal-purchase-detail')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+      </div>
+    </div>
+    <div class="modal-body" id="pur-detail-body"></div>
+  </div>
+</div>
+
+<!-- MODAL: Logout/Switch Staff -->
+<div class="modal-overlay hidden" id="modal-logout">
+  <div class="modal" style="max-width:360px">
+    <div class="modal-header">
+      <div class="modal-title">Tùy chọn ca làm việc</div>
+      <div class="modal-close" onclick="closeModal('modal-logout')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div id="logout-staff-info" style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--surface2);border-radius:var(--radius);margin-bottom:16px">
+        <div id="logout-avatar" style="width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:700;color:#fff;flex-shrink:0"></div>
+        <div>
+          <div id="logout-name" style="font-weight:600;font-size:15px"></div>
+          <div id="logout-role" style="font-size:12px;color:var(--text2)"></div>
+          <div id="logout-shift" style="font-size:11px;color:var(--text3);margin-top:2px"></div>
+        </div>
+      </div>
+      <button class="btn btn-outline" style="width:100%;justify-content:center;margin-bottom:8px" onclick="switchStaff()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        Đổi nhân viên
+      </button>
+      <button class="btn btn-red" style="width:100%;justify-content:center" onclick="closeModal('modal-logout');endShift()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        Kết thúc ca
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Edit Staff -->
+<div class="modal-overlay hidden" id="modal-edit-staff">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <div class="modal-title" id="edit-staff-title">Nhân viên</div>
+      <div class="modal-close" onclick="closeModal('modal-edit-staff')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+      </div>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-staff-id">
+      <div class="form-group">
+        <label class="form-label">Họ và tên *</label>
+        <input class="form-input" type="text" id="es-name" placeholder="Nguyễn Văn A">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Chức vụ *</label>
+        <input class="form-input" type="text" id="es-role" placeholder="Dược sĩ, Thu ngân, Quản lý...">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Mã PIN (để trống = không cần)</label>
+          <input class="form-input" type="password" id="es-pin" placeholder="4-6 chữ số" maxlength="6">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Màu đại diện</label>
+          <input class="form-input" type="color" id="es-color" value="#0369a1" style="padding:4px;height:38px">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Quyền hạn</label>
+        <select class="form-select" id="es-perm">
+          <option value="staff">Nhân viên</option>
+          <option value="manager">Quản lý</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('modal-edit-staff')">Hủy</button>
+      <button class="btn btn-primary" onclick="saveStaff()">Lưu</button>
+    </div>
+  </div>
+</div>
+
+<!-- CUSTOMER DISPLAY POPUP -->
+<div id="customer-display-popup">
+  <div class="cdp-header">
+    <div class="cdp-logo">
+      <div class="cdp-logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>
+      </div>
+      <div>
+        <div class="cdp-logo-text">MediPOS Y Tế</div>
+        <div class="cdp-logo-sub">Màn hình khách hàng</div>
+      </div>
+    </div>
+    <button class="cdp-close-btn" onclick="closeCustomerDisplay()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M6 18L18 6M6 6l12 12"/></svg>
+      Đóng màn hình
+    </button>
+  </div>
+
+  <div class="cdp-body">
+    <!-- Left: order items + totals -->
+    <div class="cdp-card">
+      <div class="cdp-card-header">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 001.99 1.61h9.72a2 2 0 001.99-1.61L23 6H6"/></svg>
+        <div class="cdp-card-title">Đơn hàng hiện tại</div>
+      </div>
+      <div class="cdp-items-list" id="cdp-items">
+        <div class="cdp-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 001.99 1.61h9.72a2 2 0 001.99-1.61L23 6H6"/></svg>
+          <div class="cdp-empty-text">Chưa có sản phẩm nào</div>
+        </div>
+      </div>
+      <div class="cdp-totals">
+        <div class="cdp-total-row"><span>Số mặt hàng</span><span id="cdp-count">0 loại</span></div>
+        <div class="cdp-total-row"><span>Tổng số lượng</span><span id="cdp-qty">0 sản phẩm</span></div>
+        <div class="cdp-total-row" id="cdp-other-row" style="display:none"><span>Chi phí khác</span><span id="cdp-other">0 ₫</span></div>
+        <div class="cdp-grand-total">
+          <span>Tổng cộng</span>
+          <span id="cdp-total">0 ₫</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: payment method / QR -->
+    <div class="cdp-card cdp-qr-card" id="cdp-right">
+      <!-- Content injected by JS -->
+      <div class="cdp-waiting">
+        <div class="cdp-waiting-anim"></div>
+        <div class="cdp-waiting-text">Đang chờ thanh toán...</div>
+        <div class="cdp-waiting-sub">Nhân viên đang xử lý đơn hàng của bạn</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cdp-thankyou">
+    Cảm ơn quý khách đã tin tưởng MediPOS Y Tế · Chúc quý khách sức khỏe 🏥
+  </div>
+</div>
+
+<script>
+// ===== CUSTOMER DISPLAY =====
+let cdpOpen = false;
+// Store info for QR
+const BANK_INFO = {
+  bankCode: 'MB',         // MBBank — đổi theo thực tế
+  accountNo: '0123456789', // Số tài khoản
+  accountName: 'MEDIPOS Y TE', // Tên tài khoản (không dấu)
+  template: 'compact2',
+};
+
+function openCustomerDisplay(){
+  cdpOpen = true;
+  document.getElementById('customer-display-popup').classList.add('active');
+  refreshCustomerDisplay();
+}
+
+function closeCustomerDisplay(){
+  cdpOpen = false;
+  document.getElementById('customer-display-popup').classList.remove('active');
+}
+
+function refreshCustomerDisplay(){
+  if(!cdpOpen) return;
+
+  // --- Items list ---
+  const itemsEl = document.getElementById('cdp-items');
+  if(cart.length === 0){
+    itemsEl.innerHTML = `<div class="cdp-empty">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 001.99 1.61h9.72a2 2 0 001.99-1.61L23 6H6"/></svg>
+      <div class="cdp-empty-text">Chưa có sản phẩm nào</div>
+    </div>`;
+  } else {
+    itemsEl.innerHTML = cart.map(i => `
+      <div class="cdp-item-row">
+        <div>
+          <div class="cdp-item-name">${i.name}</div>
+          <div class="cdp-item-unit">${i.unit} · ${fmtCDP(i.price)}/SP</div>
+        </div>
+        <div class="cdp-item-qty">×${i.qty}</div>
+        <div class="cdp-item-total">${fmtCDP(i.price * i.qty)}</div>
+      </div>
+    `).join('');
+  }
+
+  // --- Totals ---
+  const base = cart.reduce((s,i) => s + i.price * i.qty, 0);
+  const otherCostEl = document.getElementById('other-cost');
+  const other = otherCostEl ? (parseFloat(otherCostEl.value) || 0) : 0;
+  const total = base + other;
+
+  document.getElementById('cdp-count').textContent = cart.length + ' loại';
+  document.getElementById('cdp-qty').textContent = cart.reduce((s,i) => s+i.qty, 0) + ' sản phẩm';
+  document.getElementById('cdp-total').textContent = fmtCDP(total);
+  const otherRow = document.getElementById('cdp-other-row');
+  if(other > 0){
+    otherRow.style.display = 'flex';
+    document.getElementById('cdp-other').textContent = fmtCDP(other);
+  } else {
+    otherRow.style.display = 'none';
+  }
+
+  // --- Right panel ---
+  renderCDPRight(total);
+}
+
+function fmtCDP(n){
+  return new Intl.NumberFormat('vi-VN').format(Math.round(n)) + ' ₫';
+}
+
+function renderCDPRight(total){
+  const el = document.getElementById('cdp-right');
+
+  // Lấy phương thức từ modal checkout nếu đang mở, hoặc selectedPayMethod
+  const method = selectedPayMethod;
+
+  if(cart.length === 0){
+    el.innerHTML = `<div class="cdp-waiting">
+      <div class="cdp-waiting-anim"></div>
+      <div class="cdp-waiting-text">Đang chờ thanh toán...</div>
+      <div class="cdp-waiting-sub">Nhân viên đang xử lý đơn hàng của bạn</div>
+    </div>`;
+    return;
+  }
+
+  if(method === 'Tiền mặt'){
+    el.innerHTML = `
+      <div class="cdp-card-header" style="width:100%">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
+        <div class="cdp-card-title">Phương thức thanh toán</div>
+      </div>
+      <div class="cdp-cash-card">
+        <div class="cdp-cash-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/><circle cx="12" cy="14" r="2"/></svg>
+        </div>
+        <div class="cdp-method-badge">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
+          TIỀN MẶT
+        </div>
+        <div class="cdp-cash-text">Vui lòng thanh toán<br>${fmtCDP(total)}</div>
+        <div class="cdp-cash-sub">Nhân viên sẽ thu tiền và trả lại tiền thừa</div>
+      </div>`;
+    return;
+  }
+
+  if(method === 'Chuyển khoản'){
+    // VietQR API: https://img.vietqr.io/image/{bankCode}-{accountNo}-{template}.png?amount=...&addInfo=...&accountName=...
+    const amountRaw = Math.round(total);
+    const addInfo = encodeURIComponent('Thanh toan MediPOS');
+    const accountName = encodeURIComponent(BANK_INFO.accountName);
+    const qrUrl = `https://img.vietqr.io/image/${BANK_INFO.bankCode}-${BANK_INFO.accountNo}-${BANK_INFO.template}.png?amount=${amountRaw}&addInfo=${addInfo}&accountName=${accountName}`;
+
+    el.innerHTML = `
+      <div class="cdp-card-header" style="width:100%">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="0" y="0" width="11" height="11" rx="1" x="2" y="2"/><path d="M7 7h.01M17 7h.01M7 17h.01"/><rect width="5" height="5" x="14" y="14" rx="1"/><path d="M14 2h6a2 2 0 012 2v6"/><path d="M22 14v2M14 22h2"/></svg>
+        <div class="cdp-card-title">Quét mã QR để thanh toán</div>
+      </div>
+      <div class="cdp-qr-inner">
+        <div class="cdp-method-badge" style="background:#dcfce7;color:#065f46;border-color:#86efac">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          CHUYỂN KHOẢN
+        </div>
+        <div class="cdp-qr-wrap">
+          <img class="cdp-qr-img" src="${qrUrl}" alt="QR Code thanh toán" onerror="this.parentElement.innerHTML='<div style=&quot;width:200px;height:200px;display:flex;align-items:center;justify-content:center;background:#f8fafc;border-radius:8px;color:#94a3b8;font-size:12px;text-align:center;padding:16px&quot;>⚠️ Không tải được QR.<br>Kiểm tra kết nối mạng.</div>'">
+        </div>
+        <div class="cdp-qr-amount">${fmtCDP(total)}</div>
+        <div class="cdp-qr-info">
+          <b>Thông tin chuyển khoản</b>
+          Ngân hàng: <strong>${BANK_INFO.bankCode}Bank</strong><br>
+          Số TK: <strong style="font-family:'JetBrains Mono',monospace">${BANK_INFO.accountNo}</strong><br>
+          Tên TK: <strong>${BANK_INFO.accountName}</strong><br>
+          Nội dung: <strong>Thanh toan MediPOS</strong>
+        </div>
+      </div>`;
+    return;
+  }
+
+  // Chưa chọn phương thức
+  el.innerHTML = `<div class="cdp-waiting">
+    <div class="cdp-waiting-anim"></div>
+    <div class="cdp-waiting-text">Vui lòng chọn<br>phương thức thanh toán</div>
+    <div class="cdp-waiting-sub">Đang chờ nhân viên xác nhận</div>
+  </div>`;
+}
+</script>
+
+<script>
+let STAFF = [
+  {id:1,name:'Nguyễn Lan',role:'Dược sĩ',pin:'1234',color:'#0369a1',perm:'staff'},
+  {id:2,name:'Trần Minh',role:'Thu ngân',pin:'2345',color:'#059669',perm:'staff'},
+  {id:3,name:'Lê Hoa',role:'Quản lý',pin:'3456',color:'#7c3aed',perm:'manager'},
+  {id:4,name:'Phạm Tú',role:'Dược tá',pin:'4567',color:'#d97706',perm:'staff'},
+  {id:5,name:'Võ Nam',role:'Thu ngân',pin:'5678',color:'#dc2626',perm:'staff'},
+  {id:6,name:'Bùi Mai',role:'Dược sĩ',pin:'',color:'#0891b2',perm:'staff'},
+];
+let staffNextId = 7;
+let currentStaff = null;
+let selectedStaffId = null;
+let shiftStart = null;
+let pinBuffer = '';
+// Staff logs: {staffId, name, loginTime, logoutTime}
+let staffLogs = [];
+
+// ===== PIN NUMPAD =====
+function pinKey(k){
+  if(k==='del'){pinBuffer=pinBuffer.slice(0,-1);}
+  else if(pinBuffer.length<6){pinBuffer+=k;}
+  updatePinDisplay();
+}
+function updatePinDisplay(){
+  const d=document.getElementById('pin-display');
+  d.textContent=pinBuffer.length>0?'●'.repeat(pinBuffer.length):'——';
+}
+function initLogin(){
+  selectedStaffId=null;
+  pinBuffer='';
+  updatePinDisplay();
+  document.getElementById('login-error').style.display='none';
+  renderStaffGrid();
+}
+function renderStaffGrid(){
+  const grid=document.getElementById('staff-grid');
+  grid.innerHTML=STAFF.map(s=>{
+    const initials=s.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    return`<div class="staff-card ${selectedStaffId===s.id?'selected':''}" onclick="selectStaff(${s.id})">
+      <div class="staff-avatar" style="background:${s.color}">${initials}</div>
+      <div class="staff-card-name">${s.name}</div>
+      <div class="staff-card-role">${s.role}</div>
+    </div>`;
+  }).join('');
+}
+function selectStaff(id){
+  selectedStaffId=id;
+  pinBuffer='';
+  updatePinDisplay();
+  document.getElementById('login-error').style.display='none';
+  renderStaffGrid();
+}
+function doLogin(){
+  if(!selectedStaffId){showLoginError('Vui lòng chọn nhân viên!');return;}
+  const s=STAFF.find(x=>x.id===selectedStaffId);
+  if(s.pin && pinBuffer!==s.pin){showLoginError('Mã PIN không đúng!');pinBuffer='';updatePinDisplay();return;}
+  currentStaff=s;
+  shiftStart=new Date();
+  // Log login time
+  staffLogs.unshift({staffId:s.id,name:s.name,color:s.color,role:s.role,loginTime:new Date(),logoutTime:null});
+  document.getElementById('login-overlay').classList.add('hidden');
+  document.getElementById('login-error').style.display='none';
+  updateTopbarStaff();
+  // Show/hide manager tab
+  document.getElementById('nav-staffmgmt').classList.toggle('hidden', s.perm!=='manager');
+  showNotification('Xin chào '+s.name+' · Ca làm việc bắt đầu!','success');
+}
+function showLoginError(msg){
+  const el=document.getElementById('login-error');
+  document.getElementById('login-error-text').textContent=msg;
+  el.style.display='block';
+}
+function updateTopbarStaff(){
+  if(!currentStaff)return;
+  const initials=currentStaff.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('topbar-avatar').textContent=initials;
+  document.getElementById('topbar-avatar').style.background=currentStaff.color;
+  document.getElementById('topbar-staff-name').textContent=currentStaff.name;
+  document.getElementById('topbar-staff-role').textContent=currentStaff.role;
+}
+function openLogout(){
+  if(!currentStaff)return;
+  const initials=currentStaff.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('logout-avatar').textContent=initials;
+  document.getElementById('logout-avatar').style.background=currentStaff.color;
+  document.getElementById('logout-name').textContent=currentStaff.name;
+  document.getElementById('logout-role').textContent=currentStaff.role;
+  const dur=shiftStart?Math.floor((new Date()-shiftStart)/60000):0;
+  document.getElementById('logout-shift').textContent='Ca bắt đầu: '+shiftStart.toLocaleTimeString('vi-VN')+' ('+dur+' phút)';
+  openModal('modal-logout');
+}
+function switchStaff(){
+  // Log logout
+  const log=staffLogs.find(l=>l.staffId===currentStaff.id&&!l.logoutTime);
+  if(log)log.logoutTime=new Date();
+  closeModal('modal-logout');
+  currentStaff=null;shiftStart=null;
+  document.getElementById('login-overlay').classList.remove('hidden');
+  document.getElementById('nav-staffmgmt').classList.add('hidden');
+  initLogin();
+}
+function endShift(){
+  const dur=shiftStart?Math.floor((new Date()-shiftStart)/60000):0;
+  const log=staffLogs.find(l=>l.staffId===currentStaff.id&&!l.logoutTime);
+  if(log)log.logoutTime=new Date();
+  showNotification('Kết thúc ca '+currentStaff.name+' · '+dur+' phút làm việc','success');
+  currentStaff=null;shiftStart=null;
+  document.getElementById('topbar-staff-name').textContent='Nhân viên';
+  document.getElementById('topbar-staff-role').textContent='Ca làm việc';
+  document.getElementById('topbar-avatar').textContent='N';
+  document.getElementById('nav-staffmgmt').classList.add('hidden');
+  setTimeout(()=>{document.getElementById('login-overlay').classList.remove('hidden');initLogin();},1000);
+}
+
+// ===== DATA =====
+let products=[
+  {id:1,name:'Paracetamol 500mg',unit:'Hộp',cost:15000,price:25000,category:'Thuốc',opening:50,totalIn:200,totalOut:0},
+  {id:2,name:'Amoxicillin 500mg',unit:'Hộp',cost:45000,price:75000,category:'Thuốc',opening:30,totalIn:100,totalOut:0},
+  {id:3,name:'Vitamin C 1000mg',unit:'Hộp',cost:35000,price:55000,category:'Thực phẩm bổ sung',opening:40,totalIn:150,totalOut:0},
+  {id:4,name:'Betadine 10% 30ml',unit:'Chai',cost:28000,price:45000,category:'Vật tư y tế',opening:20,totalIn:80,totalOut:0},
+  {id:5,name:'Bông y tế 500g',unit:'Túi',cost:22000,price:35000,category:'Vật tư y tế',opening:25,totalIn:60,totalOut:0},
+  {id:6,name:'Băng dính y tế',unit:'Cuộn',cost:8000,price:15000,category:'Vật tư y tế',opening:60,totalIn:200,totalOut:0},
+  {id:7,name:'Khẩu trang y tế 50c',unit:'Hộp',cost:30000,price:50000,category:'Vật tư y tế',opening:80,totalIn:300,totalOut:0},
+  {id:8,name:'Nhiệt kế điện tử',unit:'Cái',cost:85000,price:150000,category:'Thiết bị',opening:10,totalIn:20,totalOut:0},
+  {id:9,name:'Nước muối sinh lý',unit:'Chai',cost:12000,price:20000,category:'Thuốc',opening:100,totalIn:400,totalOut:0},
+  {id:10,name:'Găng tay y tế M',unit:'Hộp',cost:55000,price:90000,category:'Vật tư y tế',opening:15,totalIn:50,totalOut:0},
+  {id:11,name:'Ibuprofen 400mg',unit:'Hộp',cost:38000,price:60000,category:'Thuốc',opening:35,totalIn:120,totalOut:0},
+  {id:12,name:'Omeprazole 20mg',unit:'Hộp',cost:42000,price:70000,category:'Thuốc',opening:25,totalIn:100,totalOut:0},
+];
+let orders=[];let purchases=[];let cart=[];
+let nextId=13;let nextOrderId=1;let nextPurId=1;
+let selectedPayMethod='';
+
+// ===== HELPERS =====
+function fmt(n){return new Intl.NumberFormat('vi-VN').format(Math.round(n))+' ₫'}
+function fmtNum(n){return new Intl.NumberFormat('vi-VN').format(Math.round(n))}
+function now(){return new Date().toLocaleString('vi-VN')}
+function stock(p){return p.opening+p.totalIn-p.totalOut}
+function pad(n){return String(n).padStart(3,'0')}
+function initials(name){return name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}
+
+// ===== CLOCK =====
+function updateClock(){document.getElementById('clock').textContent=new Date().toLocaleTimeString('vi-VN')}
+setInterval(updateClock,1000);updateClock();
+
+// ===== NAVIGATION =====
+function showPanel(id){
+  document.querySelectorAll('.panel,.panel-2col').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  document.getElementById('nav-'+id).classList.add('active');
+  if(id==='pos')renderProducts();
+  if(id==='inventory')renderInventory();
+  if(id==='purchase')renderPurchaseList();
+  if(id==='report')renderReport();
+  if(id==='staffmgmt')renderStaffMgmt();
+}
+function openModal(id){document.getElementById(id).classList.remove('hidden')}
+function closeModal(id){document.getElementById(id).classList.add('hidden')}
+
+// ===== POS =====
+function renderProducts(){
+  const q=(document.getElementById('pos-search').value||'').toLowerCase();
+  const grid=document.getElementById('product-grid');
+  const filtered=products.filter(p=>p.name.toLowerCase().includes(q));
+  grid.innerHTML=filtered.map(p=>{
+    const s=stock(p);
+    const cls=s===0?'out-stock':s<=5?'low-stock':'';
+    return`<div class="product-card ${cls}" onclick="addToCart(${p.id})">
+      <div class="pc-name">${p.name}</div>
+      <div class="pc-unit">${p.category} · ${p.unit}</div>
+      <div class="pc-price">${fmt(p.price)}</div>
+      <div class="pc-stock">Tồn: ${fmtNum(s)} ${p.unit}</div>
+    </div>`;
+  }).join('');
+}
+
+function addToCart(id){
+  const p=products.find(x=>x.id===id);if(!p)return;
+  const s=stock(p);
+  const existing=cart.find(x=>x.id===id);
+  if(existing){
+    if(existing.qty>=s){alert('Không đủ tồn kho!');return;}
+    existing.qty++;
+  }else{
+    if(s===0){alert('Hết hàng!');return;}
+    cart.push({id,name:p.name,unit:p.unit,price:p.price,qty:1});
+  }
+  renderCart();
+}
+
+function changeQty(id,delta){
+  const item=cart.find(x=>x.id===id);if(!item)return;
+  const p=products.find(x=>x.id===id);
+  item.qty+=delta;
+  if(item.qty<=0){cart=cart.filter(x=>x.id!==id);}
+  else if(item.qty>stock(p)){item.qty=stock(p);alert('Không đủ tồn kho!');}
+  renderCart();
+}
+
+function removeCartItem(id){cart=cart.filter(x=>x.id!==id);renderCart();}
+function clearCart(){cart=[];renderCart();}
+
+function renderCart(){
+  const container=document.getElementById('cart-items');
+  const empty=document.getElementById('cart-empty');
+  const header=document.getElementById('cart-list-header');
+  if(cart.length===0){
+    empty.style.display='flex';
+    container.querySelectorAll('.cart-item').forEach(e=>e.remove());
+    header.style.display='none';
+    document.getElementById('cart-count').textContent='0';
+    document.getElementById('cart-qty').textContent='0';
+    document.getElementById('cart-total').textContent='0 ₫';
+    return;
+  }
+  empty.style.display='none';
+  header.style.display='grid';
+  container.querySelectorAll('.cart-item').forEach(e=>e.remove());
+  cart.forEach(item=>{
+    const div=document.createElement('div');
+    div.className='cart-item';
+    div.id='ci-'+item.id;
+    div.innerHTML=`
+      <div style="flex:1;min-width:0">
+        <div class="ci-name">${item.name}</div>
+        <div class="ci-unit">${item.unit} · ${fmt(item.price)}/SP</div>
+        <div class="ci-qty" style="margin-top:6px">
+          <button class="qty-btn" onclick="changeQty(${item.id},-1)">−</button>
+          <span class="qty-val">${item.qty}</span>
+          <button class="qty-btn" onclick="changeQty(${item.id},1)">+</button>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
+        <div style="background:var(--primary-bg);color:var(--primary);border-radius:6px;padding:2px 10px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700">${item.qty}</div>
+        <div class="ci-price">${fmt(item.price*item.qty)}</div>
+        <div class="ci-del" onclick="removeCartItem(${item.id})"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:15px;height:15px"><path d="M6 18L18 6M6 6l12 12"/></svg></div>
+      </div>`;
+    container.insertBefore(div,empty);
+  });
+  const total=cart.reduce((s,i)=>s+i.price*i.qty,0);
+  document.getElementById('cart-count').textContent=cart.length;
+  document.getElementById('cart-qty').textContent=cart.reduce((s,i)=>s+i.qty,0);
+  document.getElementById('cart-total').textContent=fmt(total);
+  refreshCustomerDisplay();
+}
+
+// ===== CHECKOUT =====
+function selectPayMethod(method){
+  selectedPayMethod=method;
+  document.getElementById('pay-cash').classList.toggle('selected',method==='Tiền mặt');
+  document.getElementById('pay-bank').classList.toggle('selected',method==='Chuyển khoản');
+  document.getElementById('pay-method-warning').style.display='none';
+  refreshCustomerDisplay();
+}
+
+function calcTotal(){
+  const base=cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const other=parseFloat(document.getElementById('other-cost').value)||0;
+  document.getElementById('checkout-final-total').textContent=fmt(base+other);
+  refreshCustomerDisplay();
+}
+
+function checkout(){
+  if(cart.length===0){alert('Giỏ hàng trống!');return;}
+  const total=cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const customer=document.getElementById('customer-name').value||'Khách lẻ';
+  const phone=document.getElementById('customer-phone').value||'';
+  const staffName=currentStaff?currentStaff.name:'—';
+  const timeStr=now();
+  // Build receipt with new layout
+  const html=`<div class="receipt">
+    <div class="receipt-header">
+      <div class="receipt-header-left">
+        <div class="receipt-title">🏥 MediPOS Y TẾ</div>
+        <div class="receipt-time">${timeStr}</div>
+      </div>
+      <div class="receipt-header-right">
+        <div class="receipt-staff">NV: ${staffName}</div>
+        <div class="receipt-customer">👤 ${customer}${phone?' · '+phone:''}</div>
+      </div>
+    </div>
+    <hr class="receipt-divider">
+    <div style="display:grid;grid-template-columns:1fr 40px 1fr;gap:4px;font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">
+      <span>Sản phẩm</span><span style="text-align:center">SL</span><span style="text-align:right">Thành tiền</span>
+    </div>
+    ${cart.map(i=>`<div style="display:grid;grid-template-columns:1fr 40px 1fr;gap:4px;margin-bottom:5px;font-size:13px">
+      <span>${i.name}<br><span style="font-size:10px;color:var(--text3)">${i.unit} · ${fmt(i.price)}/SP</span></span>
+      <span style="text-align:center;font-weight:700;color:var(--primary)">${i.qty}</span>
+      <span style="text-align:right;font-family:'JetBrains Mono',monospace;font-weight:600">${fmt(i.price*i.qty)}</span>
+    </div>`).join('')}
+    <hr class="receipt-divider">
+    <div class="receipt-total"><span>TỔNG HÀNG</span><span class="color-green">${fmt(total)}</span></div>
+  </div>`;
+  document.getElementById('checkout-receipt').innerHTML=html;
+  document.getElementById('other-cost').value='';
+  document.getElementById('checkout-final-total').textContent=fmt(total);
+  selectedPayMethod='';
+  document.getElementById('pay-cash').classList.remove('selected');
+  document.getElementById('pay-bank').classList.remove('selected');
+  document.getElementById('pay-method-warning').style.display='none';
+  openModal('modal-checkout');
+}
+
+function confirmCheckout(){
+  if(!selectedPayMethod){
+    document.getElementById('pay-method-warning').style.display='block';
+    return;
+  }
+  const base=cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const other=parseFloat(document.getElementById('other-cost').value)||0;
+  const total=base+other;
+  const customer=document.getElementById('customer-name').value||'Khách lẻ';
+  const phone=document.getElementById('customer-phone').value||'';
+  const customerType=document.getElementById('customer-type').value||'Khách lẻ';
+  const orderId='DH'+pad(nextOrderId++);
+  const staffInfo=currentStaff?{id:currentStaff.id,name:currentStaff.name,role:currentStaff.role}:{name:'—',role:''};
+  const order={id:orderId,time:now(),customer,phone,customerType,items:JSON.parse(JSON.stringify(cart)),total,otherCost:other,method:selectedPayMethod,staff:staffInfo};
+  orders.unshift(order);
+  cart.forEach(ci=>{
+    const p=products.find(x=>x.id===ci.id);
+    if(p)p.totalOut+=ci.qty;
+  });
+  const savedMethod=selectedPayMethod;
+  cart=[];
+  document.getElementById('customer-name').value='';
+  document.getElementById('customer-phone').value='';
+  closeModal('modal-checkout');
+  selectedPayMethod='';
+  renderCart();
+  renderProducts();
+  refreshCustomerDisplay();
+  showNotification('Đơn '+orderId+' thanh toán thành công! ('+savedMethod+')','success');
+}
+
+// ===== INVENTORY =====
+function renderInventory(){
+  const q=(document.getElementById('inv-search').value||'').toLowerCase();
+  const tbody=document.getElementById('inventory-table');
+  const list=products.filter(p=>p.name.toLowerCase().includes(q));
+  tbody.innerHTML=list.map((p,i)=>{
+    const s=stock(p);
+    const badge=s===0?'<span class="badge badge-red">Hết hàng</span>':s<=5?'<span class="badge badge-amber">Sắp hết</span>':'<span class="badge badge-green">Còn hàng</span>';
+    return`<tr>
+      <td>${i+1}</td>
+      <td><strong>${p.name}</strong><br><small style="color:var(--text2)">${p.category}</small></td>
+      <td>${p.unit}</td>
+      <td class="num">${fmt(p.cost)}</td>
+      <td class="num">${fmt(p.price)}</td>
+      <td class="num">${fmtNum(p.opening)}</td>
+      <td class="num">${fmtNum(p.totalIn)}</td>
+      <td class="num">${fmtNum(p.totalOut)}</td>
+      <td class="num fw-bold">${fmtNum(s)}</td>
+      <td>${badge}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="openEditProduct(${p.id})">Sửa</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function openAddProduct(){
+  document.getElementById('modal-product-title').textContent='Thêm sản phẩm';
+  document.getElementById('edit-product-id').value='';
+  ['p-name','p-unit','p-cost','p-price','p-opening'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('p-category').value='Thuốc';
+  openModal('modal-product');
+}
+
+function openEditProduct(id){
+  const p=products.find(x=>x.id===id);if(!p)return;
+  document.getElementById('modal-product-title').textContent='Sửa sản phẩm';
+  document.getElementById('edit-product-id').value=p.id;
+  document.getElementById('p-name').value=p.name;
+  document.getElementById('p-unit').value=p.unit;
+  document.getElementById('p-cost').value=p.cost;
+  document.getElementById('p-price').value=p.price;
+  document.getElementById('p-opening').value=p.opening;
+  document.getElementById('p-category').value=p.category;
+  openModal('modal-product');
+}
+
+function saveProduct(){
+  const name=document.getElementById('p-name').value.trim();
+  const unit=document.getElementById('p-unit').value.trim();
+  const price=parseFloat(document.getElementById('p-price').value)||0;
+  if(!name||!unit||!price){alert('Vui lòng điền đầy đủ thông tin bắt buộc!');return;}
+  const editId=document.getElementById('edit-product-id').value;
+  const data={name,unit,cost:parseFloat(document.getElementById('p-cost').value)||0,price,opening:parseInt(document.getElementById('p-opening').value)||0,category:document.getElementById('p-category').value};
+  if(editId){const p=products.find(x=>x.id===parseInt(editId));if(p)Object.assign(p,data);}
+  else{products.push({id:nextId++,...data,totalIn:0,totalOut:0});}
+  closeModal('modal-product');renderInventory();renderProducts();
+}
+
+// ===== PURCHASE =====
+function openNewPurchase(){
+  document.getElementById('pur-supplier').value='';
+  document.getElementById('pur-date').value=new Date().toISOString().slice(0,10);
+  document.getElementById('pur-note').value='';
+  document.getElementById('purchase-rows').innerHTML='';
+  document.getElementById('pur-total').textContent='0 ₫';
+  addPurchaseRow();
+  openModal('modal-purchase');
+}
+
+function addPurchaseRow(){
+  const tbody=document.getElementById('purchase-rows');
+  const rowId='pr-'+Date.now();
+  const opts=products.map(p=>`<option value="${p.id}">${p.name} (${p.unit})</option>`).join('');
+  const tr=document.createElement('tr');tr.id=rowId;
+  tr.innerHTML=`
+    <td style="padding:8px"><select class="form-select" style="font-size:13px" onchange="updatePurTotal()">${opts}</select></td>
+    <td style="padding:8px"><input type="number" class="form-input" placeholder="SL" min="1" value="1" style="text-align:right;font-size:13px" oninput="updatePurTotal()"></td>
+    <td style="padding:8px"><input type="number" class="form-input" placeholder="Giá" min="0" style="text-align:right;font-size:13px" oninput="updatePurTotal()"></td>
+    <td style="padding:8px;text-align:right;font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--green);font-weight:600" class="row-sub">0 ₫</td>
+    <td style="padding:8px"><button class="btn btn-outline btn-sm" style="padding:4px 8px;color:var(--red)" onclick="document.getElementById('${rowId}').remove();updatePurTotal()">✕</button></td>`;
+  tbody.appendChild(tr);
+  const sel=tr.querySelector('select');
+  const p=products.find(x=>x.id===parseInt(sel.value));
+  if(p)tr.querySelectorAll('input')[1].value=p.cost;
+  sel.addEventListener('change',function(){
+    const pp=products.find(x=>x.id===parseInt(this.value));
+    if(pp)tr.querySelectorAll('input')[1].value=pp.cost;
+    updatePurTotal();
+  });
+}
+
+function updatePurTotal(){
+  let total=0;
+  document.querySelectorAll('#purchase-rows tr').forEach(tr=>{
+    const inputs=tr.querySelectorAll('input');
+    const qty=parseInt(inputs[0].value)||0;
+    const cost=parseFloat(inputs[1].value)||0;
+    const sub=qty*cost;total+=sub;
+    tr.querySelector('.row-sub').textContent=fmt(sub);
+  });
+  document.getElementById('pur-total').textContent=fmt(total);
+}
+
+function savePurchase(){
+  const supplier=document.getElementById('pur-supplier').value||'Không rõ';
+  const date=document.getElementById('pur-date').value||new Date().toISOString().slice(0,10);
+  const note=document.getElementById('pur-note').value;
+  const rows=[];let total=0;
+  document.querySelectorAll('#purchase-rows tr').forEach(tr=>{
+    const sel=tr.querySelector('select');
+    const inputs=tr.querySelectorAll('input');
+    const qty=parseInt(inputs[0].value)||0;
+    const cost=parseFloat(inputs[1].value)||0;
+    if(qty>0&&sel){
+      const pid=parseInt(sel.value);
+      const p=products.find(x=>x.id===pid);
+      if(p){rows.push({productId:pid,name:p.name,unit:p.unit,qty,cost,sub:qty*cost});total+=qty*cost;}
+    }
+  });
+  if(rows.length===0){alert('Chưa có hàng nhập!');return;}
+  const purId='PN'+pad(nextPurId++);
+  purchases.unshift({id:purId,supplier,date,note,items:rows,total,time:now()});
+  rows.forEach(r=>{const p=products.find(x=>x.id===r.productId);if(p){p.totalIn+=r.qty;p.cost=r.cost;}});
+  closeModal('modal-purchase');renderPurchaseList();renderInventory();
+  showNotification('Phiếu nhập '+purId+' đã lưu!','success');
+}
+
+function renderPurchaseList(){
+  const tbody=document.getElementById('purchase-table');
+  if(purchases.length===0){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text3)">Chưa có phiếu nhập</td></tr>';return;}
+  tbody.innerHTML=purchases.map(p=>`<tr>
+    <td><strong class="color-primary">${p.id}</strong></td>
+    <td>${p.date}</td><td>${p.supplier}</td>
+    <td style="text-align:center">${p.items.length}</td>
+    <td class="num fw-bold color-green">${fmt(p.total)}</td>
+    <td><span class="badge badge-green">Đã nhập</span></td>
+    <td><button class="btn btn-outline btn-sm" onclick="viewPurchaseDetail('${p.id}')">Chi tiết</button></td>
+  </tr>`).join('');
+}
+
+function viewPurchaseDetail(id){
+  const pur=purchases.find(x=>x.id===id);if(!pur)return;
+  document.getElementById('pur-detail-title').textContent='Phiếu nhập: '+id;
+  document.getElementById('pur-detail-body').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <div><div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;margin-bottom:3px">Nhà cung cấp</div><div>${pur.supplier}</div></div>
+      <div><div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;margin-bottom:3px">Ngày nhập</div><div>${pur.date}</div></div>
+      <div><div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;margin-bottom:3px">Thời gian tạo</div><div>${pur.time}</div></div>
+      <div><div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;margin-bottom:3px">Ghi chú</div><div>${pur.note||'—'}</div></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Sản phẩm</th><th>ĐVT</th><th class="num">SL nhập</th><th class="num">Giá nhập</th><th class="num">Thành tiền</th></tr></thead>
+        <tbody>${pur.items.map(r=>`<tr><td>${r.name}</td><td>${r.unit}</td><td class="num">${fmtNum(r.qty)}</td><td class="num">${fmt(r.cost)}</td><td class="num fw-bold color-green">${fmt(r.sub)}</td></tr>`).join('')}</tbody>
+        <tfoot><tr style="background:var(--surface3)"><td colspan="4" style="padding:10px 14px;font-weight:700;text-align:right">Tổng cộng:</td><td class="num fw-bold" style="font-size:16px;color:var(--green);padding:10px 14px">${fmt(pur.total)}</td></tr></tfoot>
+      </table>
+    </div>`;
+  openModal('modal-purchase-detail');
+}
+
+// ===== REPORT =====
+function showReportTab(tab,e){
+  document.querySelectorAll('#panel-report .tab').forEach(t=>t.classList.remove('active'));
+  if(e)e.target.classList.add('active');
+  document.getElementById('report-overview').classList.toggle('hidden',tab!=='overview');
+  document.getElementById('report-orders').classList.toggle('hidden',tab!=='orders');
+  if(tab==='orders')renderOrderList();
+}
+
+function renderReport(){
+  const totalRev=orders.reduce((s,o)=>s+o.total,0);
+  const totalOrders=orders.length;
+  const totalProfit=orders.reduce((s,o)=>s+o.items.reduce((ss,i)=>{const p=products.find(x=>x.id===i.id);return ss+(i.price-(p?p.cost:0))*i.qty;},0),0);
+  const totalInv=products.reduce((s,p)=>s+stock(p)*p.cost,0);
+  document.getElementById('report-stats').innerHTML=`
+    <div class="stat-card green"><div class="stat-label">Doanh thu</div><div class="stat-value">${fmt(totalRev)}</div><div class="stat-sub">${totalOrders} đơn hàng</div></div>
+    <div class="stat-card purple"><div class="stat-label">Lợi nhuận gộp</div><div class="stat-value">${fmt(totalProfit)}</div><div class="stat-sub">Doanh thu − giá vốn</div></div>
+    <div class="stat-card blue"><div class="stat-label">Số đơn hàng</div><div class="stat-value">${totalOrders}</div><div class="stat-sub">Đã thanh toán</div></div>
+    <div class="stat-card amber"><div class="stat-label">Giá trị tồn kho</div><div class="stat-value">${fmt(totalInv)}</div><div class="stat-sub">${products.length} sản phẩm</div></div>`;
+  const sales={};
+  orders.forEach(o=>o.items.forEach(i=>{sales[i.name]=(sales[i.name]||0)+i.price*i.qty;}));
+  const sorted=Object.entries(sales).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const max=sorted[0]?sorted[0][1]:1;
+  document.getElementById('top-products').innerHTML=sorted.length?sorted.map(([n,v])=>`
+    <div class="chart-bar-row">
+      <div class="chart-bar-label">${n.length>15?n.slice(0,15)+'…':n}</div>
+      <div class="chart-bar-track"><div class="chart-bar-fill" style="width:${(v/max*100).toFixed(1)}%"></div></div>
+      <div class="chart-bar-val">${fmt(v)}</div>
+    </div>`).join(''):'<div style="color:var(--text3);font-size:13px;padding:20px 0">Chưa có dữ liệu</div>';
+  document.getElementById('recent-orders-mini').innerHTML=orders.slice(0,5).length?
+    orders.slice(0,5).map(o=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div><div style="font-weight:500;font-size:13px">${o.id}</div><div style="font-size:11px;color:var(--text3)">${o.customer}</div></div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;color:var(--green)">${fmt(o.total)}</div>
+    </div>`).join(''):'<div style="color:var(--text3);font-size:13px;padding:20px 0">Chưa có đơn hàng</div>';
+}
+
+function renderOrderList(){
+  const q=(document.getElementById('order-search').value||'').toLowerCase();
+  const tbody=document.getElementById('order-table');
+  const list=orders.filter(o=>o.id.toLowerCase().includes(q)||o.customer.toLowerCase().includes(q));
+  if(list.length===0){tbody.innerHTML='<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text3)">Không có đơn hàng</td></tr>';return;}
+  tbody.innerHTML=list.map(o=>`<tr>
+    <td><strong class="color-primary">${o.id}</strong></td>
+    <td style="font-size:12px;color:var(--text2)">${o.time}</td>
+    <td>${o.customer}</td>
+    <td style="font-size:12px">${o.staff?o.staff.name:'—'}</td>
+    <td style="text-align:center">${o.items.length}</td>
+    <td class="num fw-bold color-green">${fmt(o.total)}</td>
+    <td><button class="btn btn-outline btn-sm" onclick="viewOrderDetail('${o.id}')">Chi tiết</button></td>
+  </tr>`).join('');
+}
+
+function viewOrderDetail(id){
+  const o=orders.find(x=>x.id===id);if(!o)return;
+  document.getElementById('order-detail-title').textContent='Đơn hàng: '+id;
+  document.getElementById('order-detail-body').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <div><div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;margin-bottom:3px">Khách hàng</div><div>${o.customer}${o.phone?' · '+o.phone:''}</div></div>
+      <div><div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;margin-bottom:3px">Thời gian</div><div style="font-size:13px">${o.time}</div></div>
+      <div><div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;margin-bottom:3px">Thanh toán</div><div><span class="badge badge-green">${o.method}</span></div></div>
+      <div><div style="font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;margin-bottom:3px">Nhân viên</div><div><span style="font-weight:500">${o.staff?o.staff.name:'—'}</span>${o.staff?`<span style="font-size:11px;color:var(--text2);margin-left:6px">${o.staff.role}</span>`:''}</div></div>
+    </div>
+    <div class="table-wrap" style="margin-bottom:16px">
+      <table>
+        <thead><tr><th>Sản phẩm</th><th class="num">SL</th><th class="num">Đơn giá</th><th class="num">Thành tiền</th></tr></thead>
+        <tbody>${o.items.map(i=>`<tr><td>${i.name}<br><small style="color:var(--text2)">${i.unit}</small></td><td class="num fw-bold">${i.qty}</td><td class="num">${fmt(i.price)}</td><td class="num fw-bold">${fmt(i.price*i.qty)}</td></tr>`).join('')}</tbody>
+      </table>
+    </div>
+    ${o.otherCost?`<div style="display:flex;justify-content:space-between;font-size:14px;margin-bottom:6px"><span style="color:var(--text2)">Chi phí khác:</span><span class="mono">${fmt(o.otherCost)}</span></div>`:''}
+    <div style="text-align:right;font-size:18px;font-weight:700">Tổng cộng: <span class="color-green mono">${fmt(o.total)}</span></div>`;
+  openModal('modal-order-detail');
+}
+
+// ===== STAFF MANAGEMENT =====
+function showStaffTab(tab,e){
+  document.querySelectorAll('#panel-staffmgmt .tab').forEach(t=>t.classList.remove('active'));
+  if(e)e.target.classList.add('active');
+  ['logs','revenue','edit'].forEach(t=>document.getElementById('stafftab-'+t).classList.toggle('hidden',t!==tab));
+  if(tab==='logs')renderStaffLogs();
+  if(tab==='revenue')renderStaffRevenue();
+  if(tab==='edit')renderStaffEditTable();
+}
+
+function renderStaffMgmt(){
+  // default: logs tab
+  document.querySelectorAll('#panel-staffmgmt .tab').forEach((t,i)=>t.classList.toggle('active',i===0));
+  ['logs','revenue','edit'].forEach((t,i)=>document.getElementById('stafftab-'+t).classList.toggle('hidden',i!==0));
+  renderStaffLogs();
+}
+
+function renderStaffLogs(){
+  const el=document.getElementById('staff-logs-list');
+  if(staffLogs.length===0){el.innerHTML='<div style="padding:24px;text-align:center;color:var(--text3)">Chưa có lịch sử đăng nhập</div>';return;}
+  el.innerHTML=staffLogs.map(log=>{
+    const loginStr=log.loginTime.toLocaleString('vi-VN');
+    const logoutStr=log.logoutTime?log.logoutTime.toLocaleString('vi-VN'):'<span style="color:var(--green);font-weight:600">Đang làm việc</span>';
+    const dur=log.logoutTime?Math.floor((log.logoutTime-log.loginTime)/60000)+'p':'—';
+    return`<div class="staff-log-row">
+      <div class="staff-log-avatar" style="background:${log.color}">${initials(log.name)}</div>
+      <div class="staff-log-info">
+        <div class="staff-log-name">${log.name} <span style="font-size:11px;font-weight:400;color:var(--text2)">${log.role}</span></div>
+        <div class="staff-log-detail">Vào: ${loginStr} · Ra: ${logoutStr} · ${dur}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderStaffRevenue(){
+  const el=document.getElementById('staff-revenue-stats');
+  const statsMap={};
+  STAFF.forEach(s=>{statsMap[s.id]={name:s.name,role:s.role,color:s.color,revenue:0,orders:0};});
+  orders.forEach(o=>{
+    if(o.staff&&statsMap[o.staff.id]){
+      statsMap[o.staff.id].revenue+=o.total;
+      statsMap[o.staff.id].orders++;
+    }
+  });
+  el.innerHTML=Object.values(statsMap).map(s=>`
+    <div class="stat-card" style="border-left:3px solid ${s.color}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <div style="width:32px;height:32px;border-radius:50%;background:${s.color};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff">${initials(s.name)}</div>
+        <div>
+          <div style="font-weight:600;font-size:13px">${s.name}</div>
+          <div style="font-size:11px;color:var(--text2)">${s.role}</div>
+        </div>
+      </div>
+      <div class="stat-value" style="font-size:18px">${fmt(s.revenue)}</div>
+      <div class="stat-sub">${s.orders} đơn hàng</div>
+    </div>`).join('');
+}
+
+function renderStaffEditTable(){
+  const tbody=document.getElementById('staff-edit-table');
+  tbody.innerHTML=STAFF.map((s,i)=>`<tr>
+    <td>${i+1}</td>
+    <td><div style="display:flex;align-items:center;gap:8px"><div style="width:28px;height:28px;border-radius:50%;background:${s.color};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff">${initials(s.name)}</div>${s.name}</div></td>
+    <td>${s.role}</td>
+    <td><div style="width:20px;height:20px;border-radius:4px;background:${s.color};border:1px solid var(--border)"></div></td>
+    <td>${s.pin?'••••':'—'}</td>
+    <td><button class="btn btn-outline btn-sm" onclick="openEditStaff(${s.id})" style="margin-right:4px">Sửa</button><button class="btn btn-sm" style="background:var(--red-bg);color:var(--red);border:none" onclick="deleteStaff(${s.id})">Xóa</button></td>
+  </tr>`).join('');
+}
+
+function openAddStaff(){
+  document.getElementById('edit-staff-title').textContent='Thêm nhân viên';
+  document.getElementById('edit-staff-id').value='';
+  document.getElementById('es-name').value='';
+  document.getElementById('es-role').value='';
+  document.getElementById('es-pin').value='';
+  document.getElementById('es-color').value='#0369a1';
+  document.getElementById('es-perm').value='staff';
+  openModal('modal-edit-staff');
+}
+
+function openEditStaff(id){
+  const s=STAFF.find(x=>x.id===id);if(!s)return;
+  document.getElementById('edit-staff-title').textContent='Sửa nhân viên';
+  document.getElementById('edit-staff-id').value=s.id;
+  document.getElementById('es-name').value=s.name;
+  document.getElementById('es-role').value=s.role;
+  document.getElementById('es-pin').value=s.pin||'';
+  document.getElementById('es-color').value=s.color;
+  document.getElementById('es-perm').value=s.perm||'staff';
+  openModal('modal-edit-staff');
+}
+
+function saveStaff(){
+  const name=document.getElementById('es-name').value.trim();
+  const role=document.getElementById('es-role').value.trim();
+  if(!name||!role){alert('Vui lòng nhập đầy đủ tên và chức vụ!');return;}
+  const pin=document.getElementById('es-pin').value.trim();
+  const color=document.getElementById('es-color').value;
+  const perm=document.getElementById('es-perm').value;
+  const editId=parseInt(document.getElementById('edit-staff-id').value);
+  if(editId){
+    const s=STAFF.find(x=>x.id===editId);
+    if(s)Object.assign(s,{name,role,pin,color,perm});
+  }else{
+    STAFF.push({id:staffNextId++,name,role,pin,color,perm});
+  }
+  closeModal('modal-edit-staff');
+  renderStaffEditTable();
+  showNotification('Đã lưu thông tin nhân viên!','success');
+}
+
+function deleteStaff(id){
+  if(!confirm('Xóa nhân viên này?'))return;
+  if(currentStaff&&currentStaff.id===id){alert('Không thể xóa nhân viên đang đăng nhập!');return;}
+  STAFF=STAFF.filter(s=>s.id!==id);
+  renderStaffEditTable();
+}
+
+// ===== NOTIFICATION =====
+function showNotification(msg,type){
+  const el=document.createElement('div');
+  el.style.cssText='position:fixed;bottom:24px;right:24px;z-index:9999;padding:14px 20px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.15);max-width:340px;animation:slideIn .2s ease';
+  el.style.background=type==='success'?'#059669':'#dc2626';
+  el.style.color='#fff';
+  el.textContent=msg;
+  document.body.appendChild(el);
+  setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity .3s';setTimeout(()=>el.remove(),300)},3000);
+}
+
+// ===== INIT =====
+const styleEl=document.createElement('style');
+styleEl.textContent='@keyframes slideIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}';
+document.head.appendChild(styleEl);
+initLogin();
+renderProducts();
+</script>
+</body>
+</html>

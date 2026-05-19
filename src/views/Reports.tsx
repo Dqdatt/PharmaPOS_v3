@@ -1,110 +1,329 @@
-import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell, PieChart, Pie } from 'recharts';
-
-const data = [
-  { name: 'T2', value: 8.2 },
-  { name: 'T3', value: 12.5 },
-  { name: 'T4', value: 9.8 },
-  { name: 'T5', value: 15.2 },
-  { name: 'T6', value: 11.4 },
-  { name: 'T7', value: 18.5 },
-  { name: 'CN', value: 12.4 },
-];
-
-const pieData = [
-  { name: 'Tiền mặt', value: 65, color: '#006b5f' },
-  { name: 'Chuyển khoản', value: 35, color: '#6df5e1' },
-];
+import { useState } from 'react';
+import { usePos, Invoice } from '../contexts/PosContext';
+import DetailModal from '../components/modals/DetailModal';
+import ExportCKModal from '../components/modals/ExportCKModal';
+import ConfirmModal from '../components/modals/ConfirmModal';
+import { showNotification } from '../utils/toast';
 
 export default function Reports() {
+  const { invoices, products, getStock, formatPrice, deleteInvoice } = usePos();
+  const [reportTab, setReportTab] = useState<'overview' | 'orders'>('overview');
+  const [orderSearchQuery, setOrderSearchQuery] = useState('');
+  const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null);
+  const [showExportCKModal, setShowExportCKModal] = useState(false);
+  const [orderStatusTab, setOrderStatusTab] = useState<'valid' | 'deleted'>('valid');
+  const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
+
+  const validInvoices = invoices.filter(inv => inv.status !== 'deleted');
+
+  const totalRevenue = validInvoices.reduce((sum, inv) => sum + inv.total, 0);
+  const totalProfit = validInvoices.reduce((sum, inv) => {
+    const costOfGoods = inv.items.reduce((s, i) => {
+      const p = products.find(x => x.id === i.id);
+      return s + (p ? p.importPrice : 0) * i.qty;
+    }, 0);
+    return sum + (inv.total - costOfGoods);
+  }, 0);
+  const inventoryValue = products.reduce((sum, p) => sum + getStock(p) * p.importPrice, 0);
+
+  const topProducts = (() => {
+    const salesMap: Record<string, number> = {};
+    validInvoices.forEach(inv => {
+      inv.items.forEach(i => {
+        salesMap[i.name] = (salesMap[i.name] || 0) + i.price * i.qty;
+      });
+    });
+    return Object.entries(salesMap)
+      .map(([name, revenue]) => ({ name, revenue }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+  })();
+
+  const filteredInvoices = invoices.filter(i => {
+    const matchSearch = i.id.toLowerCase().includes(orderSearchQuery.toLowerCase()) || 
+                        i.customer.name.toLowerCase().includes(orderSearchQuery.toLowerCase());
+    const matchStatus = orderStatusTab === 'valid' ? i.status !== 'deleted' : i.status === 'deleted';
+    return matchSearch && matchStatus;
+  });
+
+  const parseInvDateToISO = (timeStr: string) => {
+    const parts = timeStr.split(/[\s,]+/); 
+    const dateStr = parts.find(p => p.includes('/'));
+    if (!dateStr) return '';
+    const [d, m, y] = dateStr.split('/');
+    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+  };
+
+  const todayISO = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+
+  const invoicesToday = validInvoices.filter(inv => parseInvDateToISO(inv.time) === todayISO);
+  const otherCostsToday = invoicesToday.reduce((sum, inv) => sum + inv.otherCosts, 0);
+  const totalRevenueToday = invoicesToday.reduce((sum, inv) => sum + inv.total, 0);
+  const netRevenueToday = totalRevenueToday - otherCostsToday;
+
+  // Filter for the new "Chi phí khác" list
+  const [otherCostsDateFilter, setOtherCostsDateFilter] = useState(() => todayISO);
+
+  const otherCostsList = validInvoices.filter(inv => 
+    inv.otherCosts > 0 && parseInvDateToISO(inv.time) === otherCostsDateFilter
+  );
+
+  const handleDeleteInvoice = async () => {
+    if (!invoiceToDelete) return;
+    try {
+      await deleteInvoice(invoiceToDelete);
+      showNotification('Đã xóa hóa đơn và hoàn trả sản phẩm vào kho', 'success');
+    } catch (e) {
+      console.error(e);
+      showNotification('Có lỗi khi xóa hóa đơn', 'error');
+    }
+    setInvoiceToDelete(null);
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="flex-1 p-6 overflow-y-auto">
+      {/* Tab switch */}
+      <div className="flex gap-2 mb-6 bg-white p-1 rounded-lg w-fit shadow-sm border">
+        <button
+          onClick={() => setReportTab('overview')}
+          className={`px-4 py-2 rounded-md font-bold text-sm transition ${reportTab === 'overview' ? 'bg-teal-50 text-teal-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
+        >
+          Tổng quan
+        </button>
+        <button
+          onClick={() => setReportTab('orders')}
+          className={`px-4 py-2 rounded-md font-bold text-sm transition ${reportTab === 'orders' ? 'bg-teal-50 text-teal-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
+        >
+          Danh sách đơn hàng
+        </button>
+      </div>
+
+      {/* Overview tab */}
+      {reportTab === 'overview' && (
         <div>
-          <h2 className="text-2xl font-bold">Báo Cáo & Hóa Đơn</h2>
-          <p className="text-sm text-outline">Theo dõi hiệu quả kinh doanh của nhà thuốc</p>
-        </div>
-        <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-2.5 bg-white border border-outline-variant rounded-lg text-sm font-bold shadow-sm">
-            <span className="material-symbols-outlined text-lg">calendar_today</span>
-            Hôm nay: 24 Th05, 2024
-          </button>
-          <button className="flex items-center gap-2 px-6 py-2.5 bg-primary text-white rounded-lg text-sm font-bold shadow-md">
-            <span className="material-symbols-outlined text-lg">download</span>
-            Xuất báo cáo
-          </button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-6">
-        {[
-          { label: 'Doanh thu hôm nay', value: '12.450.000đ', delta: '+8.2% so với hôm qua', icon: 'payments', bg: 'bg-primary-fixed', text: 'text-primary' },
-          { label: 'Doanh thu tháng', value: '342.800.000đ', delta: '+12.4% so với tháng trước', icon: 'calendar_month', bg: 'bg-secondary-container', text: 'text-secondary' },
-          { label: 'Tổng hóa đơn', value: '1,284', delta: 'Trung bình 42 đơn/ngày', icon: 'description', bg: 'bg-tertiary-container', text: 'text-white' },
-        ].map(stat => (
-          <div key={stat.label} className="bg-white border border-outline-variant p-6 rounded-2xl shadow-sm flex items-center gap-6">
-            <div className={`w-14 h-14 ${stat.bg} rounded-full flex items-center justify-center ${stat.text}`}>
-              <span className="material-symbols-outlined text-3xl fill-icon">{stat.icon}</span>
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+            <div className="bg-white p-5 rounded-xl shadow-sm border-l-4 border-teal-500">
+              <h3 className="text-gray-500 text-xs font-bold mb-1 uppercase">Tổng doanh thu</h3>
+              <div className="text-2xl font-bold text-teal-700 font-mono">{formatPrice(totalRevenue)}</div>
+              <div className="text-xs text-gray-400 mt-2">Toàn thời gian</div>
             </div>
-            <div>
-              <p className="text-[10px] font-bold text-outline uppercase tracking-wider">{stat.label}</p>
-              <h3 className="text-xl font-bold text-on-surface">{stat.value}</h3>
-              <p className={`text-[10px] font-bold mt-1 ${stat.text.includes('primary') ? 'text-secondary' : 'text-outline'}`}>{stat.delta}</p>
+            <div className="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-500">
+              <h3 className="text-gray-500 text-xs font-bold mb-1 uppercase">Doanh thu ngày</h3>
+              <div className="text-2xl font-bold text-green-700 font-mono">{formatPrice(netRevenueToday)}</div>
+              <div className="text-xs text-gray-400 mt-2">Trừ chi phí khác</div>
+            </div>
+            <div className="bg-white p-5 rounded-xl shadow-sm border-l-4 border-purple-500">
+              <h3 className="text-gray-500 text-xs font-bold mb-1 uppercase">Chi phí khác (Hôm nay)</h3>
+              <div className="text-2xl font-bold text-purple-700 font-mono">{formatPrice(otherCostsToday)}</div>
+              <div className="text-xs text-gray-400 mt-2">Tổng phụ phí hôm nay</div>
+            </div>
+            <div className="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-500">
+              <h3 className="text-gray-500 text-xs font-bold mb-1 uppercase">Số đơn hàng</h3>
+              <div className="text-2xl font-bold text-blue-700 font-mono">{validInvoices.length}</div>
+              <div className="text-xs text-gray-400 mt-2">Đơn hàng hợp lệ</div>
+            </div>
+            <div className="bg-white p-5 rounded-xl shadow-sm border-l-4 border-amber-500">
+              <h3 className="text-gray-500 text-xs font-bold mb-1 uppercase">Giá trị tồn kho</h3>
+              <div className="text-2xl font-bold text-amber-700 font-mono">{formatPrice(inventoryValue)}</div>
+              <div className="text-xs text-gray-400 mt-2">Tính theo giá nhập</div>
             </div>
           </div>
-        ))}
-      </div>
 
-      <div className="grid grid-cols-12 gap-6">
-        <div className="col-span-8 bg-white border border-outline-variant p-6 rounded-2xl shadow-sm">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="font-bold">Xu hướng doanh thu</h3>
-            <div className="flex bg-surface-container rounded-lg p-1">
-              <button className="px-3 py-1 text-xs font-bold bg-white rounded-md shadow-sm">Ngày</button>
-              <button className="px-3 py-1 text-xs font-bold text-outline">Tháng</button>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="bg-white rounded-xl shadow-sm border p-5">
+              <h3 className="font-bold text-lg mb-4 text-gray-800">Top Sản phẩm bán chạy</h3>
+              {topProducts.length === 0 ? (
+                <div className="text-gray-400 text-sm">Chưa có dữ liệu</div>
+              ) : (
+                topProducts.map(tp => (
+                  <div key={tp.name} className="mb-3">
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="font-medium truncate pr-2">{tp.name}</span>
+                      <span className="font-mono font-bold text-teal-600">{formatPrice(tp.revenue)}</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-2">
+                      <div
+                        className="bg-teal-500 h-2 rounded-full"
+                        style={{ width: `${(tp.revenue / topProducts[0].revenue * 100)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
-          </div>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data}>
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#6e7977' }} />
-                <Tooltip cursor={{ fill: '#f1f4f3' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
-                <Bar dataKey="value" radius={[4, 4, 0, 0]}>
-                  {data.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={index === 6 ? '#0f766e' : '#9cf2e8'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
 
-        <div className="col-span-4 bg-white border border-outline-variant p-6 rounded-2xl shadow-sm flex flex-col items-center">
-          <h3 className="font-bold w-full mb-6">Phương thức thanh toán</h3>
-          <div className="h-48 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={pieData} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                  {pieData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="w-full space-y-3 mt-4">
-            {pieData.map(d => (
-              <div key={d.name} className="flex justify-between items-center text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: d.color }}></div>
-                  <span>{d.name}</span>
-                </div>
-                <span className="font-bold">{d.value}%</span>
+            <div className="bg-white rounded-xl shadow-sm border p-5">
+              <h3 className="font-bold text-lg mb-4 text-gray-800">Đơn hàng gần đây</h3>
+              {invoices.length === 0 ? (
+                <div className="text-gray-400 text-sm">Chưa có dữ liệu</div>
+              ) : (
+                invoices.slice(0, 5).map(inv => (
+                  <div key={inv.id} className="flex justify-between items-center py-2 border-b last:border-0">
+                    <div>
+                      <div className="font-bold text-sm text-gray-700">{inv.id}</div>
+                      <div className="text-xs text-gray-500">{inv.customer.name}</div>
+                    </div>
+                    <div className="font-mono font-bold text-green-600 text-sm">{formatPrice(inv.total)}</div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border p-5 flex flex-col h-full">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-bold text-lg text-gray-800">Chi phí khác</h3>
+                <input
+                  type="date"
+                  value={otherCostsDateFilter}
+                  onChange={e => setOtherCostsDateFilter(e.target.value)}
+                  className="p-1 border rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                />
               </div>
-            ))}
+              <div className="flex-1 overflow-y-auto">
+                {otherCostsList.length === 0 ? (
+                  <div className="text-gray-400 text-sm">Không có chi phí khác trong ngày này</div>
+                ) : (
+                  <div>
+                    {otherCostsList.map(inv => (
+                      <div key={inv.id} className="flex justify-between items-center py-2 border-b last:border-0">
+                        <div>
+                          <div className="font-bold text-sm text-gray-700">{inv.id}</div>
+                          <div className="text-xs text-gray-500">{inv.time.split(',')[0]}</div>
+                        </div>
+                        <div className="font-mono font-bold text-purple-600 text-sm">{formatPrice(inv.otherCosts)}</div>
+                      </div>
+                    ))}
+                    <div className="flex justify-between items-center pt-3 mt-2 border-t border-gray-300">
+                      <span className="font-bold text-gray-800">Tổng cộng:</span>
+                      <span className="font-mono font-bold text-purple-700 text-lg">
+                        {formatPrice(otherCostsList.reduce((sum, inv) => sum + inv.otherCosts, 0))}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Orders tab */}
+      {reportTab === 'orders' && (
+        <div className="bg-white rounded-xl shadow-sm border p-1">
+          <div className="p-3 border-b flex flex-wrap justify-between items-center gap-2">
+            <div className="flex gap-2">
+              <button
+                onClick={() => setOrderStatusTab('valid')}
+                className={`px-4 py-2 rounded-lg font-bold text-sm transition shadow-sm ${orderStatusTab === 'valid' ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >
+                Hợp lệ
+              </button>
+              <button
+                onClick={() => setOrderStatusTab('deleted')}
+                className={`px-4 py-2 rounded-lg font-bold text-sm transition shadow-sm ${orderStatusTab === 'deleted' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+              >
+                Đã xóa / Trả hàng
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={orderSearchQuery}
+                onChange={e => setOrderSearchQuery(e.target.value)}
+                placeholder="Tìm theo mã đơn hoặc khách..."
+                className="p-2 border rounded-lg text-sm w-64 focus:ring-2 focus:ring-teal-500 focus:outline-none"
+              />
+              <button
+                onClick={() => setShowExportCKModal(true)}
+                className="px-4 py-2 bg-teal-600 text-white rounded-lg font-bold text-sm hover:bg-teal-700 transition flex items-center gap-2 shadow-sm whitespace-nowrap"
+              >
+                <i className="fa-solid fa-file-export"></i> Xuất HD CK
+              </button>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-gray-50 text-gray-600 text-xs uppercase">
+                <tr>
+                  <th className="p-3">Mã HD</th>
+                  <th className="p-3">Thời gian</th>
+                  <th className="p-3">Khách hàng</th>
+                  <th className="p-3">Nhân viên</th>
+                  <th className="p-3">Thanh toán</th>
+                  <th className="p-3 text-right">Tổng tiền</th>
+                  <th className="p-3 text-center">Chi tiết</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredInvoices.length === 0 ? (
+                  <tr><td colSpan={7} className="p-8 text-center text-gray-400">Không tìm thấy đơn hàng</td></tr>
+                ) : (
+                  filteredInvoices.map(inv => (
+                    <tr key={inv.id} className="border-b hover:bg-gray-50">
+                      <td className="p-3 font-mono font-bold text-teal-600">{inv.id}</td>
+                      <td className="p-3 text-xs text-gray-500">{inv.time}</td>
+                      <td className="p-3">{inv.customer.name}</td>
+                      <td className="p-3">
+                        <span className="bg-gray-100 px-2 py-1 rounded text-xs border">{inv.employeeName}</span>
+                      </td>
+                      <td className="p-3">
+                        {inv.method === 'cash' ? (
+                          <span className="text-green-600 font-bold text-xs bg-green-50 px-2 py-1 rounded">
+                            <i className="fa-solid fa-money-bill mr-1"></i>Tiền mặt
+                          </span>
+                        ) : (
+                          <span className="text-blue-600 font-bold text-xs bg-blue-50 px-2 py-1 rounded">
+                            <i className="fa-solid fa-qrcode mr-1"></i>CK
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-3 text-right font-bold text-red-600 font-mono">{formatPrice(inv.total)}</td>
+                      <td className="p-3 text-center flex justify-center gap-2">
+                        <button
+                          onClick={() => setViewingInvoice(inv)}
+                          className="text-blue-500 hover:text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-200 text-xs font-bold transition"
+                        >
+                          Xem
+                        </button>
+                        {orderStatusTab === 'valid' && (
+                          <button
+                            onClick={() => setInvoiceToDelete(inv.id)}
+                            className="text-red-500 hover:text-red-700 bg-red-50 px-2 py-1 rounded border border-red-200 text-xs font-bold transition"
+                            title="Xóa/Trả hàng"
+                          >
+                            <i className="fa-solid fa-trash"></i>
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {viewingInvoice && (
+        <DetailModal
+          type="INV"
+          data={viewingInvoice}
+          onClose={() => setViewingInvoice(null)}
+        />
+      )}
+
+      {showExportCKModal && (
+        <ExportCKModal onClose={() => setShowExportCKModal(false)} />
+      )}
+
+      {invoiceToDelete && (
+        <ConfirmModal
+          title="Xác nhận xóa hóa đơn"
+          message="Bạn có chắc chắn muốn xóa/trả lại hóa đơn này? Sản phẩm sẽ được hoàn lại kho và doanh thu sẽ bị trừ."
+          onConfirm={handleDeleteInvoice}
+          onCancel={() => setInvoiceToDelete(null)}
+        />
+      )}
     </div>
   );
 }

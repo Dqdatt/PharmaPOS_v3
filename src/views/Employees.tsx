@@ -1,116 +1,202 @@
+import { useState } from 'react';
+import { usePos } from '../contexts/PosContext';
+import StaffModal from '../components/modals/StaffModal';
+import ConfirmModal from '../components/modals/ConfirmModal';
+import { showNotification } from '../utils/toast';
+
 export default function Employees() {
-  const staff = [
-    { name: 'Nguyễn Thị Mai', email: 'mai.nt@medpoint.vn', role: 'Admin', lastActive: '10 phút trước', revenue: '12.500.000đ', status: 'Đang hoạt động', avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDT9BpdX1_B2f4_-K4RhmF1iQE03_nCz7BDXunxjhk9B4NPUFolBjY6qc1EJqLbixPupN7CdvDk5V1RB_cf-AX-PJzII6jrcNoiTCmTGStQvZI6WHpuxCHXc2eJHlUsYZ-i1dkKByBXB7k3UnNOum97_L0F3Czh6I2S1PLsWX7Ktxq3B29OBptKmA5qdWS3_5tNLvOcqeWHV4tibGRnmybmR488z4xRJdg3NIxvIKZgbwpbFKzMYoqv47HOr-4SmnHtGhk0qON3t7Y' },
-    { name: 'Trần Văn Hoàng', email: 'hoang.tv@medpoint.vn', role: 'Thu ngân', lastActive: 'Hôm qua, 18:30', revenue: '8.240.000đ', status: 'Đang hoạt động', avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAuLYYlXIjzg3p5btEQIaRgATFkT90oQt7Usi5zOzb43rkDwF0qqJsMt8J514O5tlqujtwUKbAYm4K_1SNqidOTXhFjFfvxmZvYeTjtt1gzKLqZocwRKW9qDJmTngjv-1QWy2mT7tiFyy0iKGpU-GTMrDU0uforO-PRB4NRxIERCtMrc4HghDptVPVkfwGz3Qp09p_0W8sF0qK4uStRBzwq6kljl_W4Q8iikZi34JMnvQ9vrkkyRcLCKjUUDeo785MREURJNTPBlm8' },
-    { name: 'Lê Minh Tuấn', email: 'tuan.lm@medpoint.vn', role: 'Thu ngân', lastActive: '2 ngày trước', revenue: '0đ', status: 'Đã khóa', avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC8UCyFhbwEERB-534EkyaNmw_ygt-7O3uAB6bztjHZUMOKxTy9fdx9zXpXQTkXF7MaqPdBfZtSOPlK2sebPbpll9u4NG4WSsDBAzV9fJqZDPKosdRVQGtgatxJ9wxc5Rebzo3uhhioy7mFcY-L8Qd7teXq4LG4WSW9pQv7nd0NJ1bq-mq3pa0-_MuDBTwqB0uU7cKPe6PTvojAb1KzISlaqPkJ2YHIx4fwSnUIMuompshOVpEO3CGNOsCjgXeSG1uuEEmqnIOjXLI' },
-    { name: 'Phạm Hương Giang', email: 'giang.ph@medpoint.vn', role: 'Thu ngân', lastActive: 'Đang trực', revenue: '5.670.000đ', status: 'Đang hoạt động', avatar: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDa6uVINWYMr2WFCmMpNjt5twtjeXawzGN7zaSAOUt2D5n5NCSA_Stk5Eo-KKzGRNxWvUqdO6nAxrr0bzTFEdIJPJMlQ_qqYjApBcTWTi_2Mx_kOdzBQeEO0E089IJw1D6VFEpqE1PmfLIn9_BLshdrc8iXxo0_AmeXSYmHc5Oa_sbK1j5X3-1jTJIP395F4ZYA9YxDD7XaLJWqdgdORRcS60ekoYM0FkqF8aak1Sn5SgXf1z5HaTM1ePdyaeqPhgjEpu3Azc0n5dk' },
-  ];
+  const { users, deleteUserFromDB, staffLogs, invoices, currentUser } = usePos();
+  const [staffTab, setStaffTab] = useState<'logs' | 'revenue' | 'edit'>('logs');
+  const [showStaffModal, setShowStaffModal] = useState(false);
+  const [editingStaffId, setEditingStaffId] = useState<number | null>(null);
+
+  const openStaffModal = (id: number | null) => {
+    setEditingStaffId(id);
+    setShowStaffModal(true);
+  };
+
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
+
+  const confirmDelete = async () => {
+    if (confirmDeleteId === null) return;
+    try {
+      await deleteUserFromDB(confirmDeleteId);
+      showNotification('Xóa nhân viên thành công!', 'success');
+    } catch (e) {
+      showNotification('Lỗi khi xóa nhân viên!', 'error');
+      console.error(e);
+    }
+    setConfirmDeleteId(null);
+  };
+
+  const getRevenueByEmployee = (name: string) =>
+    invoices.filter(i => i.employeeName === name).reduce((sum, i) => sum + i.total, 0);
 
   return (
-    <div className="space-y-8">
-      <div className="flex justify-between items-end">
+    <div className="flex-1 p-6 overflow-y-auto">
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Quản lý Nhân Viên</h2>
-          <p className="text-sm text-outline font-medium">Quản lý danh sách, quyền truy cập và hiệu suất nhân viên.</p>
+          <h2 className="text-2xl font-bold text-gray-800">Quản lý Nhân Sự</h2>
+          <p className="text-gray-500 text-sm">Theo dõi hoạt động và phân quyền nhân viên</p>
         </div>
-        <button className="bg-primary hover:brightness-110 text-white px-6 py-3 rounded-xl flex items-center gap-2 font-bold transition-all shadow-lg active:scale-[0.98]">
-          <span className="material-symbols-outlined text-xl">person_add</span> Thêm Nhân Viên
+      </div>
+
+      <div className="flex gap-2 mb-4 bg-white p-1 rounded-lg w-fit shadow-sm border">
+        <button
+          onClick={() => setStaffTab('logs')}
+          className={`px-4 py-2 rounded-md font-bold text-sm transition ${staffTab === 'logs' ? 'bg-teal-50 text-teal-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
+        >
+          Lịch sử In/Out
+        </button>
+        <button
+          onClick={() => setStaffTab('revenue')}
+          className={`px-4 py-2 rounded-md font-bold text-sm transition ${staffTab === 'revenue' ? 'bg-teal-50 text-teal-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
+        >
+          Doanh thu NV
+        </button>
+        <button
+          onClick={() => setStaffTab('edit')}
+          className={`px-4 py-2 rounded-md font-bold text-sm transition ${staffTab === 'edit' ? 'bg-teal-50 text-teal-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
+        >
+          Tài khoản
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-6">
-        {[
-          { label: 'Tổng nhân sự', value: '24', delta: '+2 trong tháng này', icon: 'groups', color: 'text-primary', bg: 'bg-primary-fixed' },
-          { label: 'Đang hoạt động', value: '18', delta: 'Trên tổng 24 tài khoản', icon: 'fiber_manual_record', color: 'text-green-600', bg: 'bg-green-50' },
-          { label: 'Doanh thu trung bình', value: '4.2M', delta: '-5% so với tuần trước', icon: 'payments', color: 'text-tertiary', bg: 'bg-tertiary-fixed' },
-        ].map(stat => (
-          <div key={stat.label} className="bg-white border border-outline-variant p-6 rounded-2xl shadow-sm flex items-start justify-between">
-            <div>
-              <p className="text-[10px] font-bold text-outline uppercase tracking-[0.15em] mb-1">{stat.label}</p>
-              <h3 className={`text-4xl font-bold ${stat.color}`}>{stat.value}</h3>
-              <p className={`text-[10px] font-bold mt-2 flex items-center gap-1 ${stat.delta.includes('-') ? 'text-error' : 'text-secondary'}`}>
-                {stat.delta}
-              </p>
-            </div>
-            <div className={`p-4 ${stat.bg} rounded-xl ${stat.color}`}>
-              <span className="material-symbols-outlined text-2xl fill-icon">{stat.icon}</span>
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* Logs tab */}
+      {staffTab === 'logs' && (
+        <div className="bg-white rounded-xl shadow-sm border p-4">
+          {staffLogs.length === 0 ? (
+            <div className="p-8 text-center text-gray-400">Chưa có dữ liệu đăng nhập</div>
+          ) : (
+            [...staffLogs].reverse().map((log, i) => (
+              <div key={i} className="flex items-center gap-4 p-3 border-b last:border-0 hover:bg-gray-50">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${log.role === 'admin' ? 'bg-red-500' : 'bg-teal-500'}`}>
+                  {log.name.charAt(0)}
+                </div>
+                <div className="flex-1">
+                  <div className="font-bold text-sm">
+                    {log.name}{' '}
+                    <span className="text-xs font-normal text-gray-500 ml-1 bg-gray-100 px-1 rounded">{log.role}</span>
+                  </div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Vào: {log.loginTime}{' '}
+                    {log.logoutTime ? (
+                      <span>· Ra: {log.logoutTime}</span>
+                    ) : (
+                      (currentUser && currentUser.id === log.userId && i === 0) ? (
+                        <span className="text-green-600 font-bold ml-1">· Đang làm việc</span>
+                      ) : (
+                        <span className="text-red-500 font-bold ml-1">· Ra: LỖI</span>
+                      )
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
-      <div className="bg-white border border-outline-variant rounded-2xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-outline-variant bg-surface-container-low flex justify-between items-center px-6">
-          <div className="flex gap-4">
-            <button className="bg-white border border-outline-variant px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 hover:bg-slate-50 shadow-sm transition-colors">
-              <span className="material-symbols-outlined text-lg">filter_alt</span> Lọc
-            </button>
-            <div className="flex items-center gap-2 text-sm text-outline font-bold">
-              Hiển thị: 
-              <select className="bg-transparent border-none focus:ring-0 font-bold text-on-surface cursor-pointer">
-                <option>Tất cả</option>
-                <option>Quản trị</option>
-                <option>Thu ngân</option>
-              </select>
+      {/* Revenue tab */}
+      {staffTab === 'revenue' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {users.map(u => (
+            <div key={u.id} className="bg-white p-5 rounded-xl shadow-sm border flex flex-col">
+              <div className="flex items-center gap-3 mb-4">
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${u.role === 'admin' ? 'bg-red-500' : 'bg-teal-500'}`}>
+                  {u.name.charAt(0)}
+                </div>
+                <div>
+                  <div className="font-bold text-gray-800">{u.name}</div>
+                  <div className="text-xs text-gray-500">{u.role === 'admin' ? 'Quản lý' : 'Nhân viên'}</div>
+                </div>
+              </div>
+              <div className="mt-auto pt-4 border-t border-gray-100 flex justify-between items-end">
+                <div>
+                  <div className="text-xs text-gray-500 uppercase font-bold mb-1">Doanh thu tạo ra</div>
+                  <div className="font-mono font-bold text-xl text-teal-700">
+                    {new Intl.NumberFormat('vi-VN').format(getRevenueByEmployee(u.name))} ₫
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button className="p-2 hover:bg-surface-container rounded-full text-outline transition-colors"><span className="material-symbols-outlined">print</span></button>
-            <button className="p-2 hover:bg-surface-container rounded-full text-outline transition-colors"><span className="material-symbols-outlined">download</span></button>
+          ))}
+        </div>
+      )}
+
+      {/* Edit tab */}
+      {staffTab === 'edit' && (
+        <div className="bg-white rounded-xl shadow-sm border p-4">
+          <button
+            onClick={() => openStaffModal(null)}
+            className="mb-4 bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 px-4 py-2 rounded-lg text-sm font-bold transition"
+          >
+            <i className="fa-solid fa-user-plus mr-1"></i> Thêm tài khoản
+          </button>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-gray-50 text-gray-600 text-xs uppercase">
+                <tr>
+                  <th className="p-3">Họ tên</th>
+                  <th className="p-3">Quyền hạn</th>
+                  <th className="p-3">Mã PIN</th>
+                  <th className="p-3 text-center">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {users.map(u => (
+                  <tr key={u.id} className="border-b hover:bg-gray-50">
+                    <td className="p-3 font-bold flex items-center gap-2">
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] text-white ${u.role === 'admin' ? 'bg-red-500' : 'bg-teal-500'}`}>
+                        {u.name.charAt(0)}
+                      </div>
+                      {u.name}
+                    </td>
+                    <td className="p-3">
+                      <span className={`px-2 py-1 text-xs rounded font-bold border ${u.role === 'admin' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-teal-50 text-teal-600 border-teal-200'}`}>
+                        {u.role.toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="p-3 font-mono font-bold text-gray-700 tracking-widest">{u.pin || 'Chưa cài'}</td>
+                    <td className="p-3 text-center">
+                      <button
+                        onClick={() => openStaffModal(u.id)}
+                        className="text-blue-500 hover:text-blue-700 px-2"
+                      >
+                        <i className="fa-solid fa-pen"></i>
+                      </button>
+                      {u.id !== currentUser?.id && (
+                        <button
+                          onClick={() => setConfirmDeleteId(u.id)}
+                          className="text-red-500 hover:text-red-700 px-2"
+                        >
+                          <i className="fa-solid fa-trash"></i>
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
+      )}
 
-        <table className="w-full text-left">
-          <thead>
-            <tr className="bg-surface-container-lowest text-outline text-[10px] font-bold border-b border-outline-variant uppercase tracking-widest">
-              <th className="px-6 py-4">Nhân viên</th>
-              <th className="px-6 py-4">Tài khoản</th>
-              <th className="px-6 py-4">Vai trò</th>
-              <th className="px-6 py-4">Truy cập cuối</th>
-              <th className="px-6 py-4">Doanh thu</th>
-              <th className="px-6 py-4 text-center">Trạng thái</th>
-              <th className="px-6 py-4 text-right">Thao tác</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-outline-variant">
-            {staff.map((s, i) => (
-              <tr key={i} className={`hover:bg-surface-container-low transition-colors ${s.status === 'Đã khóa' ? 'opacity-70 grayscale-[0.5]' : ''}`}>
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <img className="w-10 h-10 rounded-full object-cover border border-outline-variant" src={s.avatar} alt={s.name} />
-                    <div>
-                      <p className="font-bold text-sm">{s.name}</p>
-                      <p className="text-[10px] text-outline font-medium">{s.email}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-sm font-medium">{s.email.split('@')[0]}</td>
-                <td className="px-6 py-4">
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${s.role === 'Admin' ? 'bg-primary-fixed text-primary' : 'bg-secondary-container text-secondary'}`}>
-                    {s.role}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-sm text-outline font-medium">{s.lastActive}</td>
-                <td className="px-6 py-4 text-sm font-bold text-primary">{s.revenue}</td>
-                <td className="px-6 py-4 text-center">
-                  <span className={`px-3 py-1 rounded-full text-[10px] font-bold ${s.status === 'Đang hoạt động' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    {s.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-2 text-outline">
-                    <button className="p-2 hover:bg-primary/10 hover:text-primary rounded-lg transition-colors"><span className="material-symbols-outlined text-lg">edit</span></button>
-                    <button className="p-2 hover:bg-slate-100 rounded-lg transition-colors"><span className="material-symbols-outlined text-lg">lock_reset</span></button>
-                    <button className={`p-2 rounded-lg transition-colors ${s.status === 'Đã khóa' ? 'bg-primary/10 text-primary hover:bg-primary/20' : 'hover:bg-red-50 hover:text-error'}`}>
-                      <span className="material-symbols-outlined text-lg">{s.status === 'Đã khóa' ? 'lock_open' : 'lock'}</span>
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {showStaffModal && (
+        <StaffModal
+          userId={editingStaffId}
+          onClose={() => { setShowStaffModal(false); setEditingStaffId(null); }}
+        />
+      )}
+
+      {confirmDeleteId !== null && (
+        <ConfirmModal
+          title="Xác nhận xóa"
+          message="Bạn có chắc chắn muốn xóa nhân viên này khỏi hệ thống? Hành động này không thể hoàn tác."
+          onConfirm={confirmDelete}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
+      )}
     </div>
   );
 }
