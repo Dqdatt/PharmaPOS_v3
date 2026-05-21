@@ -19,6 +19,7 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
   const [otherCosts, setOtherCosts] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer' | null>(null);
   const [showPrintConfirm, setShowPrintConfirm] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [printData, setPrintData] = useState<any>(null);
   const [mqttClient, setMqttClient] = useState<mqtt.MqttClient | null>(null);
 
@@ -38,9 +39,9 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
     };
   }, []);
 
-  const filteredPosProducts = products.filter(p =>
-    p.name.toLowerCase().includes(posSearchQuery.toLowerCase())
-  );
+  const filteredPosProducts = products
+    .filter(p => p.name.toLowerCase().includes(posSearchQuery.toLowerCase()))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const addToCart = (product: typeof products[0]) => {
     const s = getStock(product);
@@ -135,7 +136,8 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
   }, [cart, finalTotal, otherCosts, paymentMethod, posCustomer.name]);
 
   const handleCheckoutSubmit = async (shouldPrint: boolean) => {
-    if (!canCheckout || !currentUser) return;
+    if (!canCheckout || !currentUser || isProcessing) return;
+    setIsProcessing(true);
     const inv = {
       id: 'HD' + Date.now().toString().slice(-6),
       time: getNow(true),
@@ -179,8 +181,10 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
     } catch (e) {
       showNotification('Có lỗi xảy ra khi lưu hóa đơn!', 'error');
       console.error(e);
+    } finally {
+      setIsProcessing(false);
+      setShowPrintConfirm(false);
     }
-    setShowPrintConfirm(false);
   };
 
   const resetCart = () => {
@@ -416,31 +420,40 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
       {showPrintConfirm && (
         <div className="fixed inset-0 z-[100] bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-[scaleIn_0.2s_ease-out]">
-            <div className="p-5 border-b flex justify-between items-center bg-teal-50">
-              <h2 className="text-lg font-bold text-teal-700 flex items-center gap-2">
-                <i className="fa-solid fa-print"></i> In Hóa Đơn
-              </h2>
-              <button onClick={() => setShowPrintConfirm(false)} className="text-gray-400 hover:text-gray-600 transition">
-                <i className="fa-solid fa-xmark text-xl"></i>
-              </button>
-            </div>
-            <div className="p-6 text-center text-gray-700">
-              Bạn có muốn in hóa đơn cho đơn hàng này không?
-            </div>
-            <div className="p-4 bg-gray-50 flex gap-3 border-t">
-              <button
-                onClick={() => handleCheckoutSubmit(false)}
-                className="flex-1 py-2 bg-white border border-gray-300 rounded-lg font-bold text-gray-600 hover:bg-gray-100 transition"
-              >
-                Không In
-              </button>
-              <button
-                onClick={() => handleCheckoutSubmit(true)}
-                className="flex-1 py-2 bg-teal-600 text-white rounded-lg font-bold hover:bg-teal-700 transition shadow-md"
-              >
-                In Hóa Đơn
-              </button>
-            </div>
+            {isProcessing ? (
+              <div className="p-10 flex flex-col items-center justify-center text-teal-600">
+                <i className="fa-solid fa-spinner fa-spin text-5xl mb-4"></i>
+                <div className="font-bold text-lg">Đang xử lý giao dịch...</div>
+              </div>
+            ) : (
+              <>
+                <div className="p-5 border-b flex justify-between items-center bg-teal-50">
+                  <h2 className="text-lg font-bold text-teal-700 flex items-center gap-2">
+                    <i className="fa-solid fa-print"></i> In Hóa Đơn
+                  </h2>
+                  <button onClick={() => setShowPrintConfirm(false)} className="text-gray-400 hover:text-gray-600 transition">
+                    <i className="fa-solid fa-xmark text-xl"></i>
+                  </button>
+                </div>
+                <div className="p-6 text-center text-gray-700">
+                  Bạn có muốn in hóa đơn cho đơn hàng này không?
+                </div>
+                <div className="p-4 bg-gray-50 flex gap-3 border-t">
+                  <button
+                    onClick={() => handleCheckoutSubmit(false)}
+                    className="flex-1 py-2 bg-white border border-gray-300 rounded-lg font-bold text-gray-600 hover:bg-gray-100 transition flex items-center justify-center gap-2"
+                  >
+                    Không In
+                  </button>
+                  <button
+                    onClick={() => handleCheckoutSubmit(true)}
+                    className="flex-1 py-2 bg-teal-600 text-white rounded-lg font-bold hover:bg-teal-700 transition shadow-md flex items-center justify-center gap-2"
+                  >
+                    In Hóa Đơn
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

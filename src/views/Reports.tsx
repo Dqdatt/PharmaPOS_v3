@@ -13,6 +13,8 @@ export default function Reports() {
   const [showExportCKModal, setShowExportCKModal] = useState(false);
   const [orderStatusTab, setOrderStatusTab] = useState<'valid' | 'deleted'>('valid');
   const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
+  const [orderDateFilter, setOrderDateFilter] = useState('');
+  const [activeDateStr, setActiveDateStr] = useState<string | null>(null);
 
   const validInvoices = invoices.filter(inv => inv.status !== 'deleted');
 
@@ -26,25 +28,9 @@ export default function Reports() {
   }, 0);
   const inventoryValue = products.reduce((sum, p) => sum + getStock(p) * p.importPrice, 0);
 
-  const topProducts = (() => {
-    const salesMap: Record<string, number> = {};
-    validInvoices.forEach(inv => {
-      inv.items.forEach(i => {
-        salesMap[i.name] = (salesMap[i.name] || 0) + i.price * i.qty;
-      });
-    });
-    return Object.entries(salesMap)
-      .map(([name, revenue]) => ({ name, revenue }))
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5);
-  })();
-
-  const filteredInvoices = invoices.filter(i => {
-    const matchSearch = i.id.toLowerCase().includes(orderSearchQuery.toLowerCase()) || 
-                        i.customer.name.toLowerCase().includes(orderSearchQuery.toLowerCase());
-    const matchStatus = orderStatusTab === 'valid' ? i.status !== 'deleted' : i.status === 'deleted';
-    return matchSearch && matchStatus;
-  });
+  // Calendar state
+  const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
+  const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
 
   const parseInvDateToISO = (timeStr: string) => {
     const parts = timeStr.split(/[\s,]+/); 
@@ -53,6 +39,54 @@ export default function Reports() {
     const [d, m, y] = dateStr.split('/');
     return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
   };
+
+  const calendarData = (() => {
+    const data: Record<string, number> = {};
+    validInvoices.forEach(inv => {
+      const dateIso = parseInvDateToISO(inv.time);
+      if (!dateIso) return;
+      if (!data[dateIso]) data[dateIso] = 0;
+      data[dateIso] += (inv.total - inv.otherCosts);
+    });
+    return data;
+  })();
+
+  const prevMonth = () => {
+    if (calendarMonth === 0) {
+      setCalendarMonth(11);
+      setCalendarYear(y => y - 1);
+    } else {
+      setCalendarMonth(m => m - 1);
+    }
+  };
+
+  const nextMonth = () => {
+    if (calendarMonth === 11) {
+      setCalendarMonth(0);
+      setCalendarYear(y => y + 1);
+    } else {
+      setCalendarMonth(m => m + 1);
+    }
+  };
+
+  const getDaysInMonth = (month: number, year: number) => new Date(year, month + 1, 0).getDate();
+  const getFirstDayOfMonth = (month: number, year: number) => new Date(year, month, 1).getDay();
+
+  const daysInMonth = getDaysInMonth(calendarMonth, calendarYear);
+  const firstDay = getFirstDayOfMonth(calendarMonth, calendarYear); 
+  const startOffset = firstDay === 0 ? 6 : firstDay - 1; // Mon = 0 ... Sun = 6
+  
+  const calendarDays = [];
+  for (let i = 0; i < startOffset; i++) calendarDays.push(null);
+  for (let d = 1; d <= daysInMonth; d++) calendarDays.push(d);
+
+  const filteredInvoices = invoices.filter(i => {
+    const matchSearch = i.id.toLowerCase().includes(orderSearchQuery.toLowerCase()) || 
+                        i.customer.name.toLowerCase().includes(orderSearchQuery.toLowerCase());
+    const matchStatus = orderStatusTab === 'valid' ? i.status !== 'deleted' : i.status === 'deleted';
+    const matchDate = orderDateFilter ? parseInvDateToISO(i.time) === orderDateFilter : true;
+    return matchSearch && matchStatus && matchDate;
+  });
 
   const todayISO = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
 
@@ -130,26 +164,67 @@ export default function Reports() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="bg-white rounded-xl shadow-sm border p-5">
-              <h3 className="font-bold text-lg mb-4 text-gray-800">Top Sản phẩm bán chạy</h3>
-              {topProducts.length === 0 ? (
-                <div className="text-gray-400 text-sm">Chưa có dữ liệu</div>
-              ) : (
-                topProducts.map(tp => (
-                  <div key={tp.name} className="mb-3">
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="font-medium truncate pr-2">{tp.name}</span>
-                      <span className="font-mono font-bold text-teal-600">{formatPrice(tp.revenue)}</span>
+            <div className="bg-white rounded-xl shadow-sm border p-5 flex flex-col">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="font-bold text-lg text-gray-800">Lịch doanh thu</h3>
+                <div className="flex items-center gap-2">
+                  <button onClick={prevMonth} className="text-gray-500 hover:text-teal-600 transition"><i className="fa-solid fa-chevron-left"></i></button>
+                  <span className="text-sm font-bold w-20 text-center">T{calendarMonth + 1}/{calendarYear}</span>
+                  <button onClick={nextMonth} className="text-gray-500 hover:text-teal-600 transition"><i className="fa-solid fa-chevron-right"></i></button>
+                </div>
+              </div>
+              <div className="grid grid-cols-7 gap-1 mb-2 text-center text-xs font-bold text-gray-400">
+                <div>T2</div><div>T3</div><div>T4</div><div>T5</div><div>T6</div><div>T7</div><div>CN</div>
+              </div>
+              <div className="grid grid-cols-7 gap-1 flex-1">
+                {calendarDays.map((day, idx) => {
+                  if (!day) return <div key={idx} className="bg-transparent rounded"></div>;
+                  const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                  const revenue = calendarData[dateStr] || 0;
+                  const hasData = revenue > 0;
+                  
+                  return (
+                    <div 
+                      key={idx} 
+                      onClick={() => {
+                        if (hasData) {
+                          setActiveDateStr(activeDateStr === dateStr ? null : dateStr);
+                        }
+                      }}
+                      className={`relative rounded-md p-1 border flex flex-col justify-between transition-all duration-200
+                        ${hasData ? 'bg-teal-50 border-teal-100 hover:border-teal-300 cursor-pointer shadow-sm' : 'bg-gray-50 border-transparent opacity-50'}`}
+                      title={hasData ? `${dateStr}: ${formatPrice(revenue)}` : dateStr}
+                    >
+                      <div className={`text-xs font-bold mb-1 ${hasData ? 'text-teal-800' : 'text-gray-400'}`}>
+                        {day}
+                      </div>
+                      {hasData && (
+                        <div className="text-[10px] sm:text-xs font-mono font-bold text-teal-600 leading-tight text-right mt-auto truncate" title={formatPrice(revenue)}>
+                          {revenue >= 1000000 
+                            ? `${(revenue/1000000).toFixed(1)}M` 
+                            : revenue >= 1000 
+                              ? `${Math.floor(revenue/1000)}k` 
+                              : revenue}
+                        </div>
+                      )}
+
+                      {/* Custom Tooltip Popup */}
+                      {activeDateStr === dateStr && hasData && (
+                        <div className="absolute z-50 bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 bg-white text-gray-800 rounded-xl py-3 px-4 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] whitespace-nowrap animate-[scaleIn_0.2s_ease-out] min-w-[160px] text-center" onClick={(e) => e.stopPropagation()}>
+                          <div className="text-gray-400 text-[11px] uppercase tracking-wider font-bold mb-1">
+                            Doanh thu <span className="text-teal-600">{dateStr.split('-').reverse().join('/')}</span>
+                          </div>
+                          <div className="text-xl font-bold font-mono text-gray-800">
+                            {revenue.toLocaleString('vi-VN')}
+                          </div>
+                          {/* Triangle / Speech bubble tail */}
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-[8px] border-transparent border-t-white"></div>
+                        </div>
+                      )}
                     </div>
-                    <div className="w-full bg-gray-100 rounded-full h-2">
-                      <div
-                        className="bg-teal-500 h-2 rounded-full"
-                        style={{ width: `${(tp.revenue / topProducts[0].revenue * 100)}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                ))
-              )}
+                  );
+                })}
+              </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border p-5">
@@ -226,6 +301,12 @@ export default function Reports() {
               </button>
             </div>
             <div className="flex gap-2">
+              <input
+                type="date"
+                value={orderDateFilter}
+                onChange={e => setOrderDateFilter(e.target.value)}
+                className="p-2 border rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+              />
               <input
                 type="text"
                 value={orderSearchQuery}

@@ -7,11 +7,12 @@ import Reports from './Reports';
 import Employees from './Employees';
 import { showNotification } from '../utils/toast';
 import ConfirmModal from '../components/modals/ConfirmModal';
+import CloseInventoryModal from '../components/modals/CloseInventoryModal';
 
 type Tab = 'pos' | 'inventory' | 'import' | 'reports' | 'employees';
 
 export default function MainApp() {
-  const { currentUser, setCurrentUser, updateStaffLogLogoutInDB, cart, setCart, getNow } = usePos();
+  const { currentUser, setCurrentUser, updateStaffLogLogoutInDB, cart, setCart, getNow, isPreviousMonthClosed, checkPreviousMonthStatus } = usePos();
   const [currentTab, setCurrentTab] = useState<Tab>('pos');
   const [currentTime, setCurrentTime] = useState(getNow(true));
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -52,6 +53,45 @@ export default function MainApp() {
   };
 
   if (!currentUser) return null;
+
+  if (isPreviousMonthClosed === false) {
+    if (currentUser.role === 'admin') {
+      return (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50">
+          <CloseInventoryModal isForced={true} />
+        </div>
+      );
+    } else {
+      return (
+        <div className="fixed inset-0 bg-black/30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-8 text-center">
+            <div className="w-20 h-20 bg-red-50 text-red-600 rounded-full flex items-center justify-center text-4xl mx-auto mb-5 border border-red-100 shadow-sm">
+              <i className="fa-solid fa-lock"></i>
+            </div>
+            <h3 className="font-bold text-2xl text-gray-800 mb-3">Hệ thống đang tạm khóa</h3>
+            <p className="text-gray-500 text-sm mb-6 leading-relaxed">
+              Hệ thống đang chờ Quản trị viên (Admin) thực hiện chốt tồn kho đầu tháng mới. 
+              Vui lòng liên hệ Admin để hoàn thành quá trình này trước khi bắt đầu bán hàng.
+            </p>
+            <div className="space-y-3">
+              <button
+                onClick={checkPreviousMonthStatus}
+                className="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-lg transition shadow-sm"
+              >
+                <i className="fa-solid fa-rotate-right mr-2"></i> Kiểm tra lại trạng thái
+              </button>
+              <button
+                onClick={logout}
+                className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-lg transition"
+              >
+                Đăng xuất
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+  }
 
   return (
     <div className="h-screen flex flex-col">

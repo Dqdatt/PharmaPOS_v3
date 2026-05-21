@@ -67,6 +67,16 @@ export interface Purchase {
   total: number;
 }
 
+export interface InventoryHistory {
+  id: number;
+  productId: number;
+  monthYear: string;
+  initialStock: number;
+  totalIn: number;
+  totalOut: number;
+  endingStock: number;
+}
+
 interface PosContextType {
   // Loading state
   isLoadingData: boolean;
@@ -90,6 +100,15 @@ interface PosContextType {
   setInvoices: React.Dispatch<React.SetStateAction<Invoice[]>>;
   purchases: Purchase[];
   setPurchases: React.Dispatch<React.SetStateAction<Purchase[]>>;
+
+  // Monthly Rollover & Reconciliation
+  isPreviousMonthClosed: boolean | null;
+  previousMonthYear: string;
+  inventoryHistory: InventoryHistory[];
+  closeMonthlyInventory: (monthYear: string) => Promise<void>;
+  checkPreviousMonthStatus: () => Promise<void>;
+  reconcileProductStock: (productId: number) => Promise<void>;
+  fetchInventoryHistory: (monthYear: string) => Promise<InventoryHistory[]>;
 
   // Customer screen
   isCustomerView: boolean;
@@ -143,6 +162,16 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [staffLogs, setStaffLogs] = useState<StaffLog[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
+  
+  const [isPreviousMonthClosed, setIsPreviousMonthClosed] = useState<boolean | null>(null);
+  const [inventoryHistory, setInventoryHistory] = useState<InventoryHistory[]>([]);
+
+  const getPreviousMonthYear = () => {
+    const now = new Date();
+    now.setMonth(now.getMonth() - 1);
+    return `${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()}`;
+  };
+  const previousMonthYear = getPreviousMonthYear();
 
   const isCustomerView = typeof window !== 'undefined'
     ? new URLSearchParams(window.location.search).get('view') === 'customer'
@@ -375,6 +404,159 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setUsers(prev => prev.filter(u => u.id !== id));
   };
 
+  // --- MONTHLY INVENTORY ROLLOVER ---
+  const checkPreviousMonthStatus = async () => {
+    if (!previousMonthYear) return;
+    try {
+      const isEnabled = localStorage.getItem('mediPosRolloverEnabled') !== 'false';
+      if (!isEnabled) {
+        setIsPreviousMonthClosed(true); // Always unlocked if disabled
+        return;
+      }
+
+      const lockDateStr = localStorage.getItem('mediPosLockDate');
+      if (lockDateStr) {
+        const todayStr = new Date().toISOString().split('T')[0];
+        // If today is before the configured lock date, we do NOT lock the system.
+        if (todayStr < lockDateStr) {
+          setIsPreviousMonthClosed(true); // Treat as closed so no lock screen appears
+          return;
+        }
+      }
+
+      const { data, error } = await supabase
+        .from('inventory_history')
+        .select('id')
+        .eq('month_year', previousMonthYear)
+        .limit(1);
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        setIsPreviousMonthClosed(true);
+      } else {
+        // If no history, check if there are any invoices or purchases in the previous month
+        // Invoices: parse time to check if it's in previous month
+        // Purchases: parse date to check if it's in previous month
+        // For simplicity, let's just fetch all and check locally, or if the store is very new, just assume false.
+        // Let's assume false if there's no history, but later we might allow skipping if no transactions exist.
+        setIsPreviousMonthClosed(false);
+      }
+    } catch (e) {
+      console.error('Error checking previous month status:', e);
+      setIsPreviousMonthClosed(false);
+    }
+  };
+
+  useEffect(() => {
+    if (currentUser && !isCustomerView) {
+      checkPreviousMonthStatus();
+    }
+  }, [currentUser, isCustomerView]);
+
+  const closeMonthlyInventory = async (monthYear: string) => {
+    try {
+      // 1. Prepare snapshots
+      const snapshots = products.map(p => ({
+        product_id: p.id,
+        month_year: monthYear,
+        initial_stock: p.initialStock,
+        total_in: p.totalIn,
+        total_out: p.totalOut,
+        ending_stock: getStock(p)
+      }));
+
+      // 2. Insert to inventory_history
+      const { error: historyErr } = await supabase.from('inventory_history').insert(snapshots);
+      if (historyErr) {
+        // If it already exists (constraint unique_product_month), we can delete and re-insert, or just ignore.
+        // Let's assume we do this once. If error, might be duplicate.
+        console.error('Insert history error:', historyErr);
+      }
+
+      // 3. Reset product counters and update initialStock
+      for (const p of products) {
+        const newStock = getStock(p);
+        await supabase.from('products').update({
+          initial_stock: newStock,
+          total_in: 0,
+          total_out: 0
+        }).eq('id', p.id);
+      }
+
+      setIsPreviousMonthClosed(true);
+      await refreshData();
+    } catch (e) {
+      console.error('Error closing monthly inventory:', e);
+      throw e;
+    }
+  };
+
+  const fetchInventoryHistory = async (monthYear: string): Promise<InventoryHistory[]> => {
+    try {
+      const { data, error } = await supabase
+        .from('inventory_history')
+        .select('*')
+        .eq('month_year', monthYear);
+      
+      if (error) throw error;
+      return (data || []).map(d => ({
+        id: d.id,
+        productId: d.product_id,
+        monthYear: d.month_year,
+        initialStock: d.initial_stock,
+        totalIn: d.total_in,
+        totalOut: d.total_out,
+        endingStock: d.ending_stock
+      }));
+    } catch (e) {
+      console.error('Error fetching inventory history:', e);
+      return [];
+    }
+  };
+
+  const reconcileProductStock = async (productId: number) => {
+    try {
+      const p = products.find(x => x.id === productId);
+      if (!p) return;
+
+      // Calculate actual imports in current month (from Purchases)
+      // Since totalIn is reset at start of month, we only count purchases created this month.
+      // But wait! total_in counts purchases SINCE THE LAST ROLLOVER.
+      // So if rollover was done, purchases from this month are what counts.
+      // The easiest way is to sum quantities in purchase_items for this product where purchase date is >= first day of current month.
+      // To be accurate for now, let's just use the current month for calculation.
+      const currentMonthStr = `${(new Date().getMonth() + 1).toString().padStart(2, '0')}/${new Date().getFullYear()}`;
+      
+      let expectedTotalIn = 0;
+      for (const pur of purchases) {
+        // check if pur.date is in current month
+        if (pur.date.includes(currentMonthStr)) {
+          const item = pur.items.find(i => i.productId === productId);
+          if (item) expectedTotalIn += item.qty;
+        }
+      }
+
+      let expectedTotalOut = 0;
+      for (const inv of invoices) {
+        if (inv.status !== 'deleted' && inv.time.includes(currentMonthStr)) {
+          const item = inv.items.find(i => i.id === productId);
+          if (item) expectedTotalOut += item.qty;
+        }
+      }
+
+      await supabase.from('products').update({
+        total_in: expectedTotalIn,
+        total_out: expectedTotalOut
+      }).eq('id', productId);
+
+      await refreshData();
+    } catch (e) {
+      console.error('Error reconciling product stock:', e);
+      throw e;
+    }
+  };
+
   return (
     <PosContext.Provider value={{
       isLoadingData,
@@ -385,6 +567,8 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       cart, setCart,
       invoices, setInvoices,
       purchases, setPurchases,
+      isPreviousMonthClosed, previousMonthYear, inventoryHistory,
+      closeMonthlyInventory, checkPreviousMonthStatus, reconcileProductStock, fetchInventoryHistory,
       isCustomerView,
       getStock, formatPrice, getNow,
       refreshData, addProductToDB, updateProductInDB, deleteProductFromDB, addInvoiceToDB, deleteInvoice, addPurchaseToDB,

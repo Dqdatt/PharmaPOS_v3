@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { usePos } from '../../contexts/PosContext';
 
 interface ExportCKModalProps {
@@ -16,9 +17,10 @@ export default function ExportCKModal({ onClose }: ExportCKModalProps) {
   };
 
   const todayISO = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState(todayISO);
 
   const exportOrders = invoices.filter(inv => 
-    inv.method === 'transfer' && inv.status !== 'deleted' && parseInvDateToISO(inv.time) === todayISO
+    inv.method === 'transfer' && inv.status !== 'deleted' && parseInvDateToISO(inv.time) === selectedDate
   );
 
   const totalAmount = exportOrders.reduce((sum, o) => sum + o.total, 0);
@@ -37,10 +39,18 @@ export default function ExportCKModal({ onClose }: ExportCKModalProps) {
 
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[80vh] animate-[scaleIn_0.2s_ease-out]">
         <div className="p-5 border-b flex justify-between items-center bg-gray-50 no-print shrink-0">
-          <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-            <i className="fa-solid fa-money-check-dollar text-teal-600"></i>
-            Hóa Đơn Chuyển Khoản Trong Ngày
-          </h2>
+          <div className="flex items-center gap-4">
+            <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+              <i className="fa-solid fa-money-check-dollar text-teal-600"></i>
+              Hóa Đơn Chuyển Khoản
+            </h2>
+            <input 
+              type="date"
+              value={selectedDate}
+              onChange={e => setSelectedDate(e.target.value)}
+              className="px-2 py-1 border rounded-lg text-sm text-gray-700 font-bold focus:ring-2 focus:ring-teal-500 focus:outline-none"
+            />
+          </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition">
             <i className="fa-solid fa-xmark text-xl"></i>
           </button>
@@ -49,7 +59,7 @@ export default function ExportCKModal({ onClose }: ExportCKModalProps) {
         {/* VÙNG IN BẮT ĐẦU */}
         <div id="print-area" className="p-6 print:px-10 print:py-8 flex-1 overflow-y-auto">
           <h2 className="hidden print:block text-center font-bold text-2xl mb-4 uppercase">
-            {`Danh sách chuyển khoản ngày ${new Date().toLocaleDateString("vi-VN")}`}
+            {`Danh sách chuyển khoản ngày ${selectedDate.split('-').reverse().join('/')}`}
           </h2>
           <table className="w-full text-left border-collapse text-sm">
             <thead>
@@ -64,7 +74,7 @@ export default function ExportCKModal({ onClose }: ExportCKModalProps) {
               {exportOrders.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-4 py-10 text-center text-gray-400 italic">
-                    Không có hóa đơn chuyển khoản nào trong ngày hôm nay
+                    Không có hóa đơn chuyển khoản nào trong ngày {selectedDate.split('-').reverse().join('/')}
                   </td>
                 </tr>
               ) : (
