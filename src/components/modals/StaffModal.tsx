@@ -43,7 +43,8 @@ export default function StaffModal({
       }
       onClose();
     } catch (e) {
-      showNotification('Có lỗi xảy ra khi lưu nhân viên!', 'error');
+      const errMsg = e instanceof Error ? e.message : String(e);
+      showNotification(`Có lỗi xảy ra khi lưu nhân viên! Chi tiết: ${errMsg}`, 'error');
       console.error(e);
     }
   };

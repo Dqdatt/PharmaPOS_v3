@@ -28,6 +28,8 @@ export default function MainApp() {
         await updateStaffLogLogoutInDB(currentUser.id, getNow(true));
         showNotification(`Kết thúc ca ${currentUser.name}`, 'success');
       } catch (e) {
+        const errMsg = e instanceof Error ? e.message : String(e);
+        showNotification(`Lỗi khi ghi nhận đăng xuất! Chi tiết: ${errMsg}`, 'error');
         console.error('Failed to log logout:', e);
       }
     }

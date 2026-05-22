@@ -21,15 +21,18 @@ export default function ProductModal({
     sellPrice: product ? product.sellPrice : '',
     initialStock: product ? product.initialStock : '',
   });
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const update = (field: string, value: string | number) =>
     setForm(prev => ({ ...prev, [field]: value }));
 
   const saveProduct = async () => {
+    if (isProcessing) return;
     if (!form.name || !form.unit || !form.sellPrice) {
       showNotification('Vui lòng điền đủ thông tin bắt buộc (*)', 'error');
       return;
     }
+    setIsProcessing(true);
     try {
       if (isEditing && product) {
         await updateProductInDB({
@@ -41,6 +44,7 @@ export default function ProductModal({
           sellPrice: Number(form.sellPrice),
           initialStock: Number(form.initialStock),
         });
+        showNotification('Cập nhật sản phẩm thành công!', 'success');
       } else {
         await addProductToDB({
           name: form.name,
@@ -52,11 +56,14 @@ export default function ProductModal({
           totalIn: 0,
           totalOut: 0,
         });
+        showNotification('Thêm sản phẩm thành công!', 'success');
       }
       onClose();
     } catch (e) {
-      showNotification('Có lỗi xảy ra khi lưu sản phẩm!', 'error');
+      const errMsg = e instanceof Error ? e.message : String(e);
+      showNotification(`Có lỗi xảy ra khi lưu sản phẩm! Chi tiết: ${errMsg}`, 'error');
       console.error(e);
+      setIsProcessing(false);
     }
   };
 
@@ -140,18 +147,31 @@ export default function ProductModal({
         <div className="p-4 border-t bg-gray-50 flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-lg border bg-white text-gray-600 font-bold hover:bg-gray-100 text-sm"
+            disabled={isProcessing}
+            className="px-4 py-2 rounded-lg border bg-white text-gray-600 font-bold hover:bg-gray-100 text-sm disabled:opacity-50"
           >
             Hủy
           </button>
           <button
             onClick={saveProduct}
-            className="px-4 py-2 rounded-lg bg-teal-600 text-white font-bold hover:bg-teal-700 text-sm"
+            disabled={isProcessing}
+            className="px-4 py-2 rounded-lg bg-teal-600 text-white font-bold hover:bg-teal-700 text-sm disabled:opacity-50"
           >
             Lưu sản phẩm
           </button>
         </div>
       </div>
+
+      {isProcessing && (
+        <div className="fixed inset-0 z-[100] bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-[scaleIn_0.2s_ease-out]">
+            <div className="p-10 flex flex-col items-center justify-center text-teal-600">
+              <i className="fa-solid fa-spinner fa-spin text-5xl mb-4"></i>
+              <div className="font-bold text-lg">Đang lưu sản phẩm...</div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

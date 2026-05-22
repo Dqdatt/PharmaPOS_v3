@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
+import { showNotification } from '../utils/toast';
 
 // --- Types matching pos.html exactly ---
 export interface Product {
@@ -243,6 +244,8 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         })));
       }
     } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      showNotification(`Lỗi khi tải dữ liệu từ Supabase! Chi tiết: ${errMsg}`, 'error');
       console.error("Lỗi khi tải dữ liệu từ Supabase:", e);
     } finally {
       setIsLoadingData(false);
@@ -443,6 +446,8 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setIsPreviousMonthClosed(false);
       }
     } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      showNotification(`Lỗi kiểm tra trạng thái tháng trước! Chi tiết: ${errMsg}`, 'error');
       console.error('Error checking previous month status:', e);
       setIsPreviousMonthClosed(false);
     }
@@ -487,6 +492,8 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setIsPreviousMonthClosed(true);
       await refreshData();
     } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      showNotification(`Lỗi khi chốt tồn kho! Chi tiết: ${errMsg}`, 'error');
       console.error('Error closing monthly inventory:', e);
       throw e;
     }
@@ -510,6 +517,8 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         endingStock: d.ending_stock
       }));
     } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      showNotification(`Lỗi khi tải lịch sử tồn kho! Chi tiết: ${errMsg}`, 'error');
       console.error('Error fetching inventory history:', e);
       return [];
     }
@@ -552,6 +561,8 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
       await refreshData();
     } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      showNotification(`Lỗi khi đồng bộ tồn kho! Chi tiết: ${errMsg}`, 'error');
       console.error('Error reconciling product stock:', e);
       throw e;
     }

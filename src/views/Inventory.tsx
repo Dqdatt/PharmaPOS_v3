@@ -54,7 +54,8 @@ export default function Inventory() {
       await deleteProductFromDB(confirmDeleteInfo.id);
       showNotification('Xóa sản phẩm thành công!', 'success');
     } catch (e) {
-      showNotification('Lỗi khi xóa sản phẩm!', 'error');
+      const errMsg = e instanceof Error ? e.message : String(e);
+      showNotification(`Lỗi khi xóa sản phẩm! Chi tiết: ${errMsg}`, 'error');
       console.error(e);
     }
     setConfirmDeleteInfo(null);
@@ -92,7 +93,9 @@ export default function Inventory() {
       await reconcileProductStock(productId);
       showNotification('Đã tự động đồng bộ và sửa lệch thành công!', 'success');
     } catch (e) {
-      showNotification('Có lỗi khi đồng bộ!', 'error');
+      const errMsg = e instanceof Error ? e.message : String(e);
+      showNotification(`Có lỗi khi đồng bộ! Chi tiết: ${errMsg}`, 'error');
+      console.error(e);
     }
   };
 

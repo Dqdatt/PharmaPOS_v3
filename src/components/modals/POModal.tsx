@@ -14,6 +14,7 @@ export default function POModal({ onClose }: { onClose: () => void }) {
   const [supplier, setSupplier] = useState('');
   const [note, setNote] = useState('');
   const [items, setItems] = useState<PoRow[]>([{ productId: '', qty: 1, cost: 0 }]);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const addRow = () => setItems(prev => [...prev, { productId: '', qty: 1, cost: 0 }]);
 
@@ -33,6 +34,7 @@ export default function POModal({ onClose }: { onClose: () => void }) {
   const poTotalCalc = items.reduce((s, i) => s + (i.qty || 0) * (i.cost || 0), 0);
 
   const savePo = async () => {
+    if (isProcessing) return;
     const validItems = items.filter(i => i.productId !== '' && i.qty > 0);
     if (validItems.length === 0) {
       showNotification('Vui lòng chọn ít nhất 1 sản phẩm hợp lệ!', 'error');
@@ -67,13 +69,16 @@ export default function POModal({ onClose }: { onClose: () => void }) {
       return p;
     });
 
+    setIsProcessing(true);
     try {
       await addPurchaseToDB(newPo, productsToUpdate);
       showNotification(`Tạo phiếu nhập ${poId} thành công!`, 'success');
       onClose();
     } catch (e) {
-      showNotification('Có lỗi xảy ra khi lưu phiếu nhập!', 'error');
+      const errMsg = e instanceof Error ? e.message : String(e);
+      showNotification(`Có lỗi xảy ra khi lưu phiếu nhập! Chi tiết: ${errMsg}`, 'error');
       console.error(e);
+      setIsProcessing(false);
     }
   };
 
@@ -182,10 +187,21 @@ export default function POModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="p-4 border-t bg-gray-50 flex justify-end gap-2">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg border bg-white font-bold hover:bg-gray-100 text-sm">Hủy</button>
-          <button onClick={savePo} className="px-4 py-2 rounded-lg bg-teal-600 text-white font-bold hover:bg-teal-700 text-sm">Xác nhận nhập hàng</button>
+          <button onClick={onClose} disabled={isProcessing} className="px-4 py-2 rounded-lg border bg-white font-bold hover:bg-gray-100 text-sm disabled:opacity-50">Hủy</button>
+          <button onClick={savePo} disabled={isProcessing} className="px-4 py-2 rounded-lg bg-teal-600 text-white font-bold hover:bg-teal-700 text-sm disabled:opacity-50">Xác nhận nhập hàng</button>
         </div>
       </div>
+
+      {isProcessing && (
+        <div className="fixed inset-0 z-[100] bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-[scaleIn_0.2s_ease-out]">
+            <div className="p-10 flex flex-col items-center justify-center text-teal-600">
+              <i className="fa-solid fa-spinner fa-spin text-5xl mb-4"></i>
+              <div className="font-bold text-lg">Đang lưu phiếu nhập...</div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

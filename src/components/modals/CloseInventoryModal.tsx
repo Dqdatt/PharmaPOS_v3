@@ -21,7 +21,8 @@ export default function CloseInventoryModal({ onClose, isForced = false }: Props
       showNotification(`Đã chốt tồn kho thành công cho tháng ${previousMonthYear}`, 'success');
       if (onClose) onClose();
     } catch (e) {
-      showNotification('Lỗi khi chốt tồn kho!', 'error');
+      const errMsg = e instanceof Error ? e.message : String(e);
+      showNotification(`Lỗi khi chốt tồn kho! Chi tiết: ${errMsg}`, 'error');
       console.error(e);
       setIsClosing(false);
     }

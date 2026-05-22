@@ -23,7 +23,8 @@ export default function Employees() {
       await deleteUserFromDB(confirmDeleteId);
       showNotification('Xóa nhân viên thành công!', 'success');
     } catch (e) {
-      showNotification('Lỗi khi xóa nhân viên!', 'error');
+      const errMsg = e instanceof Error ? e.message : String(e);
+      showNotification(`Lỗi khi xóa nhân viên! Chi tiết: ${errMsg}`, 'error');
       console.error(e);
     }
     setConfirmDeleteId(null);

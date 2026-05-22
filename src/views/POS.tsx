@@ -8,6 +8,9 @@ import { docTienBangChu } from '../utils/numberToWords';
 import mqtt from 'mqtt';
 import { bankInfo, formatQRText } from '../utils/bank';
 
+let globalMqttClient: mqtt.MqttClient | null = null;
+let isMqttConnecting = false;
+
 export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: () => void }) {
   const {
     products, cart, setCart, addInvoiceToDB,
@@ -21,22 +24,29 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
   const [showPrintConfirm, setShowPrintConfirm] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [printData, setPrintData] = useState<any>(null);
-  const [mqttClient, setMqttClient] = useState<mqtt.MqttClient | null>(null);
+  const [mqttClient, setMqttClient] = useState<mqtt.MqttClient | null>(globalMqttClient);
 
   const DEVICE_ID = "device001";
   const mqtt_topic = `qr/${DEVICE_ID}`;
 
   useEffect(() => {
-    const client = mqtt.connect("wss://broker.emqx.io:8084/mqtt");
-    client.on("connect", () => {
-      console.log("MQTT Connected");
-      setMqttClient(client);
-    });
-    client.on("reconnect", () => console.log("MQTT Reconnecting..."));
-    client.on("error", (err) => console.log("MQTT Error:", err));
-    return () => {
-      client.end(true);
-    };
+    if (!globalMqttClient && !isMqttConnecting) {
+      isMqttConnecting = true;
+      const client = mqtt.connect("wss://broker.emqx.io:8084/mqtt");
+      client.on("connect", () => {
+        console.log("MQTT Connected");
+        globalMqttClient = client;
+        setMqttClient(client);
+        isMqttConnecting = false;
+      });
+      client.on("reconnect", () => console.log("MQTT Reconnecting..."));
+      client.on("error", (err) => {
+        console.log("MQTT Error:", err);
+        isMqttConnecting = false;
+      });
+    } else if (globalMqttClient) {
+      setMqttClient(globalMqttClient);
+    }
   }, []);
 
   const filteredPosProducts = products
@@ -112,6 +122,8 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
           mqttClient.publish(mqtt_topic, JSON.stringify(payload), { qos: 1 });
           console.log("Đã gửi lệnh thanh toán qua MQTT thành công!");
         } catch (error) {
+          const errMsg = error instanceof Error ? error.message : String(error);
+          showNotification(`Lỗi tạo chuỗi QR! Chi tiết: ${errMsg}`, 'error');
           console.error("Lỗi tạo chuỗi QR:", error);
         }
       }, 500);
@@ -179,7 +191,8 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
         resetCart();
       }
     } catch (e) {
-      showNotification('Có lỗi xảy ra khi lưu hóa đơn!', 'error');
+      const errMsg = e instanceof Error ? e.message : String(e);
+      showNotification(`Có lỗi xảy ra khi lưu hóa đơn! Chi tiết: ${errMsg}`, 'error');
       console.error(e);
     } finally {
       setIsProcessing(false);

@@ -108,8 +108,9 @@ export default function Reports() {
       await deleteInvoice(invoiceToDelete);
       showNotification('Đã xóa hóa đơn và hoàn trả sản phẩm vào kho', 'success');
     } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      showNotification(`Có lỗi khi xóa hóa đơn! Chi tiết: ${errMsg}`, 'error');
       console.error(e);
-      showNotification('Có lỗi khi xóa hóa đơn', 'error');
     }
     setInvoiceToDelete(null);
   };

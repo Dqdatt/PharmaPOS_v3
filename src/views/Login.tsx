@@ -33,6 +33,8 @@ export default function Login() {
         });
         showNotification(`Xin chào ${selectedUser.name} · Ca làm việc bắt đầu!`, 'success');
       } catch (e) {
+        const errMsg = e instanceof Error ? e.message : String(e);
+        showNotification(`Lỗi khi ghi nhận đăng nhập! Chi tiết: ${errMsg}`, 'error');
         console.error('Failed to log login:', e);
       }
       setPinInput('');
