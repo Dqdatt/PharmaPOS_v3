@@ -6,7 +6,7 @@ import ConfirmModal from '../components/modals/ConfirmModal';
 import { showNotification } from '../utils/toast';
 
 export default function Reports() {
-  const { invoices, products, getStock, formatPrice, deleteInvoice } = usePos();
+  const { invoices, exportOrders, products, getStock, formatPrice, deleteInvoice } = usePos();
   const [reportTab, setReportTab] = useState<'overview' | 'orders'>('overview');
   const [orderSearchQuery, setOrderSearchQuery] = useState('');
   const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null);
@@ -17,8 +17,11 @@ export default function Reports() {
   const [activeDateStr, setActiveDateStr] = useState<string | null>(null);
 
   const validInvoices = invoices.filter(inv => inv.status !== 'deleted');
+  const paidExportOrders = exportOrders.filter(o => o.status === 'paid');
 
-  const totalRevenue = validInvoices.reduce((sum, inv) => sum + inv.total, 0);
+  const totalInvoiceRevenue = validInvoices.reduce((sum, inv) => sum + inv.total, 0);
+  const totalExportRevenue = paidExportOrders.reduce((sum, o) => sum + o.total, 0);
+  const totalRevenue = totalInvoiceRevenue + totalExportRevenue;
   const totalProfit = validInvoices.reduce((sum, inv) => {
     const costOfGoods = inv.items.reduce((s, i) => {
       const p = products.find(x => x.id === i.id);
@@ -47,6 +50,12 @@ export default function Reports() {
       if (!dateIso) return;
       if (!data[dateIso]) data[dateIso] = 0;
       data[dateIso] += (inv.total - inv.otherCosts);
+    });
+    paidExportOrders.forEach(o => {
+      const dateIso = parseInvDateToISO(o.date);
+      if (!dateIso) return;
+      if (!data[dateIso]) data[dateIso] = 0;
+      data[dateIso] += o.total;
     });
     return data;
   })();
@@ -91,8 +100,10 @@ export default function Reports() {
   const todayISO = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
 
   const invoicesToday = validInvoices.filter(inv => parseInvDateToISO(inv.time) === todayISO);
+  const exportsToday = paidExportOrders.filter(o => parseInvDateToISO(o.date) === todayISO);
+  
   const otherCostsToday = invoicesToday.reduce((sum, inv) => sum + inv.otherCosts, 0);
-  const totalRevenueToday = invoicesToday.reduce((sum, inv) => sum + inv.total, 0);
+  const totalRevenueToday = invoicesToday.reduce((sum, inv) => sum + inv.total, 0) + exportsToday.reduce((sum, o) => sum + o.total, 0);
   const netRevenueToday = totalRevenueToday - otherCostsToday;
 
   // Filter for the new "Chi phí khác" list
@@ -137,30 +148,33 @@ export default function Reports() {
       {reportTab === 'overview' && (
         <div>
           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
-            <div className="bg-white p-5 rounded-xl shadow-sm border-l-4 border-teal-500">
+            <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-teal-500 flex flex-col justify-center">
               <h3 className="text-gray-500 text-xs font-bold mb-1 uppercase">Tổng doanh thu</h3>
-              <div className="text-2xl font-bold text-teal-700 font-mono">{formatPrice(totalRevenue)}</div>
-              <div className="text-xs text-gray-400 mt-2">Toàn thời gian</div>
+              <div className="text-xl font-bold text-teal-700 font-mono truncate">{formatPrice(totalRevenue)}</div>
+              <div className="text-[11px] text-gray-400 mt-1 truncate">
+                Bán lẻ: {formatPrice(totalInvoiceRevenue)}<br/>
+                Xuất kho: {formatPrice(totalExportRevenue)}
+              </div>
             </div>
-            <div className="bg-white p-5 rounded-xl shadow-sm border-l-4 border-green-500">
+            <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-green-500 flex flex-col justify-center">
               <h3 className="text-gray-500 text-xs font-bold mb-1 uppercase">Doanh thu ngày</h3>
-              <div className="text-2xl font-bold text-green-700 font-mono">{formatPrice(netRevenueToday)}</div>
-              <div className="text-xs text-gray-400 mt-2">Trừ chi phí khác</div>
+              <div className="text-xl font-bold text-green-700 font-mono truncate">{formatPrice(netRevenueToday)}</div>
+              <div className="text-[11px] text-gray-400 mt-1 truncate">Trừ chi phí khác</div>
             </div>
-            <div className="bg-white p-5 rounded-xl shadow-sm border-l-4 border-purple-500">
+            <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-purple-500 flex flex-col justify-center">
               <h3 className="text-gray-500 text-xs font-bold mb-1 uppercase">Chi phí khác (Hôm nay)</h3>
-              <div className="text-2xl font-bold text-purple-700 font-mono">{formatPrice(otherCostsToday)}</div>
-              <div className="text-xs text-gray-400 mt-2">Tổng phụ phí hôm nay</div>
+              <div className="text-xl font-bold text-purple-700 font-mono truncate">{formatPrice(otherCostsToday)}</div>
+              <div className="text-[11px] text-gray-400 mt-1 truncate">Tổng phụ phí hôm nay</div>
             </div>
-            <div className="bg-white p-5 rounded-xl shadow-sm border-l-4 border-blue-500">
-              <h3 className="text-gray-500 text-xs font-bold mb-1 uppercase">Số đơn hàng</h3>
-              <div className="text-2xl font-bold text-blue-700 font-mono">{validInvoices.length}</div>
-              <div className="text-xs text-gray-400 mt-2">Đơn hàng hợp lệ</div>
+            <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500 flex flex-col justify-center">
+              <h3 className="text-gray-500 text-xs font-bold mb-1 uppercase truncate">Tổng đơn (Lẻ+Xuất)</h3>
+              <div className="text-xl font-bold text-blue-700 font-mono truncate">{validInvoices.length + paidExportOrders.length}</div>
+              <div className="text-[11px] text-gray-400 mt-1 truncate">Đơn hàng hợp lệ</div>
             </div>
-            <div className="bg-white p-5 rounded-xl shadow-sm border-l-4 border-amber-500">
+            <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-amber-500 flex flex-col justify-center">
               <h3 className="text-gray-500 text-xs font-bold mb-1 uppercase">Giá trị tồn kho</h3>
-              <div className="text-2xl font-bold text-amber-700 font-mono">{formatPrice(inventoryValue)}</div>
-              <div className="text-xs text-gray-400 mt-2">Tính theo giá nhập</div>
+              <div className="text-xl font-bold text-amber-700 font-mono truncate">{formatPrice(inventoryValue)}</div>
+              <div className="text-[11px] text-gray-400 mt-1 truncate">Tính theo giá nhập</div>
             </div>
           </div>
 

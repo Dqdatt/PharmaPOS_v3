@@ -68,6 +68,26 @@ export interface Purchase {
   total: number;
 }
 
+export interface ExportOrderItem {
+  productId: number;
+  name: string;
+  unit: string;
+  qty: number;
+  price: number;
+}
+
+export interface ExportOrder {
+  id: string;
+  date: string;
+  recipientName: string;
+  recipientPhone: string;
+  status: 'exported' | 'sent' | 'received' | 'pending_payment' | 'paid' | 'returned';
+  total: number;
+  note: string;
+  employeeName: string;
+  items: ExportOrderItem[];
+}
+
 export interface InventoryHistory {
   id: number;
   productId: number;
@@ -96,11 +116,13 @@ interface PosContextType {
   cart: CartItem[];
   setCart: React.Dispatch<React.SetStateAction<CartItem[]>>;
 
-  // Invoices & Purchases
+  // Invoices, Purchases & Exports
   invoices: Invoice[];
   setInvoices: React.Dispatch<React.SetStateAction<Invoice[]>>;
   purchases: Purchase[];
   setPurchases: React.Dispatch<React.SetStateAction<Purchase[]>>;
+  exportOrders: ExportOrder[];
+  setExportOrders: React.Dispatch<React.SetStateAction<ExportOrder[]>>;
 
   // Monthly Rollover & Reconciliation
   isPreviousMonthClosed: boolean | null;
@@ -128,6 +150,10 @@ interface PosContextType {
   deleteInvoice: (id: string) => Promise<void>;
   addPurchaseToDB: (purchase: Purchase, productsToUpdate: Product[]) => Promise<void>;
   updatePurchaseInDB: (updatedPurchase: Purchase, productsToUpdate: Product[]) => Promise<void>;
+  addExportOrderToDB: (order: ExportOrder, productsToUpdate: Product[]) => Promise<void>;
+  updateExportOrderStatusInDB: (orderId: string, oldStatus: ExportOrder['status'], newStatus: ExportOrder['status']) => Promise<void>;
+  updateExportOrderInDB: (updatedOrder: ExportOrder, productsToUpdate: Product[]) => Promise<void>;
+  deleteExportOrderFromDB: (id: string) => Promise<void>;
   addStaffLogToDB: (log: StaffLog) => Promise<void>;
   updateStaffLogLogoutInDB: (userId: number, logoutTime: string) => Promise<void>;
   addUserToDB: (user: Omit<User, 'id'>) => Promise<void>;
@@ -164,6 +190,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [staffLogs, setStaffLogs] = useState<StaffLog[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
+  const [exportOrders, setExportOrders] = useState<ExportOrder[]>([]);
   
   const [isPreviousMonthClosed, setIsPreviousMonthClosed] = useState<boolean | null>(null);
   const [inventoryHistory, setInventoryHistory] = useState<InventoryHistory[]>([]);
@@ -240,10 +267,23 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setPurchases(dbPurchases.map(pur => ({
           id: pur.id, date: pur.date, supplier: pur.supplier, note: pur.note, total: Number(pur.total),
           items: (pur.purchase_items || []).map((i: any) => ({
-            productId: i.product_id, name: i.name, unit: i.unit, cost: Number(i.cost), qty: i.qty
+            productId: i.product_id, name: i.name, unit: i.unit, qty: i.qty, cost: Number(i.cost)
           }))
         })));
       }
+
+      // Export Orders
+      const { data: dbExportOrders } = await supabase.from('export_orders').select('*, export_order_items(*)').order('created_at', { ascending: false });
+      if (dbExportOrders) {
+        setExportOrders(dbExportOrders.map(ord => ({
+          id: ord.id, date: ord.date, recipientName: ord.recipient_name, recipientPhone: ord.recipient_phone,
+          status: ord.status, total: Number(ord.total), note: ord.note, employeeName: ord.employee_name,
+          items: (ord.export_order_items || []).map((i: any) => ({
+            productId: i.product_id, name: i.name, unit: i.unit, qty: i.qty, price: Number(i.price)
+          }))
+        })));
+      }
+
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e);
       showNotification(`Lỗi khi tải dữ liệu từ Supabase! Chi tiết: ${errMsg}`, 'error');
@@ -393,6 +433,108 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setPurchases(prev => prev.map(p => p.id === updatedPurchase.id ? updatedPurchase : p));
     setProducts(productsToUpdate);
   };
+
+  const addExportOrderToDB = async (order: ExportOrder, productsToUpdate: Product[]) => {
+    const { error: ordErr } = await supabase.from('export_orders').insert([{
+      id: order.id, date: order.date, recipient_name: order.recipientName, recipient_phone: order.recipientPhone,
+      status: order.status, total: order.total, note: order.note, employee_name: order.employeeName
+    }]);
+    if (ordErr) throw ordErr;
+
+    const itemsToInsert = order.items.map(i => ({
+      export_order_id: order.id, product_id: i.productId, name: i.name, unit: i.unit, qty: i.qty, price: i.price
+    }));
+    const { error: itmErr } = await supabase.from('export_order_items').insert(itemsToInsert);
+    if (itmErr) throw itmErr;
+
+    if (order.status !== 'returned') {
+      const changedProducts = productsToUpdate.filter(p => {
+        const old = products.find(op => op.id === p.id);
+        return !old || old.totalOut !== p.totalOut;
+      });
+      for (const p of changedProducts) {
+        await supabase.from('products').update({ total_out: p.totalOut }).eq('id', p.id);
+      }
+      setProducts(productsToUpdate);
+    }
+    setExportOrders(prev => [order, ...prev]);
+  };
+
+  const updateExportOrderStatusInDB = async (orderId: string, oldStatus: ExportOrder['status'], newStatus: ExportOrder['status']) => {
+    const { error } = await supabase.from('export_orders').update({ status: newStatus }).eq('id', orderId);
+    if (error) throw error;
+
+    if ((oldStatus === 'returned' && newStatus !== 'returned') || (oldStatus !== 'returned' && newStatus === 'returned')) {
+      const order = exportOrders.find(o => o.id === orderId);
+      if (order) {
+        const updatedProducts = [...products];
+        for (const item of order.items) {
+          const productIndex = updatedProducts.findIndex(p => p.id === item.productId);
+          if (productIndex !== -1) {
+            const product = updatedProducts[productIndex];
+            // If changing to 'returned', we restore the stock (decrease totalOut)
+            // If changing from 'returned' to something else, we deduct stock (increase totalOut)
+            const diff = newStatus === 'returned' ? -item.qty : item.qty;
+            const newTotalOut = Math.max(0, product.totalOut + diff);
+            
+            await supabase.from('products').update({ total_out: newTotalOut }).eq('id', product.id);
+            updatedProducts[productIndex] = { ...product, totalOut: newTotalOut };
+          }
+        }
+        setProducts(updatedProducts);
+      }
+    }
+
+    setExportOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+  };
+
+  const updateExportOrderInDB = async (updatedOrder: ExportOrder, productsToUpdate: Product[]) => {
+    const { error: ordErr } = await supabase.from('export_orders').update({
+      recipient_name: updatedOrder.recipientName, recipient_phone: updatedOrder.recipientPhone,
+      status: updatedOrder.status, total: updatedOrder.total, note: updatedOrder.note
+    }).eq('id', updatedOrder.id);
+    if (ordErr) throw ordErr;
+
+    await supabase.from('export_order_items').delete().eq('export_order_id', updatedOrder.id);
+    const itemsToInsert = updatedOrder.items.map(i => ({
+      export_order_id: updatedOrder.id, product_id: i.productId, name: i.name, unit: i.unit, qty: i.qty, price: i.price
+    }));
+    const { error: itmErr } = await supabase.from('export_order_items').insert(itemsToInsert);
+    if (itmErr) throw itmErr;
+
+    const changedProducts = productsToUpdate.filter(p => {
+      const old = products.find(op => op.id === p.id);
+      return !old || old.totalOut !== p.totalOut;
+    });
+    for (const p of changedProducts) {
+      await supabase.from('products').update({ total_out: p.totalOut }).eq('id', p.id);
+    }
+    setProducts(productsToUpdate);
+    setExportOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
+  };
+
+  const deleteExportOrderFromDB = async (id: string) => {
+    const { error } = await supabase.from('export_orders').delete().eq('id', id);
+    if (error) throw error;
+
+    const order = exportOrders.find(o => o.id === id);
+    if (order && order.status !== 'returned') {
+      const updatedProducts = [...products];
+      for (const item of order.items) {
+        const productIndex = updatedProducts.findIndex(p => p.id === item.productId);
+        if (productIndex !== -1) {
+          const product = updatedProducts[productIndex];
+          const newTotalOut = Math.max(0, product.totalOut - item.qty);
+          await supabase.from('products').update({ total_out: newTotalOut }).eq('id', product.id);
+          updatedProducts[productIndex] = { ...product, totalOut: newTotalOut };
+        }
+      }
+      setProducts(updatedProducts);
+    }
+    
+    setExportOrders(prev => prev.filter(o => o.id !== id));
+  };
+
 
 
   const addStaffLogToDB = async (log: StaffLog) => {
@@ -612,11 +754,13 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       cart, setCart,
       invoices, setInvoices,
       purchases, setPurchases,
+      exportOrders, setExportOrders,
       isPreviousMonthClosed, previousMonthYear, inventoryHistory,
       closeMonthlyInventory, checkPreviousMonthStatus, reconcileProductStock, fetchInventoryHistory,
       isCustomerView,
       getStock, formatPrice, getNow,
       refreshData, addProductToDB, updateProductInDB, deleteProductFromDB, addInvoiceToDB, deleteInvoice, addPurchaseToDB, updatePurchaseInDB,
+      addExportOrderToDB, updateExportOrderStatusInDB, updateExportOrderInDB, deleteExportOrderFromDB,
       addStaffLogToDB, updateStaffLogLogoutInDB, addUserToDB, updateUserInDB, deleteUserFromDB
     }}>
       {children}

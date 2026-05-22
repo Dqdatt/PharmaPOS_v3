@@ -5,11 +5,12 @@ import Inventory from './Inventory';
 import Imports from './Imports';
 import Reports from './Reports';
 import Employees from './Employees';
+import Exports from './Exports';
 import { showNotification } from '../utils/toast';
 import ConfirmModal from '../components/modals/ConfirmModal';
 import CloseInventoryModal from '../components/modals/CloseInventoryModal';
 
-type Tab = 'pos' | 'inventory' | 'import' | 'reports' | 'employees';
+type Tab = 'pos' | 'inventory' | 'import' | 'exports' | 'reports' | 'employees';
 
 export default function MainApp() {
   const { currentUser, setCurrentUser, updateStaffLogLogoutInDB, cart, setCart, getNow, isPreviousMonthClosed, checkPreviousMonthStatus } = usePos();
@@ -122,6 +123,12 @@ export default function MainApp() {
             <i className="fa-solid fa-truck-ramp-box"></i><span className="hidden sm:inline">Nhập Hàng</span>
           </button>
           <button
+            onClick={() => setCurrentTab('exports')}
+            className={`px-4 py-2 rounded-lg font-bold transition flex items-center gap-2 ${currentTab === 'exports' ? 'bg-teal-900' : 'hover:bg-teal-600'}`}
+          >
+            <i className="fa-solid fa-truck-fast"></i><span className="hidden sm:inline">Xuất Kho</span>
+          </button>
+          <button
             onClick={() => setCurrentTab('reports')}
             className={`px-4 py-2 rounded-lg font-bold transition flex items-center gap-2 ${currentTab === 'reports' ? 'bg-teal-900' : 'hover:bg-teal-600'}`}
           >
@@ -162,6 +169,7 @@ export default function MainApp() {
         {currentTab === 'pos' && <POS onOpenCustomerScreen={openCustomerScreen} />}
         {currentTab === 'inventory' && <Inventory />}
         {currentTab === 'import' && <Imports />}
+        {currentTab === 'exports' && <Exports />}
         {currentTab === 'reports' && <Reports />}
         {currentTab === 'employees' && currentUser.role === 'admin' && <Employees />}
       </main>
