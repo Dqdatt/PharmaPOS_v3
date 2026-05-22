@@ -4,9 +4,10 @@ interface Props {
   type: 'PO' | 'INV';
   data: Purchase | Invoice;
   onClose: () => void;
+  onEdit?: () => void;
 }
 
-export default function DetailModal({ type, data, onClose }: Props) {
+export default function DetailModal({ type, data, onClose, onEdit }: Props) {
   const { formatPrice } = usePos();
 
   const isPO = type === 'PO';
@@ -21,9 +22,19 @@ export default function DetailModal({ type, data, onClose }: Props) {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
         <div className="p-4 border-b flex justify-between items-center bg-gray-50">
-          <h3 className="font-bold text-lg text-gray-800">
-            {isPO ? 'Chi tiết Phiếu Nhập' : 'Chi tiết Hóa Đơn'} {data.id}
-          </h3>
+          <div className="flex items-center gap-3">
+            <h3 className="font-bold text-lg text-gray-800">
+              {isPO ? 'Chi tiết Phiếu Nhập' : 'Chi tiết Hóa Đơn'} {data.id}
+            </h3>
+            {isPO && onEdit && (
+              <button 
+                onClick={onEdit} 
+                className="bg-yellow-100 text-yellow-700 hover:bg-yellow-200 px-3 py-1 rounded-lg text-sm font-bold transition flex items-center gap-1 border border-yellow-300"
+              >
+                <i className="fa-solid fa-pen"></i> Sửa
+              </button>
+            )}
+          </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700">
             <i className="fa-solid fa-xmark text-xl"></i>
           </button>

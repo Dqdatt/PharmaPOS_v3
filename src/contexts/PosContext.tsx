@@ -127,6 +127,7 @@ interface PosContextType {
   addInvoiceToDB: (invoice: Invoice, productsToUpdate: Product[]) => Promise<void>;
   deleteInvoice: (id: string) => Promise<void>;
   addPurchaseToDB: (purchase: Purchase, productsToUpdate: Product[]) => Promise<void>;
+  updatePurchaseInDB: (updatedPurchase: Purchase, productsToUpdate: Product[]) => Promise<void>;
   addStaffLogToDB: (log: StaffLog) => Promise<void>;
   updateStaffLogLogoutInDB: (userId: number, logoutTime: string) => Promise<void>;
   addUserToDB: (user: Omit<User, 'id'>) => Promise<void>;
@@ -354,12 +355,45 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (itmErr) throw itmErr;
 
     // Update products totalIn and importPrice
-    for (const p of productsToUpdate) {
+    const changedProducts = productsToUpdate.filter(p => {
+      const old = products.find(op => op.id === p.id);
+      return !old || old.totalIn !== p.totalIn || old.importPrice !== p.importPrice;
+    });
+    for (const p of changedProducts) {
       await supabase.from('products').update({ total_in: p.totalIn, import_price: p.importPrice }).eq('id', p.id);
     }
     setPurchases(prev => [purchase, ...prev]);
     setProducts(productsToUpdate);
   };
+
+  const updatePurchaseInDB = async (updatedPurchase: Purchase, productsToUpdate: Product[]) => {
+    // Update purchase record
+    const { error: purErr } = await supabase.from('purchases').update({
+      supplier: updatedPurchase.supplier, note: updatedPurchase.note, total: updatedPurchase.total
+    }).eq('id', updatedPurchase.id);
+    if (purErr) throw purErr;
+
+    // Replace purchase items
+    await supabase.from('purchase_items').delete().eq('purchase_id', updatedPurchase.id);
+    const itemsToInsert = updatedPurchase.items.map(i => ({
+      purchase_id: updatedPurchase.id, product_id: i.productId, name: i.name, unit: i.unit, qty: i.qty, cost: i.cost
+    }));
+    const { error: itmErr } = await supabase.from('purchase_items').insert(itemsToInsert);
+    if (itmErr) throw itmErr;
+
+    // Update products totalIn and importPrice
+    const changedProducts = productsToUpdate.filter(p => {
+      const old = products.find(op => op.id === p.id);
+      return !old || old.totalIn !== p.totalIn || old.importPrice !== p.importPrice;
+    });
+    for (const p of changedProducts) {
+      await supabase.from('products').update({ total_in: p.totalIn, import_price: p.importPrice }).eq('id', p.id);
+    }
+
+    setPurchases(prev => prev.map(p => p.id === updatedPurchase.id ? updatedPurchase : p));
+    setProducts(productsToUpdate);
+  };
+
 
   const addStaffLogToDB = async (log: StaffLog) => {
     const { data, error } = await supabase.from('staff_logs').insert([{
@@ -582,7 +616,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       closeMonthlyInventory, checkPreviousMonthStatus, reconcileProductStock, fetchInventoryHistory,
       isCustomerView,
       getStock, formatPrice, getNow,
-      refreshData, addProductToDB, updateProductInDB, deleteProductFromDB, addInvoiceToDB, deleteInvoice, addPurchaseToDB,
+      refreshData, addProductToDB, updateProductInDB, deleteProductFromDB, addInvoiceToDB, deleteInvoice, addPurchaseToDB, updatePurchaseInDB,
       addStaffLogToDB, updateStaffLogLogoutInDB, addUserToDB, updateUserInDB, deleteUserFromDB
     }}>
       {children}

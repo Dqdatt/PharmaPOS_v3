@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { usePos } from '../contexts/PosContext';
 import ProductModal from '../components/modals/ProductModal';
 import POModal from '../components/modals/POModal';
@@ -85,6 +85,8 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
   const finalTotal = cartTotalBase + (Number(otherCosts) || 0);
   const canCheckout = cart.length > 0 && paymentMethod !== null;
 
+  const qrShownRef = useRef(false);
+
   useEffect(() => {
     if (paymentMethod === 'transfer' && finalTotal > 0) {
       const timer = setTimeout(async () => {
@@ -119,6 +121,7 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
             acqId: bankInfo.bankId,
             qrText: qrString,
           };
+          qrShownRef.current = true;
           mqttClient.publish(mqtt_topic, JSON.stringify(payload), { qos: 1 });
           console.log("Đã gửi lệnh thanh toán qua MQTT thành công!");
         } catch (error) {
@@ -129,8 +132,9 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
       }, 500);
       return () => clearTimeout(timer);
     } else {
-      if (mqttClient && mqttClient.connected) {
+      if (qrShownRef.current && mqttClient && mqttClient.connected) {
         mqttClient.publish(mqtt_topic, JSON.stringify({ type: "cancel" }));
+        qrShownRef.current = false;
       }
     }
   }, [paymentMethod, finalTotal, posCustomer.name, mqttClient, mqtt_topic]);

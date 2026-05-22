@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { showNotification } from '../../utils/toast';
-import { usePos } from '../../contexts/PosContext';
+import { usePos, Purchase } from '../../contexts/PosContext';
 
 interface PoRow {
   productId: number | '';
@@ -8,12 +8,16 @@ interface PoRow {
   cost: number;
 }
 
-export default function POModal({ onClose }: { onClose: () => void }) {
-  const { products, addPurchaseToDB, formatPrice, getNow } = usePos();
+export default function POModal({ onClose, initialData }: { onClose: () => void, initialData?: Purchase }) {
+  const { products, addPurchaseToDB, updatePurchaseInDB, formatPrice, getNow } = usePos();
 
-  const [supplier, setSupplier] = useState('');
-  const [note, setNote] = useState('');
-  const [items, setItems] = useState<PoRow[]>([{ productId: '', qty: 1, cost: 0 }]);
+  const [supplier, setSupplier] = useState(initialData?.supplier || '');
+  const [note, setNote] = useState(initialData?.note || '');
+  const [items, setItems] = useState<PoRow[]>(
+    initialData 
+      ? initialData.items.map(i => ({ productId: i.productId, qty: i.qty, cost: i.cost }))
+      : [{ productId: '', qty: 1, cost: 0 }]
+  );
   const [isProcessing, setIsProcessing] = useState(false);
 
   const addRow = () => setItems(prev => [...prev, { productId: '', qty: 1, cost: 0 }]);
@@ -52,10 +56,10 @@ export default function POModal({ onClose }: { onClose: () => void }) {
       };
     });
 
-    const poId = 'PN' + Date.now().toString().slice(-6);
+    const poId = initialData ? initialData.id : 'PN' + Date.now().toString().slice(-6);
     const newPo = {
       id: poId,
-      date: getNow(true),
+      date: initialData ? initialData.date : getNow(true),
       supplier: supplier || 'Khách vãng lai',
       note,
       items: enrichedItems,
@@ -64,15 +68,33 @@ export default function POModal({ onClose }: { onClose: () => void }) {
 
     // Calculate new stock and import price
     const productsToUpdate = products.map(p => {
+      let newTotalIn = p.totalIn;
+      // Revert old quantities if editing
+      if (initialData) {
+        const oldItem = initialData.items.find(i => i.productId === p.id);
+        if (oldItem) newTotalIn -= oldItem.qty;
+      }
+      
       const item = enrichedItems.find(i => i.productId === p.id);
-      if (item) return { ...p, totalIn: p.totalIn + item.qty, importPrice: item.cost };
+      if (item) {
+        newTotalIn += item.qty;
+        return { ...p, totalIn: newTotalIn, importPrice: item.cost };
+      } else if (initialData && initialData.items.find(i => i.productId === p.id)) {
+        // Just reverted
+        return { ...p, totalIn: newTotalIn };
+      }
       return p;
     });
 
     setIsProcessing(true);
     try {
-      await addPurchaseToDB(newPo, productsToUpdate);
-      showNotification(`Tạo phiếu nhập ${poId} thành công!`, 'success');
+      if (initialData) {
+        await updatePurchaseInDB(newPo, productsToUpdate);
+        showNotification(`Cập nhật phiếu nhập ${poId} thành công!`, 'success');
+      } else {
+        await addPurchaseToDB(newPo, productsToUpdate);
+        showNotification(`Tạo phiếu nhập ${poId} thành công!`, 'success');
+      }
       onClose();
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e);
@@ -86,7 +108,7 @@ export default function POModal({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col" style={{ maxHeight: '90vh' }}>
         <div className="p-4 border-b flex justify-between items-center bg-gray-50">
-          <h3 className="font-bold text-lg text-gray-800">Tạo Phiếu Nhập Hàng</h3>
+          <h3 className="font-bold text-lg text-gray-800">{initialData ? `Sửa Phiếu Nhập: ${initialData.id}` : 'Tạo Phiếu Nhập Hàng'}</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700">
             <i className="fa-solid fa-xmark text-xl"></i>
           </button>
@@ -188,7 +210,9 @@ export default function POModal({ onClose }: { onClose: () => void }) {
 
         <div className="p-4 border-t bg-gray-50 flex justify-end gap-2">
           <button onClick={onClose} disabled={isProcessing} className="px-4 py-2 rounded-lg border bg-white font-bold hover:bg-gray-100 text-sm disabled:opacity-50">Hủy</button>
-          <button onClick={savePo} disabled={isProcessing} className="px-4 py-2 rounded-lg bg-teal-600 text-white font-bold hover:bg-teal-700 text-sm disabled:opacity-50">Xác nhận nhập hàng</button>
+          <button onClick={savePo} disabled={isProcessing} className="px-4 py-2 rounded-lg bg-teal-600 text-white font-bold hover:bg-teal-700 text-sm disabled:opacity-50">
+            {initialData ? 'Lưu thay đổi' : 'Xác nhận nhập hàng'}
+          </button>
         </div>
       </div>
 

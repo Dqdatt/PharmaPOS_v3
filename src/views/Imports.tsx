@@ -8,6 +8,7 @@ export default function Imports() {
   const { purchases, formatPrice } = usePos();
   const [showPoModal, setShowPoModal] = useState(false);
   const [viewingPo, setViewingPo] = useState<Purchase | null>(null);
+  const [editingPo, setEditingPo] = useState<Purchase | null>(null);
 
   return (
     <div className="flex-1 p-6 overflow-y-auto">
@@ -67,11 +68,16 @@ export default function Imports() {
       </div>
 
       {showPoModal && <POModal onClose={() => setShowPoModal(false)} />}
+      {editingPo && <POModal initialData={editingPo} onClose={() => setEditingPo(null)} />}
       {viewingPo && (
         <DetailModal
           type="PO"
           data={viewingPo}
           onClose={() => setViewingPo(null)}
+          onEdit={() => {
+            setEditingPo(viewingPo);
+            setViewingPo(null);
+          }}
         />
       )}
     </div>
