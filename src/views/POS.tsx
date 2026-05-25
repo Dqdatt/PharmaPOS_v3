@@ -20,6 +20,7 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
   const [posSearchQuery, setPosSearchQuery] = useState('');
   const [posCustomer, setPosCustomer] = useState({ name: '', phone: '' });
   const [otherCosts, setOtherCosts] = useState<number>(0);
+  const [isOtherCostOnly, setIsOtherCostOnly] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer' | null>(null);
   const [showPrintConfirm, setShowPrintConfirm] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -83,7 +84,7 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
   const cartTotalQty = cart.reduce((sum, item) => sum + item.qty, 0);
   const cartTotalBase = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
   const finalTotal = cartTotalBase + (Number(otherCosts) || 0);
-  const canCheckout = cart.length > 0 && paymentMethod !== null;
+  const canCheckout = (cart.length > 0 || isOtherCostOnly) && paymentMethod !== null;
 
   const qrShownRef = useRef(false);
 
@@ -207,6 +208,7 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
   const resetCart = () => {
     setCart([]);
     setOtherCosts(0);
+    setIsOtherCostOnly(false);
     setPaymentMethod(null);
     setPosCustomer({ name: '', phone: '' });
     setPrintData(null);
@@ -275,7 +277,7 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
             <i className="fa-solid fa-cart-shopping mr-2"></i>Đơn hàng
           </div>
           <button
-            onClick={() => { setCart([]); setOtherCosts(0); setPaymentMethod(null); }}
+            onClick={() => { setCart([]); setOtherCosts(0); setIsOtherCostOnly(false); setPaymentMethod(null); }}
             className="text-red-500 hover:bg-red-50 px-2 py-1 rounded text-xs font-bold border border-red-200"
           >
             <i className="fa-solid fa-trash mr-1"></i>Xóa trắng
@@ -366,12 +368,21 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
             <span className="font-bold">{cartTotalQty}</span>
           </div>
           <div className="flex justify-between items-center mb-4 text-sm">
-            <span className="text-gray-600 font-bold">CHI PHÍ KHÁC:</span>
+            <div className="flex items-center gap-2">
+              <span className="text-gray-600 font-bold">CHI PHÍ KHÁC:</span>
+              <button
+                onClick={() => setIsOtherCostOnly(!isOtherCostOnly)}
+                className={`w-8 h-4 rounded-full transition-colors flex items-center px-0.5 ${isOtherCostOnly ? 'bg-teal-500' : 'bg-gray-300'}`}
+              >
+                <div className={`w-3 h-3 bg-white rounded-full shadow-sm transform transition-transform ${isOtherCostOnly ? 'translate-x-4' : 'translate-x-0'}`}></div>
+              </button>
+            </div>
             <input
               type="number"
               value={otherCosts || ''}
               onChange={e => setOtherCosts(Number(e.target.value) || 0)}
-              className="w-32 p-1.5 text-right border rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none font-mono"
+              disabled={!isOtherCostOnly && cart.length === 0}
+              className="w-32 p-1.5 text-right border rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none font-mono disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
               placeholder="0"
             />
           </div>

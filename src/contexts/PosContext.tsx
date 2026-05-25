@@ -348,10 +348,6 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const { error: itmErr } = await supabase.from('invoice_items').insert(itemsToInsert);
     if (itmErr) throw itmErr;
 
-    // Update products totalOut
-    for (const p of productsToUpdate) {
-      await supabase.from('products').update({ total_out: p.totalOut }).eq('id', p.id);
-    }
     setInvoices(prev => [invoice, ...prev]);
     setProducts(productsToUpdate);
   };
@@ -364,14 +360,13 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // 2. Find invoice
     const invoice = invoices.find(inv => inv.id === id);
     if (invoice) {
-      // 3. Update products totalOut in DB and local
+      // 3. Update products totalOut local only (DB updated via Triggers)
       const updatedProducts = [...products];
       for (const item of invoice.items) {
         const productIndex = updatedProducts.findIndex(p => p.id === item.id);
         if (productIndex !== -1) {
           const product = updatedProducts[productIndex];
           const newTotalOut = Math.max(0, product.totalOut - item.qty);
-          await supabase.from('products').update({ total_out: newTotalOut }).eq('id', product.id);
           updatedProducts[productIndex] = { ...product, totalOut: newTotalOut };
         }
       }
@@ -394,14 +389,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const { error: itmErr } = await supabase.from('purchase_items').insert(itemsToInsert);
     if (itmErr) throw itmErr;
 
-    // Update products totalIn and importPrice
-    const changedProducts = productsToUpdate.filter(p => {
-      const old = products.find(op => op.id === p.id);
-      return !old || old.totalIn !== p.totalIn || old.importPrice !== p.importPrice;
-    });
-    for (const p of changedProducts) {
-      await supabase.from('products').update({ total_in: p.totalIn, import_price: p.importPrice }).eq('id', p.id);
-    }
+    // Update products local only (DB updated via Triggers)
     setPurchases(prev => [purchase, ...prev]);
     setProducts(productsToUpdate);
   };
@@ -421,15 +409,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const { error: itmErr } = await supabase.from('purchase_items').insert(itemsToInsert);
     if (itmErr) throw itmErr;
 
-    // Update products totalIn and importPrice
-    const changedProducts = productsToUpdate.filter(p => {
-      const old = products.find(op => op.id === p.id);
-      return !old || old.totalIn !== p.totalIn || old.importPrice !== p.importPrice;
-    });
-    for (const p of changedProducts) {
-      await supabase.from('products').update({ total_in: p.totalIn, import_price: p.importPrice }).eq('id', p.id);
-    }
-
+    // Update products local only (DB updated via Triggers)
     setPurchases(prev => prev.map(p => p.id === updatedPurchase.id ? updatedPurchase : p));
     setProducts(productsToUpdate);
   };
@@ -448,13 +428,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (itmErr) throw itmErr;
 
     if (order.status !== 'returned') {
-      const changedProducts = productsToUpdate.filter(p => {
-        const old = products.find(op => op.id === p.id);
-        return !old || old.totalOut !== p.totalOut;
-      });
-      for (const p of changedProducts) {
-        await supabase.from('products').update({ total_out: p.totalOut }).eq('id', p.id);
-      }
+      // Local update only, DB is handled by triggers
       setProducts(productsToUpdate);
     }
     setExportOrders(prev => [order, ...prev]);
@@ -476,8 +450,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             // If changing from 'returned' to something else, we deduct stock (increase totalOut)
             const diff = newStatus === 'returned' ? -item.qty : item.qty;
             const newTotalOut = Math.max(0, product.totalOut + diff);
-            
-            await supabase.from('products').update({ total_out: newTotalOut }).eq('id', product.id);
+            // Local update only, DB is handled by triggers
             updatedProducts[productIndex] = { ...product, totalOut: newTotalOut };
           }
         }
@@ -502,13 +475,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const { error: itmErr } = await supabase.from('export_order_items').insert(itemsToInsert);
     if (itmErr) throw itmErr;
 
-    const changedProducts = productsToUpdate.filter(p => {
-      const old = products.find(op => op.id === p.id);
-      return !old || old.totalOut !== p.totalOut;
-    });
-    for (const p of changedProducts) {
-      await supabase.from('products').update({ total_out: p.totalOut }).eq('id', p.id);
-    }
+    // Local update only, DB is handled by triggers
     setProducts(productsToUpdate);
     setExportOrders(prev => prev.map(o => o.id === updatedOrder.id ? updatedOrder : o));
   };
@@ -525,7 +492,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (productIndex !== -1) {
           const product = updatedProducts[productIndex];
           const newTotalOut = Math.max(0, product.totalOut - item.qty);
-          await supabase.from('products').update({ total_out: newTotalOut }).eq('id', product.id);
+          // Local update only, DB is handled by triggers
           updatedProducts[productIndex] = { ...product, totalOut: newTotalOut };
         }
       }
