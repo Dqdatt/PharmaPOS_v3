@@ -69,7 +69,7 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
   const updateQty = (index: number, delta: number) => {
     const item = cart[index];
     const p = products.find(x => x.id === item.id);
-    const newQty = item.qty + delta;
+    const newQty = (Number(item.qty) || 0) + delta;
     if (newQty <= 0) {
       setCart(prev => prev.filter((_, i) => i !== index));
     } else if (p && newQty > getStock(p)) {
@@ -79,10 +79,31 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
     }
   };
 
+  const setQtyDirectly = (index: number, val: string | number) => {
+    if (val === '') {
+      setCart(prev => prev.map((x, i) => i === index ? { ...x, qty: '' as any } : x));
+      return;
+    }
+    const newQty = typeof val === 'string' ? parseInt(val, 10) : val;
+    if (isNaN(newQty)) return;
+
+    const item = cart[index];
+    const p = products.find(x => x.id === item.id);
+    
+    if (newQty <= 0) {
+      setCart(prev => prev.filter((_, i) => i !== index));
+    } else if (p && newQty > getStock(p)) {
+      showNotification('Không đủ tồn kho!', 'error');
+      setCart(prev => prev.map((x, i) => i === index ? { ...x, qty: getStock(p) } : x));
+    } else {
+      setCart(prev => prev.map((x, i) => i === index ? { ...x, qty: newQty } : x));
+    }
+  };
+
   const removeFromCart = (index: number) => setCart(prev => prev.filter((_, i) => i !== index));
 
-  const cartTotalQty = cart.reduce((sum, item) => sum + item.qty, 0);
-  const cartTotalBase = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const cartTotalQty = cart.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+  const cartTotalBase = cart.reduce((sum, item) => sum + item.price * (Number(item.qty) || 0), 0);
   const finalTotal = cartTotalBase + (Number(otherCosts) || 0);
   const canCheckout = (cart.length > 0 || isOtherCostOnly) && paymentMethod !== null;
 
@@ -334,7 +355,18 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
                         >
                           <i className="fa-solid fa-minus text-xs"></i>
                         </button>
-                        <span className="font-bold w-6 text-center font-mono">{item.qty}</span>
+                        <input
+                          type="number"
+                          value={item.qty}
+                          onFocus={e => e.target.select()}
+                          onChange={e => setQtyDirectly(index, e.target.value)}
+                          onBlur={e => {
+                            if (e.target.value === '' || isNaN(parseInt(e.target.value, 10)) || parseInt(e.target.value, 10) <= 0) {
+                              setQtyDirectly(index, 1);
+                            }
+                          }}
+                          className="font-bold w-10 text-center font-mono bg-transparent outline-none focus:ring-1 focus:ring-teal-500 rounded [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                        />
                         <button
                           onClick={() => updateQty(index, 1)}
                           className="w-6 h-6 flex items-center justify-center bg-white rounded shadow-sm text-gray-600 hover:text-teal-600"
@@ -345,7 +377,7 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
                     </td>
                     <td className="p-2 text-right font-mono font-semibold text-teal-700 align-middle">
                       <div className="flex items-center justify-end gap-2">
-                        {formatPrice(item.price * item.qty)}
+                        {formatPrice(item.price * (Number(item.qty) || 0))}
                         <button
                           onClick={() => removeFromCart(index)}
                           className="text-gray-400 hover:text-red-500 p-1"
@@ -539,7 +571,7 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
                   <td className="border border-black p-2">{item.name}</td>
                   <td className="border border-black p-2 text-center">{item.qty}</td>
                   <td className="border border-black p-2 text-right">{item.price.toLocaleString()}</td>
-                  <td className="border border-black p-2 text-right">{(item.price * item.qty).toLocaleString()}</td>
+                  <td className="border border-black p-2 text-right">{(item.price * (Number(item.qty) || 0)).toLocaleString()}</td>
                 </tr>
               ))}
               <tr>
