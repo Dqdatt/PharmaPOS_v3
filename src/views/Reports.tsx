@@ -16,6 +16,9 @@ export default function Reports() {
   const [orderDateFilter, setOrderDateFilter] = useState('');
   const [activeDateStr, setActiveDateStr] = useState<string | null>(null);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
+
   const validInvoices = invoices.filter(inv => inv.status !== 'deleted');
   const paidExportOrders = exportOrders.filter(o => o.status === 'paid');
 
@@ -96,6 +99,14 @@ export default function Reports() {
     const matchDate = orderDateFilter ? parseInvDateToISO(i.time) === orderDateFilter : true;
     return matchSearch && matchStatus && matchDate;
   });
+
+  const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / itemsPerPage));
+  // Safely adjust current page if filtered items shrink
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedInvoices = filteredInvoices.slice(
+    (safeCurrentPage - 1) * itemsPerPage,
+    safeCurrentPage * itemsPerPage
+  );
 
   const todayISO = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
 
@@ -303,13 +314,13 @@ export default function Reports() {
           <div className="p-3 border-b flex flex-wrap justify-between items-center gap-2">
             <div className="flex gap-2">
               <button
-                onClick={() => setOrderStatusTab('valid')}
+                onClick={() => { setOrderStatusTab('valid'); setCurrentPage(1); }}
                 className={`px-4 py-2 rounded-lg font-bold text-sm transition shadow-sm ${orderStatusTab === 'valid' ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
               >
                 Hợp lệ
               </button>
               <button
-                onClick={() => setOrderStatusTab('deleted')}
+                onClick={() => { setOrderStatusTab('deleted'); setCurrentPage(1); }}
                 className={`px-4 py-2 rounded-lg font-bold text-sm transition shadow-sm ${orderStatusTab === 'deleted' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
               >
                 Đã xóa / Trả hàng
@@ -319,13 +330,13 @@ export default function Reports() {
               <input
                 type="date"
                 value={orderDateFilter}
-                onChange={e => setOrderDateFilter(e.target.value)}
+                onChange={e => { setOrderDateFilter(e.target.value); setCurrentPage(1); }}
                 className="p-2 border rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
               />
               <input
                 type="text"
                 value={orderSearchQuery}
-                onChange={e => setOrderSearchQuery(e.target.value)}
+                onChange={e => { setOrderSearchQuery(e.target.value); setCurrentPage(1); }}
                 placeholder="Tìm theo mã đơn hoặc khách..."
                 className="p-2 border rounded-lg text-sm w-64 focus:ring-2 focus:ring-teal-500 focus:outline-none"
               />
@@ -351,10 +362,10 @@ export default function Reports() {
                 </tr>
               </thead>
               <tbody>
-                {filteredInvoices.length === 0 ? (
+                {paginatedInvoices.length === 0 ? (
                   <tr><td colSpan={7} className="p-8 text-center text-gray-400">Không tìm thấy đơn hàng</td></tr>
                 ) : (
-                  filteredInvoices.map(inv => (
+                  paginatedInvoices.map(inv => (
                     <tr key={inv.id} className="border-b hover:bg-gray-50">
                       <td className="p-3 font-mono font-bold text-teal-600">{inv.id}</td>
                       <td className="p-3 text-xs text-gray-500">{inv.time}</td>
@@ -396,6 +407,43 @@ export default function Reports() {
                 )}
               </tbody>
             </table>
+          </div>
+          
+          {/* Pagination */}
+          <div className="p-3 border-t bg-gray-50 flex justify-between items-center gap-4 rounded-b-xl">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">Hiển thị:</span>
+              <select
+                value={itemsPerPage}
+                onChange={e => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                className="p-1.5 border rounded-lg text-sm bg-white focus:ring-2 focus:ring-teal-500 focus:outline-none"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span className="text-sm text-gray-600 ml-2">Tổng: <b>{filteredInvoices.length}</b></span>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={safeCurrentPage === 1}
+                className="px-3 py-1.5 border rounded-lg bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold shadow-sm"
+              >
+                <i className="fa-solid fa-chevron-left"></i>
+              </button>
+              <span className="text-sm px-3 font-medium text-gray-700">
+                {safeCurrentPage} / {totalPages}
+              </span>
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={safeCurrentPage === totalPages}
+                className="px-3 py-1.5 border rounded-lg bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold shadow-sm"
+              >
+                <i className="fa-solid fa-chevron-right"></i>
+              </button>
+            </div>
           </div>
         </div>
       )}

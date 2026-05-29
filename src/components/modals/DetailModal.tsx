@@ -218,7 +218,14 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
           
           <h1 className="text-center font-bold text-2xl mb-1">HÓA ĐƠN BÁN HÀNG</h1>
           <p className="text-center italic text-sm mb-6">
-            Ngày {inv.time.split(/[\s,]+/)[0]}
+            {(() => {
+              const dateMatch = inv.time.match(/\d{1,2}\/\d{1,2}\/\d{4}/);
+              if (dateMatch) {
+                const [d, m, y] = dateMatch[0].split('/');
+                return `Ngày ${d.padStart(2, '0')} Tháng ${m.padStart(2, '0')} Năm ${y}`;
+              }
+              return `Ngày ${inv.time}`;
+            })()}
           </p>
 
           <div className="flex justify-between mb-2 text-[15px]">

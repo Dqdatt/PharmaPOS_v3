@@ -9,6 +9,7 @@ export default function Employees() {
   const [staffTab, setStaffTab] = useState<'logs' | 'revenue' | 'edit'>('logs');
   const [showStaffModal, setShowStaffModal] = useState(false);
   const [editingStaffId, setEditingStaffId] = useState<number | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const openStaffModal = (id: number | null) => {
     setEditingStaffId(id);
@@ -32,6 +33,12 @@ export default function Employees() {
 
   const getRevenueByEmployee = (name: string) =>
     invoices.filter(i => i.employeeName === name).reduce((sum, i) => sum + i.total, 0);
+
+  const reversedLogs = [...staffLogs].reverse();
+  const logsPerPage = 10;
+  const totalPages = Math.max(1, Math.ceil(reversedLogs.length / logsPerPage));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const paginatedLogs = reversedLogs.slice((safeCurrentPage - 1) * logsPerPage, safeCurrentPage * logsPerPage);
 
   return (
     <div className="flex-1 p-6 overflow-y-auto">
@@ -69,31 +76,61 @@ export default function Employees() {
           {staffLogs.length === 0 ? (
             <div className="p-8 text-center text-gray-400">Chưa có dữ liệu đăng nhập</div>
           ) : (
-            [...staffLogs].reverse().map((log, i) => (
-              <div key={i} className="flex items-center gap-4 p-3 border-b last:border-0 hover:bg-gray-50">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${log.role === 'admin' ? 'bg-red-500' : 'bg-teal-500'}`}>
-                  {log.name.charAt(0)}
-                </div>
-                <div className="flex-1">
-                  <div className="font-bold text-sm">
-                    {log.name}{' '}
-                    <span className="text-xs font-normal text-gray-500 ml-1 bg-gray-100 px-1 rounded">{log.role}</span>
+            <>
+              {paginatedLogs.map((log, i) => (
+                <div key={i} className="flex items-center gap-4 p-3 border-b last:border-0 hover:bg-gray-50">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${log.role === 'admin' ? 'bg-red-500' : 'bg-teal-500'}`}>
+                    {log.name.charAt(0)}
                   </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    Vào: {log.loginTime}{' '}
-                    {log.logoutTime ? (
-                      <span>· Ra: {log.logoutTime}</span>
-                    ) : (
-                      (currentUser && currentUser.id === log.userId && i === 0) ? (
-                        <span className="text-green-600 font-bold ml-1">· Đang làm việc</span>
+                  <div className="flex-1">
+                    <div className="font-bold text-sm">
+                      {log.name}{' '}
+                      <span className="text-xs font-normal text-gray-500 ml-1 bg-gray-100 px-1 rounded">{log.role}</span>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Vào: {log.loginTime}{' '}
+                      {log.logoutTime ? (
+                        <span>· Ra: {log.logoutTime}</span>
                       ) : (
-                        <span className="text-red-500 font-bold ml-1">· Ra: LỖI</span>
-                      )
-                    )}
+                        (currentUser && currentUser.id === log.userId && i === 0 && safeCurrentPage === 1) ? (
+                          <span className="text-green-600 font-bold ml-1">· Đang làm việc</span>
+                        ) : (
+                          <span className="text-red-500 font-bold ml-1">· Ra: LỖI</span>
+                        )
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
+              ))}
+              
+              {/* Pagination */}
+              {reversedLogs.length > 0 && (
+                <div className="pt-4 mt-2 border-t flex justify-between items-center gap-4">
+                  <div className="text-sm text-gray-600">
+                    Tổng: <b>{reversedLogs.length}</b> bản ghi
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={safeCurrentPage === 1}
+                      className="px-3 py-1.5 border rounded-lg bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold shadow-sm"
+                    >
+                      <i className="fa-solid fa-chevron-left"></i>
+                    </button>
+                    <span className="text-sm px-3 font-medium text-gray-700">
+                      {safeCurrentPage} / {totalPages}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={safeCurrentPage === totalPages}
+                      className="px-3 py-1.5 border rounded-lg bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold shadow-sm"
+                    >
+                      <i className="fa-solid fa-chevron-right"></i>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       )}

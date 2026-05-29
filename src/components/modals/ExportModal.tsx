@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { showNotification } from '../../utils/toast';
 import { usePos, ExportOrder } from '../../contexts/PosContext';
+import ProductAutocomplete from '../ProductAutocomplete';
 
 interface ExportRow {
   productId: number | '';
@@ -200,7 +201,7 @@ export default function ExportModal({ onClose, initialData }: { onClose: () => v
             </div>
           </div>
 
-          <div className="border rounded-lg overflow-hidden">
+          <div className="border rounded-lg">
             <div className="bg-gray-100 p-2 text-xs font-bold flex justify-between items-center">
               <span>CHI TIẾT HÀNG XUẤT</span>
               <button
@@ -233,16 +234,11 @@ export default function ExportModal({ onClose, initialData }: { onClose: () => v
                   return (
                     <tr key={idx} className="border-b">
                       <td className="p-2">
-                        <select
+                        <ProductAutocomplete
+                          products={products}
                           value={row.productId}
-                          onChange={e => updateRow(idx, 'productId', e.target.value)}
-                          className="w-full p-1 border rounded text-xs bg-white focus:ring-1 focus:ring-teal-500 focus:outline-none"
-                        >
-                          <option value="" disabled>-- Chọn --</option>
-                          {products.map(prod => (
-                            <option key={prod.id} value={prod.id}>{prod.name}</option>
-                          ))}
-                        </select>
+                          onChange={(val) => updateRow(idx, 'productId', val)}
+                        />
                       </td>
                       <td className="p-2 text-center text-xs font-bold text-gray-500">
                         {p ? currentStock : '-'}
