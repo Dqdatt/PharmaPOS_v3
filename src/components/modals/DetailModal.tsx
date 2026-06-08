@@ -3,6 +3,7 @@ import { usePos, Purchase, Invoice } from '../../contexts/PosContext';
 import mqtt from 'mqtt';
 import { bankInfo, formatQRText } from '../../utils/bank';
 import { docTienBangChu } from '../../utils/numberToWords';
+import { showNotification } from '../../utils/toast';
 interface Props {
   type: 'PO' | 'INV';
   data: Purchase | Invoice;
@@ -11,7 +12,7 @@ interface Props {
 }
 
 export default function DetailModal({ type, data, onClose, onEdit }: Props) {
-  const { formatPrice } = usePos();
+  const { formatPrice, updatePurchaseInDB, suppliers, getNow } = usePos();
 
   const isPO = type === 'PO';
   const po = isPO ? (data as Purchase) : null;
@@ -19,6 +20,7 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
 
   const [isReQRModalOpen, setIsReQRModalOpen] = useState(false);
   const [mqttClient, setMqttClient] = useState<mqtt.MqttClient | null>(null);
+  const [poQrOpen, setPoQrOpen] = useState(false);
 
   const DEVICE_ID = "device001";
   const mqtt_topic = `qr/${DEVICE_ID}`;
@@ -84,6 +86,33 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
     window.print();
   };
 
+  const handleDebt = async () => {
+    if (!po) return;
+    try {
+      const updatedPo = { ...po, status: 'DEBT' as const, debtAt: new Date().toISOString() };
+      await updatePurchaseInDB(updatedPo, []);
+      showNotification("Đã chuyển sang công nợ thành công!", "success");
+      onClose();
+    } catch (e) {
+      alert("Lỗi khi cập nhật công nợ");
+    }
+  };
+
+  const handleConfirmPayment = async () => {
+    if (!po) return;
+    try {
+      const updatedPo = { ...po, status: 'COMPLETED' as const, paidAt: new Date().toISOString(), lockedAt: new Date().toISOString() };
+      await updatePurchaseInDB(updatedPo, []); 
+      showNotification("Đã xác nhận thanh toán thành công!", "success");
+      setPoQrOpen(false);
+      onClose();
+    } catch (e) {
+      alert("Lỗi khi cập nhật thanh toán");
+    }
+  };
+
+  const supplierObj = po?.supplierId ? suppliers.find(s => s.id === po.supplierId) : null;
+
   const items = isPO
     ? (data as Purchase).items.map(i => ({ name: i.name, unit: i.unit, qty: i.qty, price: i.cost }))
     : (data as Invoice).items.map(i => ({ name: i.name, unit: i.unit, qty: i.qty, price: i.price }));
@@ -96,7 +125,7 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
             <h3 className="font-bold text-lg text-gray-800">
               {isPO ? 'Chi tiết Phiếu Nhập' : 'Chi tiết Hóa Đơn'} {data.id}
             </h3>
-            {isPO && onEdit && (
+            {isPO && onEdit && po?.status !== 'COMPLETED' && (
               <button 
                 onClick={onEdit} 
                 className="bg-yellow-100 text-yellow-700 hover:bg-yellow-200 px-3 py-1 rounded-lg text-sm font-bold transition flex items-center gap-1 border border-yellow-300"
@@ -111,6 +140,38 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
         </div>
 
         <div className="p-5 text-sm">
+          {isPO && po && (
+            <div className="flex items-center justify-between mb-6 border-b pb-4 relative">
+              <div className="absolute top-4 left-4 right-4 h-0.5 bg-gray-200 -z-10"></div>
+              
+              <div className="flex flex-col items-center gap-1 bg-white px-2">
+                <div className="w-5 h-5 rounded-full bg-red-500 border-[3px] border-white shadow-sm flex items-center justify-center">
+                  {po.status !== 'CREATED' && <i className="fa-solid fa-check text-[10px] text-white"></i>}
+                </div>
+                <div className="text-[11px] font-bold text-gray-800 mt-1">Khởi tạo</div>
+                <div className="text-[10px] text-gray-500">{po.date.split(' ')[1] || po.date}</div>
+              </div>
+              
+              {(po.status === 'DEBT' || po.debtAt) && (
+                <div className="flex flex-col items-center gap-1 bg-white px-2">
+                  <div className={`w-5 h-5 rounded-full border-[3px] border-white shadow-sm flex items-center justify-center ${po.status === 'COMPLETED' ? 'bg-yellow-500' : 'bg-yellow-500'}`}>
+                    {po.status === 'COMPLETED' && <i className="fa-solid fa-check text-[10px] text-white"></i>}
+                  </div>
+                  <div className="text-[11px] font-bold text-gray-800 mt-1">Công nợ</div>
+                  <div className="text-[10px] text-gray-500">{po.debtAt ? (po.debtAt.includes('T') ? new Date(po.debtAt).toLocaleDateString('vi-VN') : po.debtAt.split(' ')[1]) : ''}</div>
+                </div>
+              )}
+
+              <div className="flex flex-col items-center gap-1 bg-white px-2">
+                <div className={`w-5 h-5 rounded-full border-[3px] border-white shadow-sm flex items-center justify-center ${po.status === 'COMPLETED' ? 'bg-green-500' : 'bg-gray-200'}`}>
+                  {po.status === 'COMPLETED' && <i className="fa-solid fa-check text-[10px] text-white"></i>}
+                </div>
+                <div className="text-[11px] font-bold text-gray-800 mt-1">Hoàn tất</div>
+                <div className="text-[10px] text-gray-500">{po.paidAt ? (po.paidAt.includes('T') ? new Date(po.paidAt).toLocaleDateString('vi-VN') : po.paidAt.split(' ')[1]) : ''}</div>
+              </div>
+            </div>
+          )}
+
           {isPO && po ? (
             <div className="grid grid-cols-2 gap-4 mb-4 bg-gray-50 p-3 rounded-lg border">
               <div><span className="text-gray-500 text-xs font-bold block">NHÀ CUNG CẤP</span>{po.supplier || '—'}</div>
@@ -165,6 +226,25 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
             <span className="font-bold text-2xl text-red-600 font-mono">{formatPrice(data.total)}</span>
           </div>
 
+          {isPO && po && (
+            <div className="mt-6 flex flex-col gap-3">
+               {po.status === 'CREATED' && (
+                 <div className="flex gap-3">
+                   <button onClick={() => setPoQrOpen(true)} className="flex-1 bg-teal-600 hover:bg-teal-700 text-white py-2.5 rounded-lg font-bold transition shadow-sm">Thanh toán ngay</button>
+                   <button onClick={handleDebt} className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-white py-2.5 rounded-lg font-bold transition shadow-sm">Chuyển công nợ</button>
+                 </div>
+               )}
+               {po.status === 'DEBT' && (
+                 <button onClick={() => setPoQrOpen(true)} className="w-full bg-teal-600 hover:bg-teal-700 text-white py-2.5 rounded-lg font-bold transition shadow-sm">Thanh toán công nợ</button>
+               )}
+               {po.status === 'COMPLETED' && (
+                 <div className="text-center text-teal-700 font-bold text-sm bg-teal-50 border border-teal-100 p-3 rounded-lg flex items-center justify-center gap-2">
+                   <i className="fa-solid fa-lock"></i> Đã khóa chỉnh sửa
+                 </div>
+               )}
+            </div>
+          )}
+
           {!isPO && inv && (
             <div className="flex gap-3 mt-6 no-print">
               {inv.method === 'transfer' && (
@@ -198,6 +278,39 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
               />
             </div>
             <button onClick={cancelQR} className="w-full py-3 bg-gray-100 text-gray-500 rounded-xl text-[10px] font-bold uppercase hover:bg-gray-200 transition">Đóng</button>
+          </div>
+        </div>
+      )}
+
+      {poQrOpen && po && (
+        <div className="fixed inset-0 z-[200] bg-gray-900/40 backdrop-blur-md flex items-center justify-center p-6" onClick={() => setPoQrOpen(false)}>
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 flex flex-col items-center" onClick={e => e.stopPropagation()}>
+            <h2 className="text-lg font-black text-gray-800 mb-4">Thanh toán Phiếu Nhập</h2>
+            {supplierObj?.bankName && supplierObj?.accountNumber ? (
+              <>
+                <div className="w-full aspect-square bg-gray-50 rounded-2xl mb-4 flex items-center justify-center border border-gray-100 overflow-hidden">
+                  <img
+                    src={`https://img.vietqr.io/image/${supplierObj.bankName}-${supplierObj.accountNumber}-qr_only.png?amount=${po.total}&addInfo=${encodeURIComponent("THANH TOAN " + po.id)}&accountName=${encodeURIComponent(formatQRText(supplierObj.accountName || supplierObj.name))}`}
+                    className="w-full h-full object-contain p-4"
+                    alt="QR"
+                  />
+                </div>
+                <div className="text-sm font-bold text-gray-700 text-center mb-6 flex flex-col gap-1">
+                  <span className="text-base uppercase text-gray-900">{supplierObj.accountName || supplierObj.name}</span>
+                  <span className="text-gray-600 tracking-wide">{supplierObj.bankName} - {supplierObj.accountNumber}</span>
+                  <span className="text-red-600 text-lg mt-1">{formatPrice(po.total)}</span>
+                </div>
+                <button onClick={handleConfirmPayment} className="w-full py-3 bg-teal-600 text-white rounded-xl text-sm font-bold hover:bg-teal-700 transition shadow-md mb-2">
+                  Xác nhận đã thanh toán
+                </button>
+              </>
+            ) : (
+              <div className="text-center text-red-500 mb-6 bg-red-50 p-4 rounded-lg">
+                <i className="fa-solid fa-triangle-exclamation text-2xl mb-2"></i>
+                <p className="text-sm">Nhà cung cấp này chưa có tài khoản ngân hàng. Vui lòng thêm tài khoản trong Quản lý NCC.</p>
+              </div>
+            )}
+            <button onClick={() => setPoQrOpen(false)} className="w-full py-2 bg-gray-100 text-gray-600 rounded-xl text-xs font-bold hover:bg-gray-200 transition">Đóng</button>
           </div>
         </div>
       )}

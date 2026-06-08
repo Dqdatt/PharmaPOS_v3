@@ -9,10 +9,10 @@ interface PoRow {
   cost: number;
 }
 
-export default function POModal({ onClose, initialData }: { onClose: () => void, initialData?: Purchase }) {
-  const { products, addPurchaseToDB, updatePurchaseInDB, formatPrice, getNow } = usePos();
+export default function POModal({ onClose, initialData, onSaved }: { onClose: () => void, initialData?: Purchase, onSaved?: (po: Purchase) => void }) {
+  const { products, suppliers, addPurchaseToDB, updatePurchaseInDB, formatPrice, getNow } = usePos();
 
-  const [supplier, setSupplier] = useState(initialData?.supplier || '');
+  const [supplierId, setSupplierId] = useState<number | ''>(initialData?.supplierId || '');
   const [note, setNote] = useState(initialData?.note || '');
   const [items, setItems] = useState<PoRow[]>(
     initialData 
@@ -58,10 +58,18 @@ export default function POModal({ onClose, initialData }: { onClose: () => void,
     });
 
     const poId = initialData ? initialData.id : 'PN' + Date.now().toString().slice(-6);
-    const newPo = {
+    const selectedSupplier = suppliers.find(s => s.id === Number(supplierId));
+    
+    const newPo: Purchase = {
       id: poId,
       date: initialData ? initialData.date : getNow(true),
-      supplier: supplier || 'Khách vãng lai',
+      supplier: selectedSupplier?.name || 'Khách vãng lai',
+      supplierId: selectedSupplier?.id,
+      status: initialData?.status || 'CREATED',
+      debtAt: initialData?.debtAt,
+      paymentRequestedAt: initialData?.paymentRequestedAt,
+      paidAt: initialData?.paidAt,
+      lockedAt: initialData?.lockedAt,
       note,
       items: enrichedItems,
       total: poTotalCalc,
@@ -96,7 +104,8 @@ export default function POModal({ onClose, initialData }: { onClose: () => void,
         await addPurchaseToDB(newPo, productsToUpdate);
         showNotification(`Tạo phiếu nhập ${poId} thành công!`, 'success');
       }
-      onClose();
+      if (onSaved) onSaved(newPo);
+      else onClose();
     } catch (e) {
       const errMsg = e instanceof Error ? e.message : String(e);
       showNotification(`Có lỗi xảy ra khi lưu phiếu nhập! Chi tiết: ${errMsg}`, 'error');
@@ -119,12 +128,17 @@ export default function POModal({ onClose, initialData }: { onClose: () => void,
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-gray-500 mb-1">NHÀ CUNG CẤP</label>
-              <input
-                type="text"
-                value={supplier}
-                onChange={e => setSupplier(e.target.value)}
-                className="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
-              />
+              <select
+                value={supplierId}
+                onChange={e => setSupplierId(e.target.value ? Number(e.target.value) : '')}
+                className="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none bg-white"
+                disabled={initialData?.status === 'COMPLETED'}
+              >
+                <option value="">-- Chọn Nhà cung cấp --</option>
+                {suppliers.map(s => (
+                  <option key={s.id} value={s.id}>{s.code} - {s.name}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label className="block text-xs font-bold text-gray-500 mb-1">GHI CHÚ</label>

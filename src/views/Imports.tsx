@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { usePos } from '../contexts/PosContext';
 import POModal from '../components/modals/POModal';
 import DetailModal from '../components/modals/DetailModal';
+import SupplierManagerModal from '../components/modals/SupplierManagerModal';
 import { Purchase } from '../contexts/PosContext';
 
 export default function Imports() {
@@ -9,6 +10,7 @@ export default function Imports() {
   const [showPoModal, setShowPoModal] = useState(false);
   const [viewingPo, setViewingPo] = useState<Purchase | null>(null);
   const [editingPo, setEditingPo] = useState<Purchase | null>(null);
+  const [showSupplierModal, setShowSupplierModal] = useState(false);
 
   return (
     <div className="flex-1 p-6 overflow-y-auto">
@@ -17,12 +19,20 @@ export default function Imports() {
           <h2 className="text-2xl font-bold text-gray-800">Lịch sử Nhập hàng</h2>
           <p className="text-gray-500 text-sm">Quản lý các phiếu nhập hàng từ nhà cung cấp</p>
         </div>
-        <button
-          onClick={() => setShowPoModal(true)}
-          className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg font-bold shadow-sm transition"
-        >
-          <i className="fa-solid fa-file-invoice mr-2"></i>Tạo phiếu nhập
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowSupplierModal(true)}
+            className="bg-white border border-teal-600 text-teal-600 hover:bg-teal-50 px-4 py-2 rounded-lg font-bold shadow-sm transition flex items-center"
+          >
+            <i className="fa-solid fa-truck-field mr-2"></i>Quản lý NCC
+          </button>
+          <button
+            onClick={() => setShowPoModal(true)}
+            className="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg font-bold shadow-sm transition flex items-center"
+          >
+            <i className="fa-solid fa-file-invoice mr-2"></i>Tạo phiếu nhập
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -44,7 +54,13 @@ export default function Imports() {
               ) : (
                 purchases.map(po => (
                   <tr key={po.id} className="border-b hover:bg-gray-50">
-                    <td className="p-3 font-bold text-teal-600">{po.id}</td>
+                    <td className="p-3 font-bold text-teal-600 flex items-center gap-2">
+                      {po.status === 'CREATED' && <span className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-sm" title="Khởi tạo"></span>}
+                      {po.status === 'DEBT' && <span className="w-2.5 h-2.5 rounded-full bg-yellow-500 shadow-sm" title="Công nợ"></span>}
+                      {po.status === 'COMPLETED' && <span className="w-2.5 h-2.5 rounded-full bg-green-500 shadow-sm" title="Hoàn tất"></span>}
+                      {!po.status && <span className="w-2.5 h-2.5 rounded-full bg-gray-400 shadow-sm" title="Chưa xác định"></span>}
+                      {po.id}
+                    </td>
                     <td className="p-3 text-gray-600">{po.date}</td>
                     <td className="p-3 font-medium">{po.supplier}</td>
                     <td className="p-3 text-center">
@@ -67,7 +83,7 @@ export default function Imports() {
         </div>
       </div>
 
-      {showPoModal && <POModal onClose={() => setShowPoModal(false)} />}
+      {showPoModal && <POModal onClose={() => setShowPoModal(false)} onSaved={(po) => { setShowPoModal(false); setViewingPo(po); }} />}
       {editingPo && <POModal initialData={editingPo} onClose={() => setEditingPo(null)} />}
       {viewingPo && (
         <DetailModal
@@ -80,6 +96,7 @@ export default function Imports() {
           }}
         />
       )}
+      {showSupplierModal && <SupplierManagerModal onClose={() => setShowSupplierModal(false)} />}
     </div>
   );
 }

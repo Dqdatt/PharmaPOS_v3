@@ -63,9 +63,33 @@ export interface Purchase {
   id: string;
   date: string;
   supplier: string;
+  supplierId?: number;
+  status?: 'CREATED' | 'DEBT' | 'COMPLETED';
+  debtAt?: string;
+  paymentRequestedAt?: string;
+  paidAt?: string;
+  lockedAt?: string;
   note: string;
   items: PurchaseItem[];
   total: number;
+}
+
+export interface Supplier {
+  id: number;
+  code: string;
+  name: string;
+  bankName?: string;
+  accountNumber?: string;
+  accountName?: string;
+}
+
+export interface PaymentOrder {
+  id: string;
+  purchaseId: string;
+  supplierId?: number;
+  amount: number;
+  status: 'PENDING' | 'COMPLETED' | 'CANCELLED';
+  createdAt: string;
 }
 
 export interface ExportOrderItem {
@@ -123,6 +147,19 @@ interface PosContextType {
   setPurchases: React.Dispatch<React.SetStateAction<Purchase[]>>;
   exportOrders: ExportOrder[];
   setExportOrders: React.Dispatch<React.SetStateAction<ExportOrder[]>>;
+
+  // Suppliers
+  suppliers: Supplier[];
+  setSuppliers: React.Dispatch<React.SetStateAction<Supplier[]>>;
+  addSupplierToDB: (supplier: Omit<Supplier, 'id'>) => Promise<void>;
+  updateSupplierInDB: (supplier: Supplier) => Promise<void>;
+  deleteSupplierFromDB: (id: number) => Promise<void>;
+
+  // Payment Orders
+  paymentOrders: PaymentOrder[];
+  setPaymentOrders: React.Dispatch<React.SetStateAction<PaymentOrder[]>>;
+  addPaymentOrderToDB: (order: PaymentOrder) => Promise<void>;
+  updatePaymentOrderStatusInDB: (id: string, status: PaymentOrder['status']) => Promise<void>;
 
   // Monthly Rollover & Reconciliation
   isPreviousMonthClosed: boolean | null;
@@ -191,6 +228,8 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [exportOrders, setExportOrders] = useState<ExportOrder[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [paymentOrders, setPaymentOrders] = useState<PaymentOrder[]>([]);
   
   const [isPreviousMonthClosed, setIsPreviousMonthClosed] = useState<boolean | null>(null);
   const [inventoryHistory, setInventoryHistory] = useState<InventoryHistory[]>([]);
@@ -265,10 +304,29 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const { data: dbPurchases } = await supabase.from('purchases').select('*, purchase_items(*)').order('created_at', { ascending: false });
       if (dbPurchases) {
         setPurchases(dbPurchases.map(pur => ({
-          id: pur.id, date: pur.date, supplier: pur.supplier, note: pur.note, total: Number(pur.total),
+          id: pur.id, date: pur.date, supplier: pur.supplier, supplierId: pur.supplier_id,
+          status: pur.status || 'COMPLETED', debtAt: pur.debt_at, paymentRequestedAt: pur.payment_requested_at, paidAt: pur.paid_at, lockedAt: pur.locked_at,
+          note: pur.note, total: Number(pur.total),
           items: (pur.purchase_items || []).map((i: any) => ({
             productId: i.product_id, name: i.name, unit: i.unit, qty: i.qty, cost: Number(i.cost)
           }))
+        })));
+      }
+
+      // Suppliers
+      const { data: dbSuppliers } = await supabase.from('suppliers').select('*').order('id', { ascending: true });
+      if (dbSuppliers) {
+        setSuppliers(dbSuppliers.map(s => ({
+          id: s.id, code: s.code, name: s.name, bankName: s.bank_name, accountNumber: s.account_number, accountName: s.account_name
+        })));
+      }
+
+      // Payment Orders
+      const { data: dbPaymentOrders } = await supabase.from('payment_orders').select('*').order('created_at', { ascending: false });
+      if (dbPaymentOrders) {
+        setPaymentOrders(dbPaymentOrders.map(p => ({
+          id: p.id, purchaseId: p.purchase_id, supplierId: p.supplier_id,
+          amount: Number(p.amount), status: p.status, createdAt: p.created_at
         })));
       }
 
@@ -378,7 +436,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const addPurchaseToDB = async (purchase: Purchase, productsToUpdate: Product[]) => {
     // Insert purchase
     const { error: purErr } = await supabase.from('purchases').insert([{
-      id: purchase.id, date: purchase.date, supplier: purchase.supplier, note: purchase.note, total: purchase.total
+      id: purchase.id, date: purchase.date, supplier: purchase.supplier, supplier_id: purchase.supplierId, status: purchase.status || 'CREATED', debt_at: purchase.debtAt, payment_requested_at: purchase.paymentRequestedAt, paid_at: purchase.paidAt, locked_at: purchase.lockedAt, note: purchase.note, total: purchase.total
     }]);
     if (purErr) throw purErr;
 
@@ -397,7 +455,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const updatePurchaseInDB = async (updatedPurchase: Purchase, productsToUpdate: Product[]) => {
     // Update purchase record
     const { error: purErr } = await supabase.from('purchases').update({
-      supplier: updatedPurchase.supplier, note: updatedPurchase.note, total: updatedPurchase.total
+      supplier: updatedPurchase.supplier, supplier_id: updatedPurchase.supplierId, status: updatedPurchase.status, debt_at: updatedPurchase.debtAt, payment_requested_at: updatedPurchase.paymentRequestedAt, paid_at: updatedPurchase.paidAt, locked_at: updatedPurchase.lockedAt, note: updatedPurchase.note, total: updatedPurchase.total
     }).eq('id', updatedPurchase.id);
     if (purErr) throw purErr;
 
@@ -502,9 +560,45 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setExportOrders(prev => prev.filter(o => o.id !== id));
   };
 
+  // --- SUPPLIER MUTATIONS ---
+  const addSupplierToDB = async (supplier: Omit<Supplier, 'id'>) => {
+    const { data, error } = await supabase.from('suppliers').insert([{
+      code: supplier.code, name: supplier.name, bank_name: supplier.bankName, account_number: supplier.accountNumber, account_name: supplier.accountName
+    }]).select();
+    if (error) throw error;
+    if (data) {
+      setSuppliers(prev => [...prev, { id: data[0].id, code: data[0].code, name: data[0].name, bankName: data[0].bank_name, accountNumber: data[0].account_number, accountName: data[0].account_name }]);
+    }
+  };
 
+  const updateSupplierInDB = async (supplier: Supplier) => {
+    const { error } = await supabase.from('suppliers').update({
+      code: supplier.code, name: supplier.name, bank_name: supplier.bankName, account_number: supplier.accountNumber, account_name: supplier.accountName
+    }).eq('id', supplier.id);
+    if (error) throw error;
+    setSuppliers(prev => prev.map(s => s.id === supplier.id ? supplier : s));
+  };
 
-  const addStaffLogToDB = async (log: StaffLog) => {
+  const deleteSupplierFromDB = async (id: number) => {
+    const { error } = await supabase.from('suppliers').delete().eq('id', id);
+    if (error) throw error;
+    setSuppliers(prev => prev.filter(s => s.id !== id));
+  };
+
+  // --- PAYMENT MUTATIONS ---
+  const addPaymentOrderToDB = async (order: PaymentOrder) => {
+    const { error } = await supabase.from('payment_orders').insert([{
+      id: order.id, purchase_id: order.purchaseId, supplier_id: order.supplierId, amount: order.amount, status: order.status
+    }]);
+    if (error) throw error;
+    setPaymentOrders(prev => [order, ...prev]);
+  };
+
+  const updatePaymentOrderStatusInDB = async (id: string, status: PaymentOrder['status']) => {
+    const { error } = await supabase.from('payment_orders').update({ status }).eq('id', id);
+    if (error) throw error;
+    setPaymentOrders(prev => prev.map(p => p.id === id ? { ...p, status } : p));
+  };  const addStaffLogToDB = async (log: StaffLog) => {
     const { data, error } = await supabase.from('staff_logs').insert([{
       user_id: log.userId, name: log.name, role: log.role, login_time: log.loginTime, logout_time: log.logoutTime
     }]).select();
@@ -722,12 +816,15 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       invoices, setInvoices,
       purchases, setPurchases,
       exportOrders, setExportOrders,
+      suppliers, setSuppliers, paymentOrders, setPaymentOrders,
       isPreviousMonthClosed, previousMonthYear, inventoryHistory,
       closeMonthlyInventory, checkPreviousMonthStatus, reconcileProductStock, fetchInventoryHistory,
       isCustomerView,
       getStock, formatPrice, getNow,
       refreshData, addProductToDB, updateProductInDB, deleteProductFromDB, addInvoiceToDB, deleteInvoice, addPurchaseToDB, updatePurchaseInDB,
       addExportOrderToDB, updateExportOrderStatusInDB, updateExportOrderInDB, deleteExportOrderFromDB,
+      addSupplierToDB, updateSupplierInDB, deleteSupplierFromDB,
+      addPaymentOrderToDB, updatePaymentOrderStatusInDB,
       addStaffLogToDB, updateStaffLogLogoutInDB, addUserToDB, updateUserInDB, deleteUserFromDB
     }}>
       {children}
