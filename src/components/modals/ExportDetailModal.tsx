@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { usePos, ExportOrder } from "../../contexts/PosContext";
 import { VietQRConfig } from "./VietQRConfigModal";
 import { showNotification } from "../../utils/toast";
+import { docTienBangChu } from "../../utils/numberToWords";
 
 interface Props {
   order: ExportOrder;
@@ -119,7 +120,7 @@ export default function ExportDetailModal({ order, onClose, onEdit }: Props) {
             className="flex-1 p-6 print:px-10 print:py-8"
           >
             <div className="hidden print:block text-center mb-8">
-              <h1 className="font-bold text-3xl uppercase">Phiếu Xuất Kho</h1>
+              <h1 className="font-bold text-3xl uppercase">Phiếu Xuất Bán</h1>
               <p className="text-gray-600 mt-2">
                 Mã phiếu: <span className="font-bold">{order.id}</span>
               </p>
@@ -313,7 +314,7 @@ export default function ExportDetailModal({ order, onClose, onEdit }: Props) {
         className="hidden print:block absolute inset-0 bg-white z-[9999] w-full"
         style={{ fontFamily: '"Times New Roman", Times, serif' }}
       >
-        <h1 className="text-center font-bold text-xl mb-1">PHIẾU XUẤT KHO</h1>
+        <h1 className="text-center font-bold text-xl mb-1">PHIẾU XUẤT BÁN</h1>
         <p className="text-center italic text-[11px] mb-1">
           Mã phiếu: {order.id}
         </p>
@@ -399,6 +400,11 @@ export default function ExportDetailModal({ order, onClose, onEdit }: Props) {
             </tr>
           </tbody>
         </table>
+
+        <div className="flex gap-2 mb-2 text-[12px]">
+          <span className="italic">Bằng chữ:</span>
+          <span className="italic">{docTienBangChu(order.total)} .</span>
+        </div>
 
         <div className="flex justify-between mt-6 text-[12px] px-4">
           <div className="text-center">

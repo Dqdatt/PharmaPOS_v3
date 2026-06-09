@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { usePos, Supplier } from '../../contexts/PosContext';
+import BankAutocomplete from '../BankAutocomplete';
 
 interface Props {
   onClose: () => void;
@@ -127,18 +128,11 @@ export default function SupplierManagerModal({ onClose }: Props) {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Ngân hàng</label>
-                    <select
+                    <BankAutocomplete
+                      banks={banks}
                       value={supplierForm.bankName || ''}
-                      onChange={e => setSupplierForm({ ...supplierForm, bankName: e.target.value })}
-                      className="w-full border rounded-lg p-2 outline-none focus:border-teal-500 bg-white"
-                    >
-                      <option value="">-- Chọn ngân hàng --</option>
-                      {banks.map(bank => (
-                        <option key={bank.bin} value={bank.bin}>
-                          {bank.shortName} - {bank.name}
-                        </option>
-                      ))}
-                    </select>
+                      onChange={(bankBin) => setSupplierForm({ ...supplierForm, bankName: bankBin })}
+                    />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Số tài khoản</label>

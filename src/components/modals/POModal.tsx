@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { showNotification } from '../../utils/toast';
 import { usePos, Purchase } from '../../contexts/PosContext';
 import ProductAutocomplete from '../ProductAutocomplete';
+import SupplierAutocomplete from '../SupplierAutocomplete';
 
 interface PoRow {
   productId: number | '';
@@ -128,17 +129,12 @@ export default function POModal({ onClose, initialData, onSaved }: { onClose: ()
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-bold text-gray-500 mb-1">NHÀ CUNG CẤP</label>
-              <select
+              <SupplierAutocomplete
+                suppliers={suppliers}
                 value={supplierId}
-                onChange={e => setSupplierId(e.target.value ? Number(e.target.value) : '')}
-                className="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none bg-white"
+                onChange={setSupplierId}
                 disabled={initialData?.status === 'COMPLETED'}
-              >
-                <option value="">-- Chọn Nhà cung cấp --</option>
-                {suppliers.map(s => (
-                  <option key={s.id} value={s.id}>{s.code} - {s.name}</option>
-                ))}
-              </select>
+              />
             </div>
             <div>
               <label className="block text-xs font-bold text-gray-500 mb-1">GHI CHÚ</label>
