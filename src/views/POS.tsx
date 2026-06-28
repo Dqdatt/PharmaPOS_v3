@@ -18,7 +18,7 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
   } = usePos();
 
   const [posSearchQuery, setPosSearchQuery] = useState('');
-  const [posCustomer, setPosCustomer] = useState({ name: '', phone: '' });
+  const [posCustomer, setPosCustomer] = useState({ name: '', phone: '', address: '' });
   const [otherCosts, setOtherCosts] = useState<number>(0);
   const [isOtherCostOnly, setIsOtherCostOnly] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer' | null>(null);
@@ -181,7 +181,7 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
       time: getNow(true),
       employeeName: currentUser.name,
       employeeId: currentUser.id,
-      customer: { name: posCustomer.name || 'Khách lẻ', phone: posCustomer.phone },
+      customer: { name: posCustomer.name || 'Khách lẻ', phone: posCustomer.phone, address: posCustomer.address },
       items: JSON.parse(JSON.stringify(cart)),
       method: paymentMethod!,
       otherCosts: Number(otherCosts) || 0,
@@ -201,6 +201,7 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
       if (shouldPrint) {
         setPrintData({
           customerName: posCustomer.name || 'Khách lẻ',
+          customerAddress: posCustomer.address || '',
           cart: [...cart],
           totalAmount: finalTotal,
           date: {
@@ -231,7 +232,7 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
     setOtherCosts(0);
     setIsOtherCostOnly(false);
     setPaymentMethod(null);
-    setPosCustomer({ name: '', phone: '' });
+    setPosCustomer({ name: '', phone: '', address: '' });
     setPrintData(null);
   };
 
@@ -306,19 +307,28 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
         </div>
 
         {/* Customer info */}
-        <div className="p-3 border-b grid grid-cols-2 gap-2 bg-white">
+        <div className="p-3 border-b flex flex-col gap-2 bg-white">
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="text"
+              value={posCustomer.name}
+              onChange={e => setPosCustomer(p => ({ ...p, name: e.target.value }))}
+              placeholder="👤 Tên khách hàng"
+              className="p-2 border rounded-lg text-sm w-full focus:ring-2 focus:ring-teal-500 focus:outline-none"
+            />
+            <input
+              type="text"
+              value={posCustomer.phone}
+              onChange={e => setPosCustomer(p => ({ ...p, phone: e.target.value }))}
+              placeholder="📞 Số điện thoại"
+              className="p-2 border rounded-lg text-sm w-full focus:ring-2 focus:ring-teal-500 focus:outline-none"
+            />
+          </div>
           <input
             type="text"
-            value={posCustomer.name}
-            onChange={e => setPosCustomer(p => ({ ...p, name: e.target.value }))}
-            placeholder="👤 Tên khách hàng"
-            className="p-2 border rounded-lg text-sm w-full focus:ring-2 focus:ring-teal-500 focus:outline-none"
-          />
-          <input
-            type="text"
-            value={posCustomer.phone}
-            onChange={e => setPosCustomer(p => ({ ...p, phone: e.target.value }))}
-            placeholder="📞 Số điện thoại"
+            value={posCustomer.address}
+            onChange={e => setPosCustomer(p => ({ ...p, address: e.target.value }))}
+            placeholder="📍 Địa chỉ"
             className="p-2 border rounded-lg text-sm w-full focus:ring-2 focus:ring-teal-500 focus:outline-none"
           />
         </div>
@@ -551,7 +561,7 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
           
           <div className="flex gap-4 mb-6 text-[15px]">
             <span className="whitespace-nowrap">Địa chỉ:</span>
-            <span className="flex-1"></span>
+            <span className="flex-1">{printData.customerAddress}</span>
           </div>
 
           <table className="w-full border-collapse border border-black mb-2 text-[15px]">

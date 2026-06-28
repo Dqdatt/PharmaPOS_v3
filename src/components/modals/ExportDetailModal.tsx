@@ -57,13 +57,12 @@ export default function ExportDetailModal({ order, onClose, onEdit }: Props) {
   };
 
   const statusInfo = getStatusText(order.status);
-  const showQR =
-    order.status !== "paid" && order.status !== "returned" && vietQRConfig;
+  const showQR = order.paymentMethod === 'transfer' && vietQRConfig;
 
   let qrUrl = "";
   if (showQR && vietQRConfig) {
     const addInfoStr = formatQRText(
-      `${order.id} ${order.recipientName}`.substring(0, 50),
+      `thanh toan tien thuoc phieu ${order.id}`.substring(0, 50),
     )
       .replace(/\s+/g, " ")
       .trim();
@@ -165,6 +164,14 @@ export default function ExportDetailModal({ order, onClose, onEdit }: Props) {
                     {statusInfo.text}
                   </div>
                 </div>
+                <div>
+                  <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                    Phương thức TT
+                  </div>
+                  <div className="font-medium text-gray-800 text-sm whitespace-nowrap">
+                    {order.paymentMethod === 'transfer' ? 'Chuyển khoản' : 'Tiền mặt'}
+                  </div>
+                </div>
               </div>
               {order.note && (
                 <div className="mt-3 pt-3 border-t border-gray-100 print:border-none print:pt-1">
@@ -224,6 +231,32 @@ export default function ExportDetailModal({ order, onClose, onEdit }: Props) {
                   ))}
                 </tbody>
                 <tfoot>
+                  {order.otherCosts ? (
+                    <tr className="bg-gray-50 print:bg-transparent border-t border-gray-200 print:border-black">
+                      <td
+                        colSpan={4}
+                        className="py-2 px-4 text-right text-[13px] font-bold text-gray-700"
+                      >
+                        Tiền ship:
+                      </td>
+                      <td className="py-2 px-4 text-right font-mono font-bold text-[13px] text-gray-700 whitespace-nowrap">
+                        {formatPrice(order.otherCosts)}
+                      </td>
+                    </tr>
+                  ) : null}
+                  {order.otherMedsFee ? (
+                    <tr className="bg-gray-50 print:bg-transparent border-t border-gray-200 print:border-black">
+                      <td
+                        colSpan={4}
+                        className="py-2 px-4 text-right text-[13px] font-bold text-gray-700"
+                      >
+                        Tiền thuốc khác:
+                      </td>
+                      <td className="py-2 px-4 text-right font-mono font-bold text-[13px] text-gray-700 whitespace-nowrap">
+                        {formatPrice(order.otherMedsFee)}
+                      </td>
+                    </tr>
+                  ) : null}
                   <tr className="bg-gray-50 print:bg-transparent border-t border-gray-200 print:border-black">
                     <td
                       colSpan={4}
@@ -387,6 +420,32 @@ export default function ExportDetailModal({ order, onClose, onEdit }: Props) {
                 </td>
               </tr>
             ))}
+            {order.otherCosts ? (
+              <tr>
+                <td
+                  colSpan={5}
+                  className="border border-black p-1 text-right font-bold uppercase"
+                >
+                  Tiền ship:
+                </td>
+                <td className="border border-black p-1 text-right font-bold">
+                  {order.otherCosts.toLocaleString()}
+                </td>
+              </tr>
+            ) : null}
+            {order.otherMedsFee ? (
+              <tr>
+                <td
+                  colSpan={5}
+                  className="border border-black p-1 text-right font-bold uppercase"
+                >
+                  Tiền thuốc khác:
+                </td>
+                <td className="border border-black p-1 text-right font-bold">
+                  {order.otherMedsFee.toLocaleString()}
+                </td>
+              </tr>
+            ) : null}
             <tr>
               <td
                 colSpan={5}
@@ -417,6 +476,25 @@ export default function ExportDetailModal({ order, onClose, onEdit }: Props) {
             <p className="mt-12 font-bold">{order.employeeName}</p>
           </div>
         </div>
+
+        {showQR && (
+          <div className="mt-10 pt-6 border-t border-black">
+            <div className="flex justify-between items-center px-4">
+              <div className="text-[12px]">
+                <p className="font-bold mb-2">THÔNG TIN THANH TOÁN</p>
+                <p className="mb-1"><strong>Mã phiếu:</strong> {order.id}</p>
+                <p className="mb-1"><strong>Số tiền:</strong> <span className="font-bold">{order.total.toLocaleString()} đ</span></p>
+                <p className="italic text-gray-600 mt-2">Quét mã QR để thanh toán nhanh</p>
+              </div>
+              <div className="text-center">
+                <div className="font-bold text-[10px] mb-1 uppercase">Mã thanh toán QR</div>
+                <div className="w-32 h-32 border border-black p-1 bg-white inline-block">
+                  <img src={qrUrl} className="w-full h-full object-contain" />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

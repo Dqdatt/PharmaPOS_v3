@@ -12,7 +12,7 @@ interface Props {
 }
 
 export default function DetailModal({ type, data, onClose, onEdit }: Props) {
-  const { formatPrice, updatePurchaseInDB, suppliers, getNow } = usePos();
+  const { formatPrice, updatePurchaseInDB, deletePurchaseFromDB, suppliers, getNow } = usePos();
 
   const isPO = type === 'PO';
   const po = isPO ? (data as Purchase) : null;
@@ -111,6 +111,33 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
     }
   };
 
+  const handleConfirmCashPayment = async () => {
+    if (!po) return;
+    if (confirm('Xác nhận thanh toán công nợ bằng tiền mặt?')) {
+      try {
+        const updatedPo = { ...po, status: 'COMPLETED' as const, paidAt: new Date().toISOString(), lockedAt: new Date().toISOString() };
+        await updatePurchaseInDB(updatedPo, []); 
+        showNotification("Đã xác nhận thanh toán thành công!", "success");
+        onClose();
+      } catch (e) {
+        alert("Lỗi khi cập nhật thanh toán");
+      }
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!po) return;
+    if (confirm('Bạn có chắc chắn muốn xóa phiếu nhập này? Hành động này không thể hoàn tác!')) {
+      try {
+        await deletePurchaseFromDB(po.id);
+        showNotification("Đã xóa phiếu nhập thành công!", "success");
+        onClose();
+      } catch (e) {
+        alert("Lỗi khi xóa phiếu nhập");
+      }
+    }
+  };
+
   const supplierObj = po?.supplierId ? suppliers.find(s => s.id === po.supplierId) : null;
 
   const items = isPO
@@ -126,12 +153,20 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
               {isPO ? 'Chi tiết Phiếu Nhập' : 'Chi tiết Hóa Đơn'} {data.id}
             </h3>
             {isPO && onEdit && po?.status !== 'COMPLETED' && (
-              <button 
-                onClick={onEdit} 
-                className="bg-yellow-100 text-yellow-700 hover:bg-yellow-200 px-3 py-1 rounded-lg text-sm font-bold transition flex items-center gap-1 border border-yellow-300"
-              >
-                <i className="fa-solid fa-pen"></i> Sửa
-              </button>
+              <div className="flex gap-2">
+                <button 
+                  onClick={onEdit} 
+                  className="bg-yellow-100 text-yellow-700 hover:bg-yellow-200 px-3 py-1 rounded-lg text-sm font-bold transition flex items-center gap-1 border border-yellow-300"
+                >
+                  <i className="fa-solid fa-pen"></i> Sửa
+                </button>
+                <button 
+                  onClick={handleDelete} 
+                  className="bg-red-100 text-red-700 hover:bg-red-200 px-3 py-1 rounded-lg text-sm font-bold transition flex items-center gap-1 border border-red-300"
+                >
+                  <i className="fa-solid fa-trash"></i> Xóa
+                </button>
+              </div>
             )}
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700">
@@ -235,7 +270,10 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
                  </div>
                )}
                {po.status === 'DEBT' && (
-                 <button onClick={() => setPoQrOpen(true)} className="w-full bg-teal-600 hover:bg-teal-700 text-white py-2.5 rounded-lg font-bold transition shadow-sm">Thanh toán công nợ</button>
+                 <div className="flex gap-3">
+                   <button onClick={() => setPoQrOpen(true)} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-bold transition shadow-sm">Chuyển khoản</button>
+                   <button onClick={handleConfirmCashPayment} className="flex-1 bg-teal-600 hover:bg-teal-700 text-white py-2.5 rounded-lg font-bold transition shadow-sm">Tiền mặt</button>
+                 </div>
                )}
                {po.status === 'COMPLETED' && (
                  <div className="text-center text-teal-700 font-bold text-sm bg-teal-50 border border-teal-100 p-3 rounded-lg flex items-center justify-center gap-2">

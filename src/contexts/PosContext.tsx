@@ -43,7 +43,7 @@ export interface Invoice {
   time: string;
   employeeName: string;
   employeeId: number;
-  customer: { name: string; phone: string };
+  customer: { name: string; phone: string; address?: string };
   items: CartItem[];
   method: string;
   otherCosts: number;
@@ -107,6 +107,9 @@ export interface ExportOrder {
   recipientPhone: string;
   status: 'exported' | 'sent' | 'received' | 'pending_payment' | 'paid' | 'returned';
   total: number;
+  otherCosts?: number;
+  otherMedsFee?: number;
+  paymentMethod?: 'cash' | 'transfer';
   note: string;
   employeeName: string;
   items: ExportOrderItem[];
@@ -187,6 +190,7 @@ interface PosContextType {
   deleteInvoice: (id: string) => Promise<void>;
   addPurchaseToDB: (purchase: Purchase, productsToUpdate: Product[]) => Promise<void>;
   updatePurchaseInDB: (updatedPurchase: Purchase, productsToUpdate: Product[]) => Promise<void>;
+  deletePurchaseFromDB: (id: string) => Promise<void>;
   addExportOrderToDB: (order: ExportOrder, productsToUpdate: Product[]) => Promise<void>;
   updateExportOrderStatusInDB: (orderId: string, oldStatus: ExportOrder['status'], newStatus: ExportOrder['status']) => Promise<void>;
   updateExportOrderInDB: (updatedOrder: ExportOrder, productsToUpdate: Product[]) => Promise<void>;
@@ -291,7 +295,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (dbInvoices) {
         setInvoices(dbInvoices.map(inv => ({
           id: inv.id, time: inv.time, employeeName: inv.employee_name, employeeId: inv.employee_id,
-          customer: { name: inv.customer_name, phone: inv.customer_phone || '' },
+          customer: { name: inv.customer_name, phone: inv.customer_phone || '', address: inv.customer_address || '' },
           method: inv.method, otherCosts: Number(inv.other_costs), total: Number(inv.total),
           status: inv.status,
           items: (inv.invoice_items || []).map((i: any) => ({
@@ -335,7 +339,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (dbExportOrders) {
         setExportOrders(dbExportOrders.map(ord => ({
           id: ord.id, date: ord.date, recipientName: ord.recipient_name, recipientPhone: ord.recipient_phone,
-          status: ord.status, total: Number(ord.total), note: ord.note, employeeName: ord.employee_name,
+          status: ord.status, total: Number(ord.total), otherCosts: Number(ord.other_costs || 0), otherMedsFee: Number(ord.other_meds_fee || 0), paymentMethod: ord.payment_method || 'cash', note: ord.note, employeeName: ord.employee_name,
           items: (ord.export_order_items || []).map((i: any) => ({
             productId: i.product_id, name: i.name, unit: i.unit, qty: i.qty, price: Number(i.price)
           }))
@@ -394,7 +398,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // Insert invoice
     const { error: invErr } = await supabase.from('invoices').insert([{
       id: invoice.id, time: invoice.time, employee_name: invoice.employeeName, employee_id: invoice.employeeId,
-      customer_name: invoice.customer.name, customer_phone: invoice.customer.phone,
+      customer_name: invoice.customer.name, customer_phone: invoice.customer.phone, customer_address: invoice.customer.address,
       method: invoice.method, other_costs: invoice.otherCosts, total: invoice.total
     }]);
     if (invErr) throw invErr;
@@ -472,10 +476,35 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setProducts(productsToUpdate);
   };
 
+  const deletePurchaseFromDB = async (id: string) => {
+    // 1. Delete purchase items first (if not cascading)
+    await supabase.from('purchase_items').delete().eq('purchase_id', id);
+    
+    // 2. Delete purchase
+    const { error } = await supabase.from('purchases').delete().eq('id', id);
+    if (error) throw error;
+    
+    // 3. Update local state
+    const purchase = purchases.find(p => p.id === id);
+    if (purchase) {
+      const updatedProducts = [...products];
+      for (const item of purchase.items) {
+        const productIndex = updatedProducts.findIndex(p => p.id === item.productId);
+        if (productIndex !== -1) {
+          const product = updatedProducts[productIndex];
+          const newTotalIn = Math.max(0, product.totalIn - item.qty);
+          updatedProducts[productIndex] = { ...product, totalIn: newTotalIn };
+        }
+      }
+      setProducts(updatedProducts);
+    }
+    setPurchases(prev => prev.filter(p => p.id !== id));
+  };
+
   const addExportOrderToDB = async (order: ExportOrder, productsToUpdate: Product[]) => {
     const { error: ordErr } = await supabase.from('export_orders').insert([{
       id: order.id, date: order.date, recipient_name: order.recipientName, recipient_phone: order.recipientPhone,
-      status: order.status, total: order.total, note: order.note, employee_name: order.employeeName
+      status: order.status, total: order.total, other_costs: order.otherCosts || 0, other_meds_fee: order.otherMedsFee || 0, payment_method: order.paymentMethod || 'cash', note: order.note, employee_name: order.employeeName
     }]);
     if (ordErr) throw ordErr;
 
@@ -522,7 +551,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const updateExportOrderInDB = async (updatedOrder: ExportOrder, productsToUpdate: Product[]) => {
     const { error: ordErr } = await supabase.from('export_orders').update({
       recipient_name: updatedOrder.recipientName, recipient_phone: updatedOrder.recipientPhone,
-      status: updatedOrder.status, total: updatedOrder.total, note: updatedOrder.note
+      status: updatedOrder.status, total: updatedOrder.total, other_costs: updatedOrder.otherCosts || 0, other_meds_fee: updatedOrder.otherMedsFee || 0, payment_method: updatedOrder.paymentMethod || 'cash', note: updatedOrder.note
     }).eq('id', updatedOrder.id);
     if (ordErr) throw ordErr;
 
