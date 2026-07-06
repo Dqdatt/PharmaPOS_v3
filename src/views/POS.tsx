@@ -18,7 +18,7 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
   } = usePos();
 
   const [posSearchQuery, setPosSearchQuery] = useState('');
-  const [posCustomer, setPosCustomer] = useState({ name: '', phone: '', address: '' });
+  const [posCustomer, setPosCustomer] = useState({ name: '', phone: '', address: '', doctorName: '', note: '' });
   const [otherCosts, setOtherCosts] = useState<number>(0);
   const [isOtherCostOnly, setIsOtherCostOnly] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer' | null>(null);
@@ -181,7 +181,7 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
       time: getNow(true),
       employeeName: currentUser.name,
       employeeId: currentUser.id,
-      customer: { name: posCustomer.name || 'Khách lẻ', phone: posCustomer.phone, address: posCustomer.address },
+      customer: { name: posCustomer.name || 'Khách lẻ', phone: posCustomer.phone, address: posCustomer.address, doctorName: posCustomer.doctorName, note: posCustomer.note },
       items: JSON.parse(JSON.stringify(cart)),
       method: paymentMethod!,
       otherCosts: Number(otherCosts) || 0,
@@ -232,7 +232,7 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
     setOtherCosts(0);
     setIsOtherCostOnly(false);
     setPaymentMethod(null);
-    setPosCustomer({ name: '', phone: '', address: '' });
+    setPosCustomer({ name: '', phone: '', address: '', doctorName: '', note: '' });
     setPrintData(null);
   };
 
@@ -324,12 +324,28 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
               className="p-2 border rounded-lg text-sm w-full focus:ring-2 focus:ring-teal-500 focus:outline-none"
             />
           </div>
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <input
+              type="text"
+              value={posCustomer.address}
+              onChange={e => setPosCustomer(p => ({ ...p, address: e.target.value }))}
+              placeholder="📍 Địa chỉ"
+              className="p-2 border rounded-lg text-sm w-full focus:ring-2 focus:ring-teal-500 focus:outline-none"
+            />
+            <input
+              type="text"
+              value={posCustomer.doctorName}
+              onChange={e => setPosCustomer(p => ({ ...p, doctorName: e.target.value }))}
+              placeholder="👨‍⚕️ Bác sĩ chỉ định"
+              className="p-2 border rounded-lg text-sm w-full focus:ring-2 focus:ring-teal-500 focus:outline-none"
+            />
+          </div>
           <input
             type="text"
-            value={posCustomer.address}
-            onChange={e => setPosCustomer(p => ({ ...p, address: e.target.value }))}
-            placeholder="📍 Địa chỉ"
-            className="p-2 border rounded-lg text-sm w-full focus:ring-2 focus:ring-teal-500 focus:outline-none"
+            value={posCustomer.note}
+            onChange={e => setPosCustomer(p => ({ ...p, note: e.target.value }))}
+            placeholder="📝 Ghi chú đơn hàng"
+            className="p-2 border rounded-lg text-sm w-full mt-2 focus:ring-2 focus:ring-teal-500 focus:outline-none"
           />
         </div>
 

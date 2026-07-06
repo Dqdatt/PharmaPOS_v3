@@ -32,6 +32,9 @@ export default function ExportModal({
   const [recipientPhone, setRecipientPhone] = useState(
     initialData?.recipientPhone || "",
   );
+  const [customerAddress, setCustomerAddress] = useState(
+    initialData?.customerAddress || "",
+  );
   const [status, setStatus] = useState<ExportOrder["status"]>(
     initialData?.status || "exported",
   );
@@ -148,6 +151,7 @@ export default function ExportModal({
       date: initialData ? initialData.date : getNow(true),
       recipientName,
       recipientPhone,
+      customerAddress,
       status,
       note,
       items: enrichedItems,
@@ -247,6 +251,18 @@ export default function ExportModal({
                 onChange={(e) => setRecipientPhone(e.target.value)}
                 className="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
                 placeholder="SĐT liên hệ"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-bold text-gray-500 mb-1">
+                ĐỊA CHỈ
+              </label>
+              <input
+                type="text"
+                value={customerAddress}
+                onChange={(e) => setCustomerAddress(e.target.value)}
+                className="w-full p-2 border rounded-lg text-sm focus:ring-2 focus:ring-teal-500 focus:outline-none"
+                placeholder="Địa chỉ khách hàng"
               />
             </div>
             <div>

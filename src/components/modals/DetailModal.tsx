@@ -101,7 +101,7 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
   const handleConfirmPayment = async () => {
     if (!po) return;
     try {
-      const updatedPo = { ...po, status: 'COMPLETED' as const, paidAt: new Date().toISOString(), lockedAt: new Date().toISOString() };
+      const updatedPo = { ...po, status: 'COMPLETED' as const, paymentMethod: 'transfer', paidAt: new Date().toISOString(), lockedAt: new Date().toISOString() };
       await updatePurchaseInDB(updatedPo, []); 
       showNotification("Đã xác nhận thanh toán thành công!", "success");
       setPoQrOpen(false);
@@ -115,7 +115,7 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
     if (!po) return;
     if (confirm('Xác nhận thanh toán công nợ bằng tiền mặt?')) {
       try {
-        const updatedPo = { ...po, status: 'COMPLETED' as const, paidAt: new Date().toISOString(), lockedAt: new Date().toISOString() };
+        const updatedPo = { ...po, status: 'COMPLETED' as const, paymentMethod: 'cash', paidAt: new Date().toISOString(), lockedAt: new Date().toISOString() };
         await updatePurchaseInDB(updatedPo, []); 
         showNotification("Đã xác nhận thanh toán thành công!", "success");
         onClose();
@@ -379,11 +379,35 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
             })()}
           </p>
 
-          <div className="flex justify-between mb-2 text-[15px]">
-            <div className="flex gap-4 w-2/3">
+          <div className="flex flex-col gap-1 mb-2 text-[15px]">
+            <div className="flex gap-4">
               <span className="whitespace-nowrap">Họ tên:</span>
-              <span className="uppercase flex-1">{inv.customer.name}</span>
+              <span className="uppercase flex-1 font-bold">{inv.customer.name}</span>
             </div>
+            {inv.customer.phone && (
+              <div className="flex gap-4">
+                <span className="whitespace-nowrap">SĐT:</span>
+                <span className="flex-1">{inv.customer.phone}</span>
+              </div>
+            )}
+            {inv.customer.address && (
+              <div className="flex gap-4">
+                <span className="whitespace-nowrap">Địa chỉ:</span>
+                <span className="flex-1">{inv.customer.address}</span>
+              </div>
+            )}
+            {inv.customer.doctorName && (
+              <div className="flex gap-4">
+                <span className="whitespace-nowrap">Bác sĩ:</span>
+                <span className="flex-1 font-bold">{inv.customer.doctorName}</span>
+              </div>
+            )}
+            {inv.customer.note && (
+              <div className="flex gap-4">
+                <span className="whitespace-nowrap">Ghi chú:</span>
+                <span className="flex-1 italic">{inv.customer.note}</span>
+              </div>
+            )}
           </div>
           
           <table className="w-full border-collapse border border-black mb-2 text-[15px]">
@@ -417,15 +441,14 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
             </tbody>
           </table>
 
-          <div className="flex gap-3 mb-10 text-[15px]">
+          <div className="flex gap-3 mb-6 text-[15px]">
             <span className="italic">Bằng chữ:</span>
             <span className="italic">{docTienBangChu(inv.total)} .</span>
           </div>
 
-          <div className="flex justify-end pr-16 text-[15px]">
-            <div className="text-center">
-              <p>Người bán</p>
-            </div>
+          <div className="text-center mt-6 pt-4 border-t border-dashed border-gray-400 text-sm">
+            <p className="font-bold mb-1">Hotline đặt thuốc, vật tư y tế và CSKH: 0888 90 4297</p>
+            <p className="italic">Rất hân hạnh được phục vụ, xin cảm ơn và hẹn gặp lại.</p>
           </div>
         </div>
       )}

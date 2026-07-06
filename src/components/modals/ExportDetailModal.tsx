@@ -347,7 +347,7 @@ export default function ExportDetailModal({ order, onClose, onEdit }: Props) {
         className="hidden print:block absolute inset-0 bg-white z-[9999] w-full"
         style={{ fontFamily: '"Times New Roman", Times, serif' }}
       >
-        <h1 className="text-center font-bold text-xl mb-1">PHIẾU XUẤT BÁN</h1>
+        <h1 className="text-center font-bold text-xl mb-1">HÓA ĐƠN THANH TOÁN</h1>
         <p className="text-center italic text-[11px] mb-1">
           Mã phiếu: {order.id}
         </p>
@@ -366,6 +366,12 @@ export default function ExportDetailModal({ order, onClose, onEdit }: Props) {
                 Số điện thoại:
               </span>
               <span className="flex-1">{order.recipientPhone}</span>
+            </div>
+          )}
+          {order.customerAddress && (
+            <div className="flex gap-2 mb-0.5">
+              <span className="whitespace-nowrap font-bold">Địa chỉ:</span>
+              <span className="flex-1">{order.customerAddress}</span>
             </div>
           )}
           {order.note && (
@@ -465,16 +471,16 @@ export default function ExportDetailModal({ order, onClose, onEdit }: Props) {
           <span className="italic">{docTienBangChu(order.total)} .</span>
         </div>
 
-        <div className="flex justify-between mt-6 text-[12px] px-4">
+        <div className="flex justify-end mt-6 text-[12px] px-4">
           <div className="text-center">
             <p className="font-bold">Người nhận hàng</p>
             <p className="italic text-[10px]">(Ký, họ tên)</p>
           </div>
-          <div className="text-center">
-            <p className="font-bold">Người lập phiếu</p>
-            <p className="italic text-[10px]">(Ký, họ tên)</p>
-            <p className="mt-12 font-bold">{order.employeeName}</p>
-          </div>
+        </div>
+
+        <div className="text-center mt-6 pt-4 border-t border-dashed border-gray-400 text-[12px]">
+          <p className="font-bold mb-1">Hotline đặt thuốc, vật tư y tế và CSKH: 0888 90 4297</p>
+          <p className="italic">Rất hân hạnh được phục vụ, xin cảm ơn và hẹn gặp lại.</p>
         </div>
 
         {showQR && (

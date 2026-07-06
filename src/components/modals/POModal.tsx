@@ -21,6 +21,8 @@ export default function POModal({ onClose, initialData, onSaved }: { onClose: ()
       : [{ productId: '', qty: 1, cost: 0 }]
   );
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer' | 'debt'>('cash');
 
   const addRow = () => setItems(prev => [...prev, { productId: '', qty: 1, cost: 0 }]);
 
@@ -39,14 +41,19 @@ export default function POModal({ onClose, initialData, onSaved }: { onClose: ()
 
   const poTotalCalc = items.reduce((s, i) => s + (i.qty || 0) * (i.cost || 0), 0);
 
-  const savePo = async () => {
-    if (isProcessing) return;
+  const handleConfirmClick = () => {
     const validItems = items.filter(i => i.productId !== '' && i.qty > 0);
     if (validItems.length === 0) {
       showNotification('Vui lòng chọn ít nhất 1 sản phẩm hợp lệ!', 'error');
       return;
     }
+    setShowPayment(true);
+  };
 
+  const savePo = async () => {
+    if (isProcessing) return;
+    const validItems = items.filter(i => i.productId !== '' && i.qty > 0);
+    
     const enrichedItems = validItems.map(i => {
       const p = products.find(x => x.id === i.productId);
       return {
@@ -61,15 +68,18 @@ export default function POModal({ onClose, initialData, onSaved }: { onClose: ()
     const poId = initialData ? initialData.id : 'PN' + Date.now().toString().slice(-6);
     const selectedSupplier = suppliers.find(s => s.id === Number(supplierId));
     
+    const status = paymentMethod === 'debt' ? 'DEBT' : 'COMPLETED';
+    
     const newPo: Purchase = {
       id: poId,
       date: initialData ? initialData.date : getNow(true),
       supplier: selectedSupplier?.name || 'Khách vãng lai',
       supplierId: selectedSupplier?.id,
-      status: initialData?.status || 'CREATED',
-      debtAt: initialData?.debtAt,
+      status: status,
+      paymentMethod: paymentMethod !== 'debt' ? paymentMethod : undefined,
+      debtAt: paymentMethod === 'debt' ? getNow(true) : initialData?.debtAt,
+      paidAt: paymentMethod !== 'debt' ? getNow(true) : initialData?.paidAt,
       paymentRequestedAt: initialData?.paymentRequestedAt,
-      paidAt: initialData?.paidAt,
       lockedAt: initialData?.lockedAt,
       note,
       items: enrichedItems,
@@ -216,11 +226,57 @@ export default function POModal({ onClose, initialData, onSaved }: { onClose: ()
 
         <div className="p-4 border-t bg-gray-50 flex justify-end gap-2">
           <button onClick={onClose} disabled={isProcessing} className="px-4 py-2 rounded-lg border bg-white font-bold hover:bg-gray-100 text-sm disabled:opacity-50">Hủy</button>
-          <button onClick={savePo} disabled={isProcessing} className="px-4 py-2 rounded-lg bg-teal-600 text-white font-bold hover:bg-teal-700 text-sm disabled:opacity-50">
+          <button onClick={handleConfirmClick} disabled={isProcessing} className="px-4 py-2 rounded-lg bg-teal-600 text-white font-bold hover:bg-teal-700 text-sm disabled:opacity-50">
             {initialData ? 'Lưu thay đổi' : 'Xác nhận nhập hàng'}
           </button>
         </div>
       </div>
+
+      {showPayment && (
+        <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden">
+            <div className="p-4 border-b bg-gray-50">
+              <h3 className="font-bold text-lg text-gray-800">Thanh toán phiếu nhập</h3>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="text-center mb-4">
+                <div className="text-sm text-gray-500 mb-1">Tổng số tiền cần thanh toán</div>
+                <div className="text-2xl font-bold text-red-600">{formatPrice(poTotalCalc)}</div>
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-bold text-gray-700 mb-2">Chọn phương thức:</label>
+                <div 
+                  onClick={() => setPaymentMethod('cash')}
+                  className={`p-3 border rounded-lg cursor-pointer flex justify-between items-center ${paymentMethod === 'cash' ? 'bg-teal-50 border-teal-500 text-teal-700' : 'hover:bg-gray-50'}`}
+                >
+                  <span className="font-bold"><i className="fa-solid fa-money-bill-wave mr-2"></i>Tiền mặt</span>
+                  {paymentMethod === 'cash' && <i className="fa-solid fa-circle-check"></i>}
+                </div>
+                <div 
+                  onClick={() => setPaymentMethod('transfer')}
+                  className={`p-3 border rounded-lg cursor-pointer flex justify-between items-center ${paymentMethod === 'transfer' ? 'bg-teal-50 border-teal-500 text-teal-700' : 'hover:bg-gray-50'}`}
+                >
+                  <span className="font-bold"><i className="fa-solid fa-money-check-dollar mr-2"></i>Chuyển khoản</span>
+                  {paymentMethod === 'transfer' && <i className="fa-solid fa-circle-check"></i>}
+                </div>
+                <div 
+                  onClick={() => setPaymentMethod('debt')}
+                  className={`p-3 border rounded-lg cursor-pointer flex justify-between items-center ${paymentMethod === 'debt' ? 'bg-orange-50 border-orange-500 text-orange-700' : 'hover:bg-gray-50'}`}
+                >
+                  <span className="font-bold"><i className="fa-solid fa-clock-rotate-left mr-2"></i>Chuyển công nợ</span>
+                  {paymentMethod === 'debt' && <i className="fa-solid fa-circle-check"></i>}
+                </div>
+              </div>
+            </div>
+            <div className="p-4 border-t bg-gray-50 flex justify-end gap-2">
+              <button onClick={() => setShowPayment(false)} className="px-4 py-2 rounded-lg border bg-white font-bold hover:bg-gray-100 text-sm">Hủy</button>
+              <button onClick={() => { setShowPayment(false); savePo(); }} className="px-4 py-2 rounded-lg bg-teal-600 text-white font-bold hover:bg-teal-700 text-sm">
+                Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isProcessing && (
         <div className="fixed inset-0 z-[100] bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4">

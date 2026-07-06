@@ -43,7 +43,7 @@ export interface Invoice {
   time: string;
   employeeName: string;
   employeeId: number;
-  customer: { name: string; phone: string; address?: string };
+  customer: { name: string; phone: string; address?: string; doctorName?: string; note?: string };
   items: CartItem[];
   method: string;
   otherCosts: number;
@@ -65,6 +65,7 @@ export interface Purchase {
   supplier: string;
   supplierId?: number;
   status?: 'CREATED' | 'DEBT' | 'COMPLETED';
+  paymentMethod?: string;
   debtAt?: string;
   paymentRequestedAt?: string;
   paidAt?: string;
@@ -105,6 +106,8 @@ export interface ExportOrder {
   date: string;
   recipientName: string;
   recipientPhone: string;
+  customerAddress?: string;
+  customerNote?: string;
   status: 'exported' | 'sent' | 'received' | 'pending_payment' | 'paid' | 'returned';
   total: number;
   otherCosts?: number;
@@ -399,6 +402,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const { error: invErr } = await supabase.from('invoices').insert([{
       id: invoice.id, time: invoice.time, employee_name: invoice.employeeName, employee_id: invoice.employeeId,
       customer_name: invoice.customer.name, customer_phone: invoice.customer.phone, customer_address: invoice.customer.address,
+      doctor_name: invoice.customer.doctorName, note: invoice.customer.note,
       method: invoice.method, other_costs: invoice.otherCosts, total: invoice.total
     }]);
     if (invErr) throw invErr;
@@ -440,7 +444,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const addPurchaseToDB = async (purchase: Purchase, productsToUpdate: Product[]) => {
     // Insert purchase
     const { error: purErr } = await supabase.from('purchases').insert([{
-      id: purchase.id, date: purchase.date, supplier: purchase.supplier, supplier_id: purchase.supplierId, status: purchase.status || 'CREATED', debt_at: purchase.debtAt, payment_requested_at: purchase.paymentRequestedAt, paid_at: purchase.paidAt, locked_at: purchase.lockedAt, note: purchase.note, total: purchase.total
+      id: purchase.id, date: purchase.date, supplier: purchase.supplier, supplier_id: purchase.supplierId, status: purchase.status || 'CREATED', payment_method: purchase.paymentMethod, debt_at: purchase.debtAt, payment_requested_at: purchase.paymentRequestedAt, paid_at: purchase.paidAt, locked_at: purchase.lockedAt, note: purchase.note, total: purchase.total
     }]);
     if (purErr) throw purErr;
 
@@ -459,7 +463,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const updatePurchaseInDB = async (updatedPurchase: Purchase, productsToUpdate: Product[]) => {
     // Update purchase record
     const { error: purErr } = await supabase.from('purchases').update({
-      supplier: updatedPurchase.supplier, supplier_id: updatedPurchase.supplierId, status: updatedPurchase.status, debt_at: updatedPurchase.debtAt, payment_requested_at: updatedPurchase.paymentRequestedAt, paid_at: updatedPurchase.paidAt, locked_at: updatedPurchase.lockedAt, note: updatedPurchase.note, total: updatedPurchase.total
+      supplier: updatedPurchase.supplier, supplier_id: updatedPurchase.supplierId, status: updatedPurchase.status, payment_method: updatedPurchase.paymentMethod, debt_at: updatedPurchase.debtAt, payment_requested_at: updatedPurchase.paymentRequestedAt, paid_at: updatedPurchase.paidAt, locked_at: updatedPurchase.lockedAt, note: updatedPurchase.note, total: updatedPurchase.total
     }).eq('id', updatedPurchase.id);
     if (purErr) throw purErr;
 
@@ -504,6 +508,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const addExportOrderToDB = async (order: ExportOrder, productsToUpdate: Product[]) => {
     const { error: ordErr } = await supabase.from('export_orders').insert([{
       id: order.id, date: order.date, recipient_name: order.recipientName, recipient_phone: order.recipientPhone,
+      customer_address: order.customerAddress, customer_note: order.customerNote,
       status: order.status, total: order.total, other_costs: order.otherCosts || 0, other_meds_fee: order.otherMedsFee || 0, payment_method: order.paymentMethod || 'cash', note: order.note, employee_name: order.employeeName
     }]);
     if (ordErr) throw ordErr;
@@ -550,8 +555,9 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const updateExportOrderInDB = async (updatedOrder: ExportOrder, productsToUpdate: Product[]) => {
     const { error: ordErr } = await supabase.from('export_orders').update({
-      recipient_name: updatedOrder.recipientName, recipient_phone: updatedOrder.recipientPhone,
-      status: updatedOrder.status, total: updatedOrder.total, other_costs: updatedOrder.otherCosts || 0, other_meds_fee: updatedOrder.otherMedsFee || 0, payment_method: updatedOrder.paymentMethod || 'cash', note: updatedOrder.note
+      date: updatedOrder.date, recipient_name: updatedOrder.recipientName, recipient_phone: updatedOrder.recipientPhone,
+      customer_address: updatedOrder.customerAddress, customer_note: updatedOrder.customerNote,
+      status: updatedOrder.status, total: updatedOrder.total, other_costs: updatedOrder.otherCosts || 0, other_meds_fee: updatedOrder.otherMedsFee || 0, payment_method: updatedOrder.paymentMethod || 'cash', note: updatedOrder.note, employee_name: updatedOrder.employeeName
     }).eq('id', updatedOrder.id);
     if (ordErr) throw ordErr;
 

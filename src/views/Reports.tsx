@@ -103,10 +103,43 @@ export default function Reports() {
   const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / itemsPerPage));
   // Safely adjust current page if filtered items shrink
   const safeCurrentPage = Math.min(currentPage, totalPages);
-  const paginatedInvoices = filteredInvoices.slice(
-    (safeCurrentPage - 1) * itemsPerPage,
-    safeCurrentPage * itemsPerPage
-  );
+  const paginatedInvoices = filteredInvoices.slice((safeCurrentPage - 1) * itemsPerPage, safeCurrentPage * itemsPerPage);
+
+  const exportDoctorCSV = () => {
+    const docInvoices = validInvoices.filter(inv => inv.customer.doctorName);
+    if (docInvoices.length === 0) {
+      showNotification('Không có đơn hàng nào có bác sĩ chỉ định trong tháng/năm này!', 'error');
+      return;
+    }
+    
+    let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+    csvContent += "Mã HĐ,Thời gian,Khách hàng,SĐT,Bác sĩ,Tên thuốc,SL,Đơn giá,Thành tiền\n";
+    
+    docInvoices.forEach(inv => {
+      inv.items.forEach(item => {
+        const row = [
+          inv.id,
+          inv.time,
+          `"${inv.customer.name}"`,
+          `"${inv.customer.phone || ''}"`,
+          `"${inv.customer.doctorName}"`,
+          `"${item.name}"`,
+          item.qty,
+          item.price,
+          item.price * item.qty
+        ].join(',');
+        csvContent += row + "\n";
+      });
+    });
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `DS_Bac_Si_Thang_${calendarMonth + 1}_${calendarYear}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const todayISO = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
 
@@ -341,6 +374,12 @@ export default function Reports() {
                 className="p-2 border rounded-lg text-sm w-64 focus:ring-2 focus:ring-teal-500 focus:outline-none"
               />
               <button
+                onClick={exportDoctorCSV}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition flex items-center gap-2 shadow-sm whitespace-nowrap"
+              >
+                <i className="fa-solid fa-user-doctor"></i> Xuất DS BS
+              </button>
+              <button
                 onClick={() => setShowExportCKModal(true)}
                 className="px-4 py-2 bg-teal-600 text-white rounded-lg font-bold text-sm hover:bg-teal-700 transition flex items-center gap-2 shadow-sm whitespace-nowrap"
               >
@@ -355,6 +394,7 @@ export default function Reports() {
                   <th className="p-3">Mã HD</th>
                   <th className="p-3">Thời gian</th>
                   <th className="p-3">Khách hàng</th>
+                  <th className="p-3">Bác sĩ</th>
                   <th className="p-3">Nhân viên</th>
                   <th className="p-3">Thanh toán</th>
                   <th className="p-3 text-right">Tổng tiền</th>
@@ -370,6 +410,7 @@ export default function Reports() {
                       <td className="p-3 font-mono font-bold text-teal-600">{inv.id}</td>
                       <td className="p-3 text-xs text-gray-500">{inv.time}</td>
                       <td className="p-3">{inv.customer.name}</td>
+                      <td className="p-3 font-bold text-teal-700">{inv.customer.doctorName || '-'}</td>
                       <td className="p-3">
                         <span className="bg-gray-100 px-2 py-1 rounded text-xs border">{inv.employeeName}</span>
                       </td>
