@@ -50,6 +50,9 @@ CREATE TABLE invoices (
   employee_id BIGINT REFERENCES users(id) ON DELETE SET NULL,
   customer_name TEXT NOT NULL DEFAULT 'Khách lẻ',
   customer_phone TEXT,
+  customer_address TEXT,
+  doctor_name TEXT,
+  note TEXT,
   method TEXT NOT NULL,
   other_costs NUMERIC NOT NULL DEFAULT 0,
   total NUMERIC NOT NULL DEFAULT 0,
@@ -157,6 +160,9 @@ ALTER TABLE purchases ADD COLUMN IF NOT EXISTS debt_at TIMESTAMP WITH TIME ZONE;
 ALTER TABLE purchases ADD COLUMN IF NOT EXISTS payment_requested_at TIMESTAMP WITH TIME ZONE;
 ALTER TABLE purchases ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP WITH TIME ZONE;
 ALTER TABLE purchases ADD COLUMN IF NOT EXISTS locked_at TIMESTAMP WITH TIME ZONE;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS customer_address TEXT;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS doctor_name TEXT;
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS note TEXT;
 
 -- We don't drop the old `supplier` TEXT column to keep old data working.
 

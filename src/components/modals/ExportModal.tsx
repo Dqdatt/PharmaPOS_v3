@@ -152,6 +152,7 @@ export default function ExportModal({
       recipientName,
       recipientPhone,
       customerAddress,
+      customerNote: note,
       status,
       note,
       items: enrichedItems,

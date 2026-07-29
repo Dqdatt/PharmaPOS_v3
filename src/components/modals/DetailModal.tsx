@@ -12,7 +12,7 @@ interface Props {
 }
 
 export default function DetailModal({ type, data, onClose, onEdit }: Props) {
-  const { formatPrice, updatePurchaseInDB, deletePurchaseFromDB, suppliers, getNow } = usePos();
+  const { products, formatPrice, updatePurchaseInDB, deletePurchaseFromDB, suppliers, getNow } = usePos();
 
   const isPO = type === 'PO';
   const po = isPO ? (data as Purchase) : null;
@@ -89,8 +89,8 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
   const handleDebt = async () => {
     if (!po) return;
     try {
-      const updatedPo = { ...po, status: 'DEBT' as const, debtAt: new Date().toISOString() };
-      await updatePurchaseInDB(updatedPo, []);
+      const updatedPo = { ...po, status: 'DEBT' as const, debtAt: getNow(true) };
+      await updatePurchaseInDB(updatedPo, products);
       showNotification("Đã chuyển sang công nợ thành công!", "success");
       onClose();
     } catch (e) {
@@ -101,8 +101,9 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
   const handleConfirmPayment = async () => {
     if (!po) return;
     try {
-      const updatedPo = { ...po, status: 'COMPLETED' as const, paymentMethod: 'transfer', paidAt: new Date().toISOString(), lockedAt: new Date().toISOString() };
-      await updatePurchaseInDB(updatedPo, []); 
+      const paidAt = getNow(true);
+      const updatedPo = { ...po, status: 'COMPLETED' as const, paymentMethod: 'transfer', paidAt, lockedAt: paidAt };
+      await updatePurchaseInDB(updatedPo, products); 
       showNotification("Đã xác nhận thanh toán thành công!", "success");
       setPoQrOpen(false);
       onClose();
@@ -115,8 +116,9 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
     if (!po) return;
     if (confirm('Xác nhận thanh toán công nợ bằng tiền mặt?')) {
       try {
-        const updatedPo = { ...po, status: 'COMPLETED' as const, paymentMethod: 'cash', paidAt: new Date().toISOString(), lockedAt: new Date().toISOString() };
-        await updatePurchaseInDB(updatedPo, []); 
+        const paidAt = getNow(true);
+        const updatedPo = { ...po, status: 'COMPLETED' as const, paymentMethod: 'cash', paidAt, lockedAt: paidAt };
+        await updatePurchaseInDB(updatedPo, products); 
         showNotification("Đã xác nhận thanh toán thành công!", "success");
         onClose();
       } catch (e) {
@@ -220,7 +222,9 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
                 {inv.customer.name}{inv.customer.phone ? ` - ${inv.customer.phone}` : ''}
               </div>
               <div><span className="text-gray-500 text-xs font-bold block">THỜI GIAN</span>{inv.time}</div>
-              <div><span className="text-gray-500 text-xs font-bold block">NHÂN VIÊN</span>{inv.employeeName}</div>
+              <div><span className="text-gray-500 text-xs font-bold block">ĐỊA CHỈ</span>{inv.customer.address || '—'}</div>
+              <div><span className="text-gray-500 text-xs font-bold block">BÁC SĨ CHỈ ĐỊNH</span>{inv.customer.doctorName || '—'}</div>
+              <div><span className="text-gray-500 text-xs font-bold block">GHI CHÚ</span>{inv.customer.note || '—'}</div>
               <div>
                 <span className="text-gray-500 text-xs font-bold block">THANH TOÁN</span>
                 {inv.method === 'cash' ? 'Tiền mặt' : 'Chuyển khoản'}

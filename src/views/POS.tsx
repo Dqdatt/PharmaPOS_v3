@@ -181,7 +181,13 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
       time: getNow(true),
       employeeName: currentUser.name,
       employeeId: currentUser.id,
-      customer: { name: posCustomer.name || 'Khách lẻ', phone: posCustomer.phone, address: posCustomer.address, doctorName: posCustomer.doctorName, note: posCustomer.note },
+      customer: {
+        name: posCustomer.name || 'Khách lẻ',
+        phone: posCustomer.phone,
+        address: posCustomer.address,
+        doctorName: posCustomer.doctorName,
+        note: posCustomer.note,
+      },
       items: JSON.parse(JSON.stringify(cart)),
       method: paymentMethod!,
       otherCosts: Number(otherCosts) || 0,
@@ -201,7 +207,10 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
       if (shouldPrint) {
         setPrintData({
           customerName: posCustomer.name || 'Khách lẻ',
+          customerPhone: posCustomer.phone || '',
           customerAddress: posCustomer.address || '',
+          doctorName: posCustomer.doctorName || '',
+          customerNote: posCustomer.note || '',
           cart: [...cart],
           totalAmount: finalTotal,
           date: {
@@ -299,7 +308,13 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
             <i className="fa-solid fa-cart-shopping mr-2"></i>Đơn hàng
           </div>
           <button
-            onClick={() => { setCart([]); setOtherCosts(0); setIsOtherCostOnly(false); setPaymentMethod(null); }}
+            onClick={() => {
+              setCart([]);
+              setOtherCosts(0);
+              setIsOtherCostOnly(false);
+              setPaymentMethod(null);
+              setPosCustomer({ name: '', phone: '', address: '', doctorName: '', note: '' });
+            }}
             className="text-red-500 hover:bg-red-50 px-2 py-1 rounded text-xs font-bold border border-red-200"
           >
             <i className="fa-solid fa-trash mr-1"></i>Xóa trắng
@@ -567,17 +582,35 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
           <div className="flex justify-between mb-2 text-[15px]">
             <div className="flex gap-4 w-2/3">
               <span className="whitespace-nowrap">Họ tên:</span>
-              <span className="uppercase flex-1">{printData.customerName}</span>
+              <span className="uppercase flex-1 font-bold">{printData.customerName}</span>
             </div>
-            <div className="flex gap-4 w-1/3">
-              <span className="whitespace-nowrap">Năm sinh:</span>
-              <span className="flex-1"></span>
-            </div>
+            {printData.customerPhone && (
+              <div className="flex gap-4 w-1/3">
+                <span className="whitespace-nowrap">SĐT:</span>
+                <span className="flex-1">{printData.customerPhone}</span>
+              </div>
+            )}
           </div>
           
-          <div className="flex gap-4 mb-6 text-[15px]">
-            <span className="whitespace-nowrap">Địa chỉ:</span>
-            <span className="flex-1">{printData.customerAddress}</span>
+          <div className="flex flex-col gap-1 mb-6 text-[15px]">
+            {printData.customerAddress && (
+              <div className="flex gap-4">
+                <span className="whitespace-nowrap">Địa chỉ:</span>
+                <span className="flex-1">{printData.customerAddress}</span>
+              </div>
+            )}
+            {printData.doctorName && (
+              <div className="flex gap-4">
+                <span className="whitespace-nowrap">Bác sĩ chỉ định:</span>
+                <span className="flex-1 font-bold">{printData.doctorName}</span>
+              </div>
+            )}
+            {printData.customerNote && (
+              <div className="flex gap-4">
+                <span className="whitespace-nowrap">Ghi chú:</span>
+                <span className="flex-1 italic">{printData.customerNote}</span>
+              </div>
+            )}
           </div>
 
           <table className="w-full border-collapse border border-black mb-2 text-[15px]">
@@ -616,10 +649,9 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
             <span className="italic">{docTienBangChu(printData.totalAmount)} .</span>
           </div>
 
-          <div className="flex justify-end pr-16 text-[15px]">
-            <div className="text-center">
-              <p>Người bán</p>
-            </div>
+          <div className="text-center mt-8 pt-4 border-t border-dashed border-gray-400 text-sm">
+            <p className="font-bold mb-1">Hotline đặt thuốc, vật tư y tế và CSKH: 0888 90 4297</p>
+            <p className="italic">Rất hân hạnh được phục vụ, xin cảm ơn và hẹn gặp lại.</p>
           </div>
         </div>
       )}

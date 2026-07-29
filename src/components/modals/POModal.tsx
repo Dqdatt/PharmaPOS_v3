@@ -22,6 +22,8 @@ export default function POModal({ onClose, initialData, onSaved }: { onClose: ()
   );
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
+  const [paymentStep, setPaymentStep] = useState<'action' | 'method'>('action');
+  const [paymentAction, setPaymentAction] = useState<'pay' | 'debt' | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer' | 'debt'>('cash');
 
   const addRow = () => setItems(prev => [...prev, { productId: '', qty: 1, cost: 0 }]);
@@ -47,6 +49,8 @@ export default function POModal({ onClose, initialData, onSaved }: { onClose: ()
       showNotification('Vui lòng chọn ít nhất 1 sản phẩm hợp lệ!', 'error');
       return;
     }
+    setPaymentStep('action');
+    setPaymentAction(null);
     setShowPayment(true);
   };
 
@@ -244,34 +248,65 @@ export default function POModal({ onClose, initialData, onSaved }: { onClose: ()
                 <div className="text-2xl font-bold text-red-600">{formatPrice(poTotalCalc)}</div>
               </div>
               <div className="space-y-2">
-                <label className="block text-sm font-bold text-gray-700 mb-2">Chọn phương thức:</label>
-                <div 
-                  onClick={() => setPaymentMethod('cash')}
-                  className={`p-3 border rounded-lg cursor-pointer flex justify-between items-center ${paymentMethod === 'cash' ? 'bg-teal-50 border-teal-500 text-teal-700' : 'hover:bg-gray-50'}`}
-                >
-                  <span className="font-bold"><i className="fa-solid fa-money-bill-wave mr-2"></i>Tiền mặt</span>
-                  {paymentMethod === 'cash' && <i className="fa-solid fa-circle-check"></i>}
-                </div>
-                <div 
-                  onClick={() => setPaymentMethod('transfer')}
-                  className={`p-3 border rounded-lg cursor-pointer flex justify-between items-center ${paymentMethod === 'transfer' ? 'bg-teal-50 border-teal-500 text-teal-700' : 'hover:bg-gray-50'}`}
-                >
-                  <span className="font-bold"><i className="fa-solid fa-money-check-dollar mr-2"></i>Chuyển khoản</span>
-                  {paymentMethod === 'transfer' && <i className="fa-solid fa-circle-check"></i>}
-                </div>
-                <div 
-                  onClick={() => setPaymentMethod('debt')}
-                  className={`p-3 border rounded-lg cursor-pointer flex justify-between items-center ${paymentMethod === 'debt' ? 'bg-orange-50 border-orange-500 text-orange-700' : 'hover:bg-gray-50'}`}
-                >
-                  <span className="font-bold"><i className="fa-solid fa-clock-rotate-left mr-2"></i>Chuyển công nợ</span>
-                  {paymentMethod === 'debt' && <i className="fa-solid fa-circle-check"></i>}
-                </div>
+                {paymentStep === 'action' ? (
+                  <>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Chọn thao tác:</label>
+                    <div
+                      onClick={() => {
+                        setPaymentAction('pay');
+                        setPaymentMethod('cash');
+                        setPaymentStep('method');
+                      }}
+                      className="p-3 border rounded-lg cursor-pointer flex justify-between items-center hover:bg-teal-50 hover:border-teal-500 hover:text-teal-700"
+                    >
+                      <span className="font-bold"><i className="fa-solid fa-circle-dollar-to-slot mr-2"></i>Thanh toán công nợ</span>
+                      <i className="fa-solid fa-chevron-right"></i>
+                    </div>
+                    <div
+                      onClick={() => {
+                        setPaymentAction('debt');
+                        setPaymentMethod('debt');
+                      }}
+                      className={`p-3 border rounded-lg cursor-pointer flex justify-between items-center ${paymentMethod === 'debt' ? 'bg-orange-50 border-orange-500 text-orange-700' : 'hover:bg-gray-50'}`}
+                    >
+                      <span className="font-bold"><i className="fa-solid fa-clock-rotate-left mr-2"></i>Chuyển công nợ</span>
+                      {paymentMethod === 'debt' && <i className="fa-solid fa-circle-check"></i>}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Chọn phương thức thanh toán:</label>
+                    <div
+                      onClick={() => setPaymentMethod('cash')}
+                      className={`p-3 border rounded-lg cursor-pointer flex justify-between items-center ${paymentMethod === 'cash' ? 'bg-teal-50 border-teal-500 text-teal-700' : 'hover:bg-gray-50'}`}
+                    >
+                      <span className="font-bold"><i className="fa-solid fa-money-bill-wave mr-2"></i>Tiền mặt</span>
+                      {paymentMethod === 'cash' && <i className="fa-solid fa-circle-check"></i>}
+                    </div>
+                    <div
+                      onClick={() => setPaymentMethod('transfer')}
+                      className={`p-3 border rounded-lg cursor-pointer flex justify-between items-center ${paymentMethod === 'transfer' ? 'bg-teal-50 border-teal-500 text-teal-700' : 'hover:bg-gray-50'}`}
+                    >
+                      <span className="font-bold"><i className="fa-solid fa-money-check-dollar mr-2"></i>Chuyển khoản</span>
+                      {paymentMethod === 'transfer' && <i className="fa-solid fa-circle-check"></i>}
+                    </div>
+                  </>
+                )}
               </div>
             </div>
             <div className="p-4 border-t bg-gray-50 flex justify-end gap-2">
-              <button onClick={() => setShowPayment(false)} className="px-4 py-2 rounded-lg border bg-white font-bold hover:bg-gray-100 text-sm">Hủy</button>
-              <button onClick={() => { setShowPayment(false); savePo(); }} className="px-4 py-2 rounded-lg bg-teal-600 text-white font-bold hover:bg-teal-700 text-sm">
-                Xác nhận
+              <button
+                onClick={() => paymentStep === 'method' ? setPaymentStep('action') : setShowPayment(false)}
+                className="px-4 py-2 rounded-lg border bg-white font-bold hover:bg-gray-100 text-sm"
+              >
+                {paymentStep === 'method' ? 'Quay lại' : 'Hủy'}
+              </button>
+              <button
+                onClick={() => { setShowPayment(false); savePo(); }}
+                disabled={paymentStep === 'action' && paymentAction !== 'debt'}
+                className="px-4 py-2 rounded-lg bg-teal-600 text-white font-bold hover:bg-teal-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {paymentMethod === 'debt' ? 'Chuyển công nợ' : 'Thanh toán thành công'}
               </button>
             </div>
           </div>

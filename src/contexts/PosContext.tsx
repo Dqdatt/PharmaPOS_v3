@@ -298,7 +298,13 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (dbInvoices) {
         setInvoices(dbInvoices.map(inv => ({
           id: inv.id, time: inv.time, employeeName: inv.employee_name, employeeId: inv.employee_id,
-          customer: { name: inv.customer_name, phone: inv.customer_phone || '', address: inv.customer_address || '' },
+          customer: {
+            name: inv.customer_name,
+            phone: inv.customer_phone || '',
+            address: inv.customer_address || '',
+            doctorName: inv.doctor_name || '',
+            note: inv.note || '',
+          },
           method: inv.method, otherCosts: Number(inv.other_costs), total: Number(inv.total),
           status: inv.status,
           items: (inv.invoice_items || []).map((i: any) => ({
@@ -342,7 +348,9 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (dbExportOrders) {
         setExportOrders(dbExportOrders.map(ord => ({
           id: ord.id, date: ord.date, recipientName: ord.recipient_name, recipientPhone: ord.recipient_phone,
-          status: ord.status, total: Number(ord.total), otherCosts: Number(ord.other_costs || 0), otherMedsFee: Number(ord.other_meds_fee || 0), paymentMethod: ord.payment_method || 'cash', note: ord.note, employeeName: ord.employee_name,
+          customerAddress: ord.customer_address || '',
+          customerNote: ord.customer_note || '',
+          status: ord.status, total: Number(ord.total), otherCosts: Number(ord.other_costs || 0), otherMedsFee: Number(ord.other_meds_fee || 0), paymentMethod: ord.payment_method || 'cash', note: ord.note || ord.customer_note || '', employeeName: ord.employee_name,
           items: (ord.export_order_items || []).map((i: any) => ({
             productId: i.product_id, name: i.name, unit: i.unit, qty: i.qty, price: Number(i.price)
           }))

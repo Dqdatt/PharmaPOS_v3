@@ -58,6 +58,7 @@ export default function ExportDetailModal({ order, onClose, onEdit }: Props) {
 
   const statusInfo = getStatusText(order.status);
   const showQR = order.paymentMethod === 'transfer' && vietQRConfig;
+  const displayNote = order.note || order.customerNote || "";
 
   let qrUrl = "";
   if (showQR && vietQRConfig) {
@@ -119,7 +120,7 @@ export default function ExportDetailModal({ order, onClose, onEdit }: Props) {
             className="flex-1 p-6 print:px-10 print:py-8"
           >
             <div className="hidden print:block text-center mb-8">
-              <h1 className="font-bold text-3xl uppercase">Phiếu Xuất Bán</h1>
+              <h1 className="font-bold text-3xl uppercase">Hóa Đơn Thanh Toán</h1>
               <p className="text-gray-600 mt-2">
                 Mã phiếu: <span className="font-bold">{order.id}</span>
               </p>
@@ -143,6 +144,16 @@ export default function ExportDetailModal({ order, onClose, onEdit }: Props) {
                     <div className="font-medium text-gray-800 text-sm whitespace-nowrap">
                       <i className="fa-solid fa-phone mr-1.5 opacity-70 text-gray-500 text-xs"></i>
                       {order.recipientPhone}
+                    </div>
+                  </div>
+                )}
+                {order.customerAddress && (
+                  <div>
+                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
+                      Địa chỉ
+                    </div>
+                    <div className="font-medium text-gray-800 text-sm">
+                      {order.customerAddress}
                     </div>
                   </div>
                 )}
@@ -173,12 +184,12 @@ export default function ExportDetailModal({ order, onClose, onEdit }: Props) {
                   </div>
                 </div>
               </div>
-              {order.note && (
+              {displayNote && (
                 <div className="mt-3 pt-3 border-t border-gray-100 print:border-none print:pt-1">
                   <div className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">
                     Ghi chú
                   </div>
-                  <div className="text-gray-700 text-sm">{order.note}</div>
+                  <div className="text-gray-700 text-sm">{displayNote}</div>
                 </div>
               )}
             </div>
@@ -272,14 +283,7 @@ export default function ExportDetailModal({ order, onClose, onEdit }: Props) {
               </table>
             </div>
 
-            <div className="hidden print:flex mt-12 justify-between px-10">
-              <div className="text-center">
-                <p className="font-bold text-gray-800">Người lập phiếu</p>
-                <p className="text-sm text-gray-500 mt-1">
-                  (Ký, ghi rõ họ tên)
-                </p>
-                <p className="font-bold mt-16">{order.employeeName}</p>
-              </div>
+            <div className="hidden print:flex mt-12 justify-end px-10">
               <div className="text-center">
                 <p className="font-bold text-gray-800">Người nhận</p>
                 <p className="text-sm text-gray-500 mt-1">
@@ -337,7 +341,7 @@ export default function ExportDetailModal({ order, onClose, onEdit }: Props) {
             onClick={handlePrint}
             className="px-5 py-2.5 rounded-lg bg-teal-600 text-white font-bold hover:bg-teal-700 transition flex items-center gap-2 shadow-sm"
           >
-            <i className="fa-solid fa-print"></i> In phiếu xuất
+            <i className="fa-solid fa-print"></i> In hóa đơn
           </button>
         </div>
       </div>
@@ -374,10 +378,10 @@ export default function ExportDetailModal({ order, onClose, onEdit }: Props) {
               <span className="flex-1">{order.customerAddress}</span>
             </div>
           )}
-          {order.note && (
+          {displayNote && (
             <div className="flex gap-2 mb-0.5">
               <span className="whitespace-nowrap font-bold">Ghi chú:</span>
-              <span className="flex-1">{order.note}</span>
+              <span className="flex-1">{displayNote}</span>
             </div>
           )}
         </div>

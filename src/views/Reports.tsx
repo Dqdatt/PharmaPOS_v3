@@ -106,14 +106,20 @@ export default function Reports() {
   const paginatedInvoices = filteredInvoices.slice((safeCurrentPage - 1) * itemsPerPage, safeCurrentPage * itemsPerPage);
 
   const exportDoctorCSV = () => {
-    const docInvoices = validInvoices.filter(inv => inv.customer.doctorName);
+    const docInvoices = validInvoices.filter(inv => {
+      if (!inv.customer.doctorName) return false;
+      const dateIso = parseInvDateToISO(inv.time);
+      if (!dateIso) return false;
+      const [year, month] = dateIso.split('-').map(Number);
+      return year === calendarYear && month === calendarMonth + 1;
+    });
     if (docInvoices.length === 0) {
       showNotification('Không có đơn hàng nào có bác sĩ chỉ định trong tháng/năm này!', 'error');
       return;
     }
     
     let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
-    csvContent += "Mã HĐ,Thời gian,Khách hàng,SĐT,Bác sĩ,Tên thuốc,SL,Đơn giá,Thành tiền\n";
+    csvContent += "Mã HĐ,Thời gian,Khách hàng,SĐT,Địa chỉ,Ghi chú,Bác sĩ,Tên thuốc,SL,Đơn giá,Thành tiền\n";
     
     docInvoices.forEach(inv => {
       inv.items.forEach(item => {
@@ -122,6 +128,8 @@ export default function Reports() {
           inv.time,
           `"${inv.customer.name}"`,
           `"${inv.customer.phone || ''}"`,
+          `"${inv.customer.address || ''}"`,
+          `"${inv.customer.note || ''}"`,
           `"${inv.customer.doctorName}"`,
           `"${item.name}"`,
           item.qty,
@@ -403,7 +411,7 @@ export default function Reports() {
               </thead>
               <tbody>
                 {paginatedInvoices.length === 0 ? (
-                  <tr><td colSpan={7} className="p-8 text-center text-gray-400">Không tìm thấy đơn hàng</td></tr>
+                  <tr><td colSpan={8} className="p-8 text-center text-gray-400">Không tìm thấy đơn hàng</td></tr>
                 ) : (
                   paginatedInvoices.map(inv => (
                     <tr key={inv.id} className="border-b hover:bg-gray-50">
