@@ -492,7 +492,11 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       purchase_id: purchase.id, product_id: i.productId, name: i.name, unit: i.unit, qty: i.qty, cost: i.cost
     }));
     const { error: itmErr } = await supabase.from('purchase_items').insert(itemsToInsert);
-    if (itmErr) throw itmErr;
+    if (itmErr) {
+      await supabase.from('purchase_items').delete().eq('purchase_id', purchase.id);
+      await supabase.from('purchases').delete().eq('id', purchase.id);
+      throw itmErr;
+    }
 
     // Update products local only (DB updated via Triggers)
     setPurchases(prev => [purchase, ...prev]);
