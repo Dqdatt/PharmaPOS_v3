@@ -11,6 +11,18 @@ import { bankInfo, formatQRText } from '../utils/bank';
 let globalMqttClient: mqtt.MqttClient | null = null;
 let isMqttConnecting = false;
 
+const getCheckoutErrorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === 'object') {
+    const maybeError = error as { message?: unknown; details?: unknown; hint?: unknown; code?: unknown };
+    return [maybeError.message, maybeError.details, maybeError.hint, maybeError.code]
+      .filter(Boolean)
+      .map(String)
+      .join(' | ');
+  }
+  return String(error);
+};
+
 export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: () => void }) {
   const {
     products, cart, setCart, addInvoiceToDB,
@@ -227,7 +239,7 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
         resetCart();
       }
     } catch (e) {
-      const errMsg = e instanceof Error ? e.message : String(e);
+      const errMsg = getCheckoutErrorMessage(e);
       showNotification(`Có lỗi xảy ra khi lưu hóa đơn! Chi tiết: ${errMsg}`, 'error');
       console.error(e);
     } finally {

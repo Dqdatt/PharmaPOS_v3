@@ -207,6 +207,28 @@ interface PosContextType {
 
 const PosContext = createContext<PosContextType | undefined>(undefined);
 
+const getSupabaseErrorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === 'object') {
+    const maybeError = error as { message?: unknown; details?: unknown; hint?: unknown; code?: unknown };
+    return [maybeError.message, maybeError.details, maybeError.hint, maybeError.code]
+      .filter(Boolean)
+      .map(String)
+      .join(' | ');
+  }
+  return String(error);
+};
+
+const isMissingOptionalInvoiceColumnError = (error: unknown) => {
+  const message = getSupabaseErrorMessage(error).toLowerCase();
+  return ['customer_address', 'doctor_name', 'note'].some(column => message.includes(column));
+};
+
+const isMissingOptionalExportColumnError = (error: unknown) => {
+  const message = getSupabaseErrorMessage(error).toLowerCase();
+  return ['customer_address', 'customer_note'].some(column => message.includes(column));
+};
+
 export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
@@ -406,14 +428,27 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const addInvoiceToDB = async (invoice: Invoice, productsToUpdate: Product[]) => {
-    // Insert invoice
-    const { error: invErr } = await supabase.from('invoices').insert([{
+    const invoiceBasePayload = {
       id: invoice.id, time: invoice.time, employee_name: invoice.employeeName, employee_id: invoice.employeeId,
-      customer_name: invoice.customer.name, customer_phone: invoice.customer.phone, customer_address: invoice.customer.address,
-      doctor_name: invoice.customer.doctorName, note: invoice.customer.note,
-      method: invoice.method, other_costs: invoice.otherCosts, total: invoice.total
-    }]);
-    if (invErr) throw invErr;
+      customer_name: invoice.customer.name, customer_phone: invoice.customer.phone,
+      method: invoice.method, other_costs: invoice.otherCosts, total: invoice.total,
+    };
+    const invoicePayload = {
+      ...invoiceBasePayload,
+      customer_address: invoice.customer.address,
+      doctor_name: invoice.customer.doctorName,
+      note: invoice.customer.note,
+    };
+
+    // Insert invoice. If production DB has not applied the optional customer/doctor
+    // migration yet, retry with the legacy invoice schema so checkout is not blocked.
+    const { error: invErr } = await supabase.from('invoices').insert([invoicePayload]);
+    if (invErr) {
+      if (!isMissingOptionalInvoiceColumnError(invErr)) throw invErr;
+      console.warn('Invoice optional columns are missing in Supabase; retrying with legacy invoice payload.', invErr);
+      const { error: retryErr } = await supabase.from('invoices').insert([invoiceBasePayload]);
+      if (retryErr) throw retryErr;
+    }
 
     // Insert invoice items
     const itemsToInsert = invoice.items.map(i => ({
@@ -514,12 +549,22 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const addExportOrderToDB = async (order: ExportOrder, productsToUpdate: Product[]) => {
-    const { error: ordErr } = await supabase.from('export_orders').insert([{
+    const exportOrderBasePayload = {
       id: order.id, date: order.date, recipient_name: order.recipientName, recipient_phone: order.recipientPhone,
-      customer_address: order.customerAddress, customer_note: order.customerNote,
-      status: order.status, total: order.total, other_costs: order.otherCosts || 0, other_meds_fee: order.otherMedsFee || 0, payment_method: order.paymentMethod || 'cash', note: order.note, employee_name: order.employeeName
-    }]);
-    if (ordErr) throw ordErr;
+      status: order.status, total: order.total, other_costs: order.otherCosts || 0, other_meds_fee: order.otherMedsFee || 0, payment_method: order.paymentMethod || 'cash', note: order.note, employee_name: order.employeeName,
+    };
+    const exportOrderPayload = {
+      ...exportOrderBasePayload,
+      customer_address: order.customerAddress,
+      customer_note: order.customerNote,
+    };
+    const { error: ordErr } = await supabase.from('export_orders').insert([exportOrderPayload]);
+    if (ordErr) {
+      if (!isMissingOptionalExportColumnError(ordErr)) throw ordErr;
+      console.warn('Export order optional columns are missing in Supabase; retrying with legacy export payload.', ordErr);
+      const { error: retryErr } = await supabase.from('export_orders').insert([exportOrderBasePayload]);
+      if (retryErr) throw retryErr;
+    }
 
     const itemsToInsert = order.items.map(i => ({
       export_order_id: order.id, product_id: i.productId, name: i.name, unit: i.unit, qty: i.qty, price: i.price
@@ -562,12 +607,22 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const updateExportOrderInDB = async (updatedOrder: ExportOrder, productsToUpdate: Product[]) => {
-    const { error: ordErr } = await supabase.from('export_orders').update({
+    const exportOrderBasePayload = {
       date: updatedOrder.date, recipient_name: updatedOrder.recipientName, recipient_phone: updatedOrder.recipientPhone,
-      customer_address: updatedOrder.customerAddress, customer_note: updatedOrder.customerNote,
-      status: updatedOrder.status, total: updatedOrder.total, other_costs: updatedOrder.otherCosts || 0, other_meds_fee: updatedOrder.otherMedsFee || 0, payment_method: updatedOrder.paymentMethod || 'cash', note: updatedOrder.note, employee_name: updatedOrder.employeeName
-    }).eq('id', updatedOrder.id);
-    if (ordErr) throw ordErr;
+      status: updatedOrder.status, total: updatedOrder.total, other_costs: updatedOrder.otherCosts || 0, other_meds_fee: updatedOrder.otherMedsFee || 0, payment_method: updatedOrder.paymentMethod || 'cash', note: updatedOrder.note, employee_name: updatedOrder.employeeName,
+    };
+    const exportOrderPayload = {
+      ...exportOrderBasePayload,
+      customer_address: updatedOrder.customerAddress,
+      customer_note: updatedOrder.customerNote,
+    };
+    const { error: ordErr } = await supabase.from('export_orders').update(exportOrderPayload).eq('id', updatedOrder.id);
+    if (ordErr) {
+      if (!isMissingOptionalExportColumnError(ordErr)) throw ordErr;
+      console.warn('Export order optional columns are missing in Supabase; retrying update with legacy export payload.', ordErr);
+      const { error: retryErr } = await supabase.from('export_orders').update(exportOrderBasePayload).eq('id', updatedOrder.id);
+      if (retryErr) throw retryErr;
+    }
 
     await supabase.from('export_order_items').delete().eq('export_order_id', updatedOrder.id);
     const itemsToInsert = updatedOrder.items.map(i => ({
