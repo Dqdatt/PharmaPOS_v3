@@ -194,6 +194,7 @@ interface PosContextType {
   deleteInvoice: (id: string) => Promise<void>;
   addPurchaseToDB: (purchase: Purchase, productsToUpdate: Product[]) => Promise<void>;
   updatePurchaseInDB: (updatedPurchase: Purchase, productsToUpdate: Product[]) => Promise<void>;
+  updatePurchasePaymentInDB: (updatedPurchase: Purchase) => Promise<void>;
   deletePurchaseFromDB: (id: string) => Promise<void>;
   addExportOrderToDB: (order: ExportOrder, productsToUpdate: Product[]) => Promise<void>;
   updateExportOrderStatusInDB: (orderId: string, oldStatus: ExportOrder['status'], newStatus: ExportOrder['status']) => Promise<void>;
@@ -537,6 +538,21 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // Update products local only (DB updated via Triggers)
     setPurchases(prev => prev.map(p => p.id === updatedPurchase.id ? updatedPurchase : p));
     setProducts(productsToUpdate);
+  };
+
+  const updatePurchasePaymentInDB = async (updatedPurchase: Purchase) => {
+    const purchasePayload = {
+      status: updatedPurchase.status,
+      payment_method: updatedPurchase.paymentMethod,
+      debt_at: normalizeDbTimestamp(updatedPurchase.debtAt),
+      payment_requested_at: normalizeDbTimestamp(updatedPurchase.paymentRequestedAt),
+      paid_at: normalizeDbTimestamp(updatedPurchase.paidAt),
+      locked_at: normalizeDbTimestamp(updatedPurchase.lockedAt),
+    };
+    const { error } = await supabase.from('purchases').update(purchasePayload).eq('id', updatedPurchase.id);
+    if (error) throw error;
+
+    setPurchases(prev => prev.map(p => p.id === updatedPurchase.id ? updatedPurchase : p));
   };
 
   const deletePurchaseFromDB = async (id: string) => {
@@ -933,7 +949,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       closeMonthlyInventory, checkPreviousMonthStatus, reconcileProductStock, fetchInventoryHistory,
       isCustomerView,
       getStock, formatPrice, getNow,
-      refreshData, addProductToDB, updateProductInDB, deleteProductFromDB, addInvoiceToDB, deleteInvoice, addPurchaseToDB, updatePurchaseInDB,
+      refreshData, addProductToDB, updateProductInDB, deleteProductFromDB, addInvoiceToDB, deleteInvoice, addPurchaseToDB, updatePurchaseInDB, updatePurchasePaymentInDB,
       addExportOrderToDB, updateExportOrderStatusInDB, updateExportOrderInDB, deleteExportOrderFromDB,
       addSupplierToDB, updateSupplierInDB, deleteSupplierFromDB,
       addPaymentOrderToDB, updatePaymentOrderStatusInDB,

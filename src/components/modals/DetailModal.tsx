@@ -4,7 +4,7 @@ import mqtt from 'mqtt';
 import { bankInfo, formatQRText } from '../../utils/bank';
 import { docTienBangChu } from '../../utils/numberToWords';
 import { showNotification } from '../../utils/toast';
-import { createDbTimestamp } from '../../utils/dbFallback';
+import { createDbTimestamp, getDbErrorMessage } from '../../utils/dbFallback';
 interface Props {
   type: 'PO' | 'INV';
   data: Purchase | Invoice;
@@ -13,7 +13,7 @@ interface Props {
 }
 
 export default function DetailModal({ type, data, onClose, onEdit }: Props) {
-  const { products, formatPrice, updatePurchaseInDB, deletePurchaseFromDB, suppliers, getNow } = usePos();
+  const { formatPrice, updatePurchasePaymentInDB, deletePurchaseFromDB, suppliers, getNow } = usePos();
 
   const isPO = type === 'PO';
   const po = isPO ? (data as Purchase) : null;
@@ -91,11 +91,12 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
     if (!po) return;
     try {
       const updatedPo = { ...po, status: 'DEBT' as const, debtAt: createDbTimestamp() };
-      await updatePurchaseInDB(updatedPo, products);
+      await updatePurchasePaymentInDB(updatedPo);
       showNotification("Đã chuyển sang công nợ thành công!", "success");
       onClose();
     } catch (e) {
-      alert("Lỗi khi cập nhật công nợ");
+      showNotification(`Lỗi khi cập nhật công nợ: ${getDbErrorMessage(e)}`, "error");
+      console.error(e);
     }
   };
 
@@ -104,12 +105,13 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
     try {
       const paidAt = createDbTimestamp();
       const updatedPo = { ...po, status: 'COMPLETED' as const, paymentMethod: 'transfer', paidAt, lockedAt: paidAt };
-      await updatePurchaseInDB(updatedPo, products); 
+      await updatePurchasePaymentInDB(updatedPo); 
       showNotification("Đã xác nhận thanh toán thành công!", "success");
       setPoQrOpen(false);
       onClose();
     } catch (e) {
-      alert("Lỗi khi cập nhật thanh toán");
+      showNotification(`Lỗi khi cập nhật thanh toán: ${getDbErrorMessage(e)}`, "error");
+      console.error(e);
     }
   };
 
@@ -119,11 +121,12 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
       try {
         const paidAt = createDbTimestamp();
         const updatedPo = { ...po, status: 'COMPLETED' as const, paymentMethod: 'cash', paidAt, lockedAt: paidAt };
-        await updatePurchaseInDB(updatedPo, products); 
+        await updatePurchasePaymentInDB(updatedPo); 
         showNotification("Đã xác nhận thanh toán thành công!", "success");
         onClose();
       } catch (e) {
-        alert("Lỗi khi cập nhật thanh toán");
+        showNotification(`Lỗi khi cập nhật thanh toán: ${getDbErrorMessage(e)}`, "error");
+        console.error(e);
       }
     }
   };
