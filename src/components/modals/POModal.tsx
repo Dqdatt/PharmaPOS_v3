@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { showNotification } from '../../utils/toast';
 import { usePos, Purchase } from '../../contexts/PosContext';
 import ProductAutocomplete from '../ProductAutocomplete';
 import SupplierAutocomplete from '../SupplierAutocomplete';
 import { createDbTimestamp, getDbErrorMessage } from '../../utils/dbFallback';
+import { formatQRText } from '../../utils/bank';
+import { PurchasePaymentMode, resolvePurchasePaymentFields } from '../../utils/purchasePayment';
 
 interface PoRow {
   productId: number | '';
@@ -13,6 +15,7 @@ interface PoRow {
 
 export default function POModal({ onClose, initialData, onSaved }: { onClose: () => void, initialData?: Purchase, onSaved?: (po: Purchase) => void }) {
   const { products, suppliers, addPurchaseToDB, updatePurchaseInDB, formatPrice, getNow } = usePos();
+  const draftPoIdRef = useRef(initialData?.id || 'PN' + Date.now().toString().slice(-6));
 
   const [supplierId, setSupplierId] = useState<number | ''>(initialData?.supplierId || '');
   const [note, setNote] = useState(initialData?.note || '');
@@ -23,7 +26,7 @@ export default function POModal({ onClose, initialData, onSaved }: { onClose: ()
   );
   const [isProcessing, setIsProcessing] = useState(false);
   const [showPayment, setShowPayment] = useState(false);
-  const [paymentStep, setPaymentStep] = useState<'action' | 'method'>('action');
+  const [paymentStep, setPaymentStep] = useState<'action' | 'method' | 'qr'>('action');
   const [paymentAction, setPaymentAction] = useState<'pay' | 'debt' | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'transfer' | 'debt'>('cash');
 
@@ -43,6 +46,7 @@ export default function POModal({ onClose, initialData, onSaved }: { onClose: ()
   };
 
   const poTotalCalc = items.reduce((s, i) => s + (i.qty || 0) * (i.cost || 0), 0);
+  const selectedSupplier = suppliers.find(s => s.id === Number(supplierId));
 
   const handleConfirmClick = () => {
     const validItems = items.filter(i => i.productId !== '' && i.qty > 0);
@@ -50,12 +54,16 @@ export default function POModal({ onClose, initialData, onSaved }: { onClose: ()
       showNotification('Vui lòng chọn ít nhất 1 sản phẩm hợp lệ!', 'error');
       return;
     }
+    if (initialData) {
+      savePo('preserve');
+      return;
+    }
     setPaymentStep('action');
     setPaymentAction(null);
     setShowPayment(true);
   };
 
-  const savePo = async () => {
+  const savePo = async (paymentMode: PurchasePaymentMode) => {
     if (isProcessing) return;
     const validItems = items.filter(i => i.productId !== '' && i.qty > 0);
     
@@ -70,23 +78,20 @@ export default function POModal({ onClose, initialData, onSaved }: { onClose: ()
       };
     });
 
-    const poId = initialData ? initialData.id : 'PN' + Date.now().toString().slice(-6);
-    const selectedSupplier = suppliers.find(s => s.id === Number(supplierId));
-    
-    const status = paymentMethod === 'debt' ? 'DEBT' : 'COMPLETED';
-    const paymentTimestamp = createDbTimestamp();
+    const poId = initialData ? initialData.id : draftPoIdRef.current;
+    const paymentFields = resolvePurchasePaymentFields(paymentMode, initialData, createDbTimestamp());
     
     const newPo: Purchase = {
       id: poId,
       date: initialData ? initialData.date : getNow(true),
       supplier: selectedSupplier?.name || 'Khách vãng lai',
       supplierId: selectedSupplier?.id,
-      status: status,
-      paymentMethod: paymentMethod !== 'debt' ? paymentMethod : undefined,
-      debtAt: paymentMethod === 'debt' ? paymentTimestamp : initialData?.debtAt,
-      paidAt: paymentMethod !== 'debt' ? paymentTimestamp : initialData?.paidAt,
-      paymentRequestedAt: initialData?.paymentRequestedAt,
-      lockedAt: paymentMethod !== 'debt' ? paymentTimestamp : initialData?.lockedAt,
+      status: paymentFields.status,
+      paymentMethod: paymentFields.paymentMethod,
+      debtAt: paymentFields.debtAt,
+      paidAt: paymentFields.paidAt,
+      paymentRequestedAt: paymentFields.paymentRequestedAt,
+      lockedAt: paymentFields.lockedAt,
       note,
       items: enrichedItems,
       total: poTotalCalc,
@@ -128,6 +133,27 @@ export default function POModal({ onClose, initialData, onSaved }: { onClose: ()
       showNotification(`Có lỗi xảy ra khi lưu phiếu nhập! Chi tiết: ${errMsg}`, 'error');
       console.error(e);
       setIsProcessing(false);
+    }
+  };
+
+  const handlePaymentSubmit = () => {
+    if (paymentStep === 'action' && paymentAction === 'debt') {
+      setShowPayment(false);
+      savePo('debt');
+      return;
+    }
+
+    if (paymentStep === 'method' && paymentMethod === 'cash') {
+      if (confirm('Xác nhận thanh toán phiếu nhập bằng tiền mặt?')) {
+        setShowPayment(false);
+        savePo('cash');
+      }
+      return;
+    }
+
+    if (paymentStep === 'qr') {
+      setShowPayment(false);
+      savePo('transfer');
     }
   };
 
@@ -250,7 +276,31 @@ export default function POModal({ onClose, initialData, onSaved }: { onClose: ()
                 <div className="text-2xl font-bold text-red-600">{formatPrice(poTotalCalc)}</div>
               </div>
               <div className="space-y-2">
-                {paymentStep === 'action' ? (
+                {paymentStep === 'qr' ? (
+                  <>
+                    {selectedSupplier?.bankName && selectedSupplier?.accountNumber ? (
+                      <div className="flex flex-col items-center">
+                        <div className="w-56 h-56 bg-gray-50 rounded-2xl mb-4 flex items-center justify-center border border-gray-100 overflow-hidden">
+                          <img
+                            src={`https://img.vietqr.io/image/${selectedSupplier.bankName}-${selectedSupplier.accountNumber}-qr_only.png?amount=${poTotalCalc}&addInfo=${encodeURIComponent("THANH TOAN " + (initialData?.id || draftPoIdRef.current))}&accountName=${encodeURIComponent(formatQRText(selectedSupplier.accountName || selectedSupplier.name))}`}
+                            className="w-full h-full object-contain p-3"
+                            alt="QR thanh toán phiếu nhập"
+                          />
+                        </div>
+                        <div className="text-sm font-bold text-gray-700 text-center flex flex-col gap-1">
+                          <span className="text-base uppercase text-gray-900">{selectedSupplier.accountName || selectedSupplier.name}</span>
+                          <span className="text-gray-600 tracking-wide">{selectedSupplier.bankName} - {selectedSupplier.accountNumber}</span>
+                          <span className="text-red-600 text-lg mt-1">{formatPrice(poTotalCalc)}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-center text-red-500 bg-red-50 p-4 rounded-lg">
+                        <i className="fa-solid fa-triangle-exclamation text-2xl mb-2"></i>
+                        <p className="text-sm">Nhà cung cấp này chưa có tài khoản ngân hàng. Vui lòng thêm tài khoản trong Quản lý NCC.</p>
+                      </div>
+                    )}
+                  </>
+                ) : paymentStep === 'action' ? (
                   <>
                     <label className="block text-sm font-bold text-gray-700 mb-2">Chọn thao tác:</label>
                     <div
@@ -286,7 +336,10 @@ export default function POModal({ onClose, initialData, onSaved }: { onClose: ()
                       {paymentMethod === 'cash' && <i className="fa-solid fa-circle-check"></i>}
                     </div>
                     <div
-                      onClick={() => setPaymentMethod('transfer')}
+                      onClick={() => {
+                        setPaymentMethod('transfer');
+                        setPaymentStep('qr');
+                      }}
                       className={`p-3 border rounded-lg cursor-pointer flex justify-between items-center ${paymentMethod === 'transfer' ? 'bg-teal-50 border-teal-500 text-teal-700' : 'hover:bg-gray-50'}`}
                     >
                       <span className="font-bold"><i className="fa-solid fa-money-check-dollar mr-2"></i>Chuyển khoản</span>
@@ -298,17 +351,17 @@ export default function POModal({ onClose, initialData, onSaved }: { onClose: ()
             </div>
             <div className="p-4 border-t bg-gray-50 flex justify-end gap-2">
               <button
-                onClick={() => paymentStep === 'method' ? setPaymentStep('action') : setShowPayment(false)}
+                onClick={() => paymentStep === 'qr' ? setPaymentStep('method') : paymentStep === 'method' ? setPaymentStep('action') : setShowPayment(false)}
                 className="px-4 py-2 rounded-lg border bg-white font-bold hover:bg-gray-100 text-sm"
               >
-                {paymentStep === 'method' ? 'Quay lại' : 'Hủy'}
+                {paymentStep === 'method' || paymentStep === 'qr' ? 'Quay lại' : 'Hủy'}
               </button>
               <button
-                onClick={() => { setShowPayment(false); savePo(); }}
-                disabled={paymentStep === 'action' && paymentAction !== 'debt'}
+                onClick={handlePaymentSubmit}
+                disabled={(paymentStep === 'action' && paymentAction !== 'debt') || (paymentStep === 'qr' && !(selectedSupplier?.bankName && selectedSupplier?.accountNumber))}
                 className="px-4 py-2 rounded-lg bg-teal-600 text-white font-bold hover:bg-teal-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {paymentMethod === 'debt' ? 'Chuyển công nợ' : 'Thanh toán thành công'}
+                {paymentStep === 'qr' ? 'Xác nhận đã thanh toán' : paymentMethod === 'debt' ? 'Chuyển công nợ' : 'Thanh toán thành công'}
               </button>
             </div>
           </div>
