@@ -3,6 +3,7 @@ import { showNotification } from '../../utils/toast';
 import { usePos, Purchase } from '../../contexts/PosContext';
 import ProductAutocomplete from '../ProductAutocomplete';
 import SupplierAutocomplete from '../SupplierAutocomplete';
+import { getDbErrorMessage } from '../../utils/dbFallback';
 
 interface PoRow {
   productId: number | '';
@@ -122,7 +123,7 @@ export default function POModal({ onClose, initialData, onSaved }: { onClose: ()
       if (onSaved) onSaved(newPo);
       else onClose();
     } catch (e) {
-      const errMsg = e instanceof Error ? e.message : String(e);
+      const errMsg = getDbErrorMessage(e);
       showNotification(`Có lỗi xảy ra khi lưu phiếu nhập! Chi tiết: ${errMsg}`, 'error');
       console.error(e);
       setIsProcessing(false);

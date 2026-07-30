@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { showNotification } from '../utils/toast';
+import { writeWithLegacyFallback } from '../utils/dbFallback';
 
 // --- Types matching pos.html exactly ---
 export interface Product {
@@ -206,28 +207,6 @@ interface PosContextType {
 }
 
 const PosContext = createContext<PosContextType | undefined>(undefined);
-
-const getSupabaseErrorMessage = (error: unknown) => {
-  if (error instanceof Error) return error.message;
-  if (error && typeof error === 'object') {
-    const maybeError = error as { message?: unknown; details?: unknown; hint?: unknown; code?: unknown };
-    return [maybeError.message, maybeError.details, maybeError.hint, maybeError.code]
-      .filter(Boolean)
-      .map(String)
-      .join(' | ');
-  }
-  return String(error);
-};
-
-const isMissingOptionalInvoiceColumnError = (error: unknown) => {
-  const message = getSupabaseErrorMessage(error).toLowerCase();
-  return ['customer_address', 'doctor_name', 'note'].some(column => message.includes(column));
-};
-
-const isMissingOptionalExportColumnError = (error: unknown) => {
-  const message = getSupabaseErrorMessage(error).toLowerCase();
-  return ['customer_address', 'customer_note'].some(column => message.includes(column));
-};
 
 export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -442,13 +421,12 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     // Insert invoice. If production DB has not applied the optional customer/doctor
     // migration yet, retry with the legacy invoice schema so checkout is not blocked.
-    const { error: invErr } = await supabase.from('invoices').insert([invoicePayload]);
-    if (invErr) {
-      if (!isMissingOptionalInvoiceColumnError(invErr)) throw invErr;
-      console.warn('Invoice optional columns are missing in Supabase; retrying with legacy invoice payload.', invErr);
-      const { error: retryErr } = await supabase.from('invoices').insert([invoiceBasePayload]);
-      if (retryErr) throw retryErr;
-    }
+    await writeWithLegacyFallback(
+      'invoice',
+      () => supabase.from('invoices').insert([invoicePayload]),
+      () => supabase.from('invoices').insert([invoiceBasePayload]),
+      'Invoice optional columns are missing in Supabase; retrying with legacy invoice payload.',
+    );
 
     // Insert invoice items
     const itemsToInsert = invoice.items.map(i => ({
@@ -485,11 +463,29 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const addPurchaseToDB = async (purchase: Purchase, productsToUpdate: Product[]) => {
-    // Insert purchase
-    const { error: purErr } = await supabase.from('purchases').insert([{
-      id: purchase.id, date: purchase.date, supplier: purchase.supplier, supplier_id: purchase.supplierId, status: purchase.status || 'CREATED', payment_method: purchase.paymentMethod, debt_at: purchase.debtAt, payment_requested_at: purchase.paymentRequestedAt, paid_at: purchase.paidAt, locked_at: purchase.lockedAt, note: purchase.note, total: purchase.total
-    }]);
-    if (purErr) throw purErr;
+    const purchaseBasePayload = {
+      id: purchase.id,
+      date: purchase.date,
+      supplier: purchase.supplier,
+      note: purchase.note,
+      total: purchase.total,
+    };
+    const purchasePayload = {
+      ...purchaseBasePayload,
+      supplier_id: purchase.supplierId,
+      status: purchase.status || 'CREATED',
+      payment_method: purchase.paymentMethod,
+      debt_at: purchase.debtAt,
+      payment_requested_at: purchase.paymentRequestedAt,
+      paid_at: purchase.paidAt,
+      locked_at: purchase.lockedAt,
+    };
+    await writeWithLegacyFallback(
+      'purchase',
+      () => supabase.from('purchases').insert([purchasePayload]),
+      () => supabase.from('purchases').insert([purchaseBasePayload]),
+      'Purchase optional columns are missing in Supabase; retrying with legacy purchase payload.',
+    );
 
     // Insert purchase items
     const itemsToInsert = purchase.items.map(i => ({
@@ -504,11 +500,27 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const updatePurchaseInDB = async (updatedPurchase: Purchase, productsToUpdate: Product[]) => {
-    // Update purchase record
-    const { error: purErr } = await supabase.from('purchases').update({
-      supplier: updatedPurchase.supplier, supplier_id: updatedPurchase.supplierId, status: updatedPurchase.status, payment_method: updatedPurchase.paymentMethod, debt_at: updatedPurchase.debtAt, payment_requested_at: updatedPurchase.paymentRequestedAt, paid_at: updatedPurchase.paidAt, locked_at: updatedPurchase.lockedAt, note: updatedPurchase.note, total: updatedPurchase.total
-    }).eq('id', updatedPurchase.id);
-    if (purErr) throw purErr;
+    const purchaseBasePayload = {
+      supplier: updatedPurchase.supplier,
+      note: updatedPurchase.note,
+      total: updatedPurchase.total,
+    };
+    const purchasePayload = {
+      ...purchaseBasePayload,
+      supplier_id: updatedPurchase.supplierId,
+      status: updatedPurchase.status,
+      payment_method: updatedPurchase.paymentMethod,
+      debt_at: updatedPurchase.debtAt,
+      payment_requested_at: updatedPurchase.paymentRequestedAt,
+      paid_at: updatedPurchase.paidAt,
+      locked_at: updatedPurchase.lockedAt,
+    };
+    await writeWithLegacyFallback(
+      'purchase',
+      () => supabase.from('purchases').update(purchasePayload).eq('id', updatedPurchase.id),
+      () => supabase.from('purchases').update(purchaseBasePayload).eq('id', updatedPurchase.id),
+      'Purchase optional columns are missing in Supabase; retrying update with legacy purchase payload.',
+    );
 
     // Replace purchase items
     await supabase.from('purchase_items').delete().eq('purchase_id', updatedPurchase.id);
@@ -558,13 +570,12 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       customer_address: order.customerAddress,
       customer_note: order.customerNote,
     };
-    const { error: ordErr } = await supabase.from('export_orders').insert([exportOrderPayload]);
-    if (ordErr) {
-      if (!isMissingOptionalExportColumnError(ordErr)) throw ordErr;
-      console.warn('Export order optional columns are missing in Supabase; retrying with legacy export payload.', ordErr);
-      const { error: retryErr } = await supabase.from('export_orders').insert([exportOrderBasePayload]);
-      if (retryErr) throw retryErr;
-    }
+    await writeWithLegacyFallback(
+      'exportOrder',
+      () => supabase.from('export_orders').insert([exportOrderPayload]),
+      () => supabase.from('export_orders').insert([exportOrderBasePayload]),
+      'Export order optional columns are missing in Supabase; retrying with legacy export payload.',
+    );
 
     const itemsToInsert = order.items.map(i => ({
       export_order_id: order.id, product_id: i.productId, name: i.name, unit: i.unit, qty: i.qty, price: i.price
@@ -616,13 +627,12 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       customer_address: updatedOrder.customerAddress,
       customer_note: updatedOrder.customerNote,
     };
-    const { error: ordErr } = await supabase.from('export_orders').update(exportOrderPayload).eq('id', updatedOrder.id);
-    if (ordErr) {
-      if (!isMissingOptionalExportColumnError(ordErr)) throw ordErr;
-      console.warn('Export order optional columns are missing in Supabase; retrying update with legacy export payload.', ordErr);
-      const { error: retryErr } = await supabase.from('export_orders').update(exportOrderBasePayload).eq('id', updatedOrder.id);
-      if (retryErr) throw retryErr;
-    }
+    await writeWithLegacyFallback(
+      'exportOrder',
+      () => supabase.from('export_orders').update(exportOrderPayload).eq('id', updatedOrder.id),
+      () => supabase.from('export_orders').update(exportOrderBasePayload).eq('id', updatedOrder.id),
+      'Export order optional columns are missing in Supabase; retrying update with legacy export payload.',
+    );
 
     await supabase.from('export_order_items').delete().eq('export_order_id', updatedOrder.id);
     const itemsToInsert = updatedOrder.items.map(i => ({
