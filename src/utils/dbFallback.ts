@@ -34,6 +34,37 @@ export const shouldRetryWithLegacyPayload = (target: LegacyFallbackTarget, error
 
 type DbWriteResult = { error: unknown | null };
 
+const parseVietnameseDateTime = (value: string) => {
+  const normalized = value.trim();
+  const timeFirst = normalized.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s+(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  const dateFirst = normalized.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:,?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?)?$/);
+
+  if (timeFirst) {
+    const [, hour, minute, second = '0', day, month, year] = timeFirst;
+    return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second));
+  }
+
+  if (dateFirst) {
+    const [, day, month, year, hour = '0', minute = '0', second = '0'] = dateFirst;
+    return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute), Number(second));
+  }
+
+  return null;
+};
+
+export const createDbTimestamp = () => new Date().toISOString();
+
+export const normalizeDbTimestamp = (value?: string | Date | null) => {
+  if (!value) return undefined;
+  const parsed = value instanceof Date ? value : new Date(value);
+  if (!Number.isNaN(parsed.getTime())) return parsed.toISOString();
+
+  const fallback = parseVietnameseDateTime(String(value));
+  if (fallback && !Number.isNaN(fallback.getTime())) return fallback.toISOString();
+
+  return undefined;
+};
+
 export const writeWithLegacyFallback = async (
   target: LegacyFallbackTarget,
   primaryWrite: () => PromiseLike<DbWriteResult>,

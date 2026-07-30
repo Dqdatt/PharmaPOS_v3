@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { showNotification } from '../utils/toast';
-import { writeWithLegacyFallback } from '../utils/dbFallback';
+import { normalizeDbTimestamp, writeWithLegacyFallback } from '../utils/dbFallback';
 
 // --- Types matching pos.html exactly ---
 export interface Product {
@@ -475,10 +475,10 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       supplier_id: purchase.supplierId,
       status: purchase.status || 'CREATED',
       payment_method: purchase.paymentMethod,
-      debt_at: purchase.debtAt,
-      payment_requested_at: purchase.paymentRequestedAt,
-      paid_at: purchase.paidAt,
-      locked_at: purchase.lockedAt,
+      debt_at: normalizeDbTimestamp(purchase.debtAt),
+      payment_requested_at: normalizeDbTimestamp(purchase.paymentRequestedAt),
+      paid_at: normalizeDbTimestamp(purchase.paidAt),
+      locked_at: normalizeDbTimestamp(purchase.lockedAt),
     };
     await writeWithLegacyFallback(
       'purchase',
@@ -514,10 +514,10 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       supplier_id: updatedPurchase.supplierId,
       status: updatedPurchase.status,
       payment_method: updatedPurchase.paymentMethod,
-      debt_at: updatedPurchase.debtAt,
-      payment_requested_at: updatedPurchase.paymentRequestedAt,
-      paid_at: updatedPurchase.paidAt,
-      locked_at: updatedPurchase.lockedAt,
+      debt_at: normalizeDbTimestamp(updatedPurchase.debtAt),
+      payment_requested_at: normalizeDbTimestamp(updatedPurchase.paymentRequestedAt),
+      paid_at: normalizeDbTimestamp(updatedPurchase.paidAt),
+      locked_at: normalizeDbTimestamp(updatedPurchase.lockedAt),
     };
     await writeWithLegacyFallback(
       'purchase',

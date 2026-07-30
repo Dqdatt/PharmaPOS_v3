@@ -4,6 +4,7 @@ import mqtt from 'mqtt';
 import { bankInfo, formatQRText } from '../../utils/bank';
 import { docTienBangChu } from '../../utils/numberToWords';
 import { showNotification } from '../../utils/toast';
+import { createDbTimestamp } from '../../utils/dbFallback';
 interface Props {
   type: 'PO' | 'INV';
   data: Purchase | Invoice;
@@ -89,7 +90,7 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
   const handleDebt = async () => {
     if (!po) return;
     try {
-      const updatedPo = { ...po, status: 'DEBT' as const, debtAt: getNow(true) };
+      const updatedPo = { ...po, status: 'DEBT' as const, debtAt: createDbTimestamp() };
       await updatePurchaseInDB(updatedPo, products);
       showNotification("Đã chuyển sang công nợ thành công!", "success");
       onClose();
@@ -101,7 +102,7 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
   const handleConfirmPayment = async () => {
     if (!po) return;
     try {
-      const paidAt = getNow(true);
+      const paidAt = createDbTimestamp();
       const updatedPo = { ...po, status: 'COMPLETED' as const, paymentMethod: 'transfer', paidAt, lockedAt: paidAt };
       await updatePurchaseInDB(updatedPo, products); 
       showNotification("Đã xác nhận thanh toán thành công!", "success");
@@ -116,7 +117,7 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
     if (!po) return;
     if (confirm('Xác nhận thanh toán công nợ bằng tiền mặt?')) {
       try {
-        const paidAt = getNow(true);
+        const paidAt = createDbTimestamp();
         const updatedPo = { ...po, status: 'COMPLETED' as const, paymentMethod: 'cash', paidAt, lockedAt: paidAt };
         await updatePurchaseInDB(updatedPo, products); 
         showNotification("Đã xác nhận thanh toán thành công!", "success");

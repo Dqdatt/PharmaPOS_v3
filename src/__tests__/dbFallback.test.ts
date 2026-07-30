@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { getDbErrorMessage, shouldRetryWithLegacyPayload, writeWithLegacyFallback } from '../utils/dbFallback';
+import {
+  createDbTimestamp,
+  getDbErrorMessage,
+  normalizeDbTimestamp,
+  shouldRetryWithLegacyPayload,
+  writeWithLegacyFallback,
+} from '../utils/dbFallback';
 
 describe('database legacy fallback guards', () => {
   it('formats Supabase object errors instead of [object Object]', () => {
@@ -121,5 +127,20 @@ describe('database legacy fallback guards', () => {
     } finally {
       console.warn = originalWarn;
     }
+  });
+
+  it('normalizes Vietnamese timestamp strings before sending to Supabase', () => {
+    const normalized = normalizeDbTimestamp('11:18:14 30/7/2026');
+
+    assert.equal(typeof normalized, 'string');
+    assert.match(normalized!, /^2026-07-30T/);
+    assert.equal(Number.isNaN(new Date(normalized!).getTime()), false);
+  });
+
+  it('creates ISO timestamps for TIMESTAMP WITH TIME ZONE columns', () => {
+    const timestamp = createDbTimestamp();
+
+    assert.match(timestamp, /^\d{4}-\d{2}-\d{2}T/);
+    assert.equal(Number.isNaN(new Date(timestamp).getTime()), false);
   });
 });

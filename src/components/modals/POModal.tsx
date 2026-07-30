@@ -3,7 +3,7 @@ import { showNotification } from '../../utils/toast';
 import { usePos, Purchase } from '../../contexts/PosContext';
 import ProductAutocomplete from '../ProductAutocomplete';
 import SupplierAutocomplete from '../SupplierAutocomplete';
-import { getDbErrorMessage } from '../../utils/dbFallback';
+import { createDbTimestamp, getDbErrorMessage } from '../../utils/dbFallback';
 
 interface PoRow {
   productId: number | '';
@@ -74,6 +74,7 @@ export default function POModal({ onClose, initialData, onSaved }: { onClose: ()
     const selectedSupplier = suppliers.find(s => s.id === Number(supplierId));
     
     const status = paymentMethod === 'debt' ? 'DEBT' : 'COMPLETED';
+    const paymentTimestamp = createDbTimestamp();
     
     const newPo: Purchase = {
       id: poId,
@@ -82,10 +83,10 @@ export default function POModal({ onClose, initialData, onSaved }: { onClose: ()
       supplierId: selectedSupplier?.id,
       status: status,
       paymentMethod: paymentMethod !== 'debt' ? paymentMethod : undefined,
-      debtAt: paymentMethod === 'debt' ? getNow(true) : initialData?.debtAt,
-      paidAt: paymentMethod !== 'debt' ? getNow(true) : initialData?.paidAt,
+      debtAt: paymentMethod === 'debt' ? paymentTimestamp : initialData?.debtAt,
+      paidAt: paymentMethod !== 'debt' ? paymentTimestamp : initialData?.paidAt,
       paymentRequestedAt: initialData?.paymentRequestedAt,
-      lockedAt: initialData?.lockedAt,
+      lockedAt: paymentMethod !== 'debt' ? paymentTimestamp : initialData?.lockedAt,
       note,
       items: enrichedItems,
       total: poTotalCalc,
