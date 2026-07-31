@@ -83,7 +83,7 @@ export default function Imports() {
         </div>
       </div>
 
-      {showPoModal && <POModal onClose={() => setShowPoModal(false)} onSaved={(po) => { setShowPoModal(false); setViewingPo(po); }} />}
+      {showPoModal && <POModal onClose={() => setShowPoModal(false)} onSaved={() => setShowPoModal(false)} />}
       {editingPo && <POModal initialData={editingPo} onClose={() => setEditingPo(null)} />}
       {viewingPo && (
         <DetailModal
