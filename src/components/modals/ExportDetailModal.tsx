@@ -348,8 +348,8 @@ export default function ExportDetailModal({ order, onClose, onEdit }: Props) {
 
       {/* PRINT AREA */}
       <div
-        className="hidden print:flex print:flex-col absolute inset-0 bg-white z-[9999] w-full"
-        style={{ fontFamily: '"Times New Roman", Times, serif', minHeight: '270mm' }}
+        className="hidden print:block absolute inset-0 bg-white z-[9999] w-full"
+        style={{ fontFamily: '"Times New Roman", Times, serif', paddingBottom: '28mm' }}
       >
         <h1 className="text-center font-bold text-xl mb-1">HÓA ĐƠN THANH TOÁN</h1>
         <p className="text-center italic text-[11px] mb-1">
@@ -501,7 +501,10 @@ export default function ExportDetailModal({ order, onClose, onEdit }: Props) {
           </div>
         )}
 
-        <div className="text-center mt-auto pt-4 pb-2 border-t border-dashed border-gray-400 text-[12px]">
+        <div
+          className="text-center pt-3 pb-2 border-t border-dashed border-gray-400 text-[12px]"
+          style={{ position: 'fixed', left: '10mm', right: '10mm', bottom: '7mm', background: 'white' }}
+        >
           <p className="font-bold mb-1">Hotline đặt thuốc, vật tư y tế và CSKH: 0888 90 4297</p>
           <p className="italic">Rất hân hạnh được phục vụ, xin cảm ơn và hẹn gặp lại.</p>
         </div>
