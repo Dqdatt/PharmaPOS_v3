@@ -4,6 +4,14 @@ import DetailModal from '../components/modals/DetailModal';
 import ExportCKModal from '../components/modals/ExportCKModal';
 import ConfirmModal from '../components/modals/ConfirmModal';
 import { showNotification } from '../utils/toast';
+import {
+  getPaidExportOrders,
+  getReportRevenueSummary,
+  getRetailCalendarRevenue,
+  getRetailRevenueForDate,
+  getValidRetailInvoices,
+  parseReportDateToISO,
+} from '../utils/reportRevenue';
 
 export default function Reports() {
   const { invoices, exportOrders, products, getStock, formatPrice, deleteInvoice } = usePos();
@@ -19,12 +27,14 @@ export default function Reports() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(50);
 
-  const validInvoices = invoices.filter(inv => inv.status !== 'deleted');
-  const paidExportOrders = exportOrders.filter(o => o.status === 'paid');
+  const validInvoices: Invoice[] = getValidRetailInvoices(invoices);
+  const paidExportOrders = getPaidExportOrders(exportOrders);
 
-  const totalInvoiceRevenue = validInvoices.reduce((sum, inv) => sum + inv.total, 0);
-  const totalExportRevenue = paidExportOrders.reduce((sum, o) => sum + o.total, 0);
-  const totalRevenue = totalInvoiceRevenue + totalExportRevenue;
+  const {
+    retailRevenue: totalInvoiceRevenue,
+    exportRevenue: totalExportRevenue,
+    totalRevenue,
+  } = getReportRevenueSummary(invoices, exportOrders);
   const totalProfit = validInvoices.reduce((sum, inv) => {
     const costOfGoods = inv.items.reduce((s, i) => {
       const p = products.find(x => x.id === i.id);
@@ -38,30 +48,7 @@ export default function Reports() {
   const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth());
   const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
 
-  const parseInvDateToISO = (timeStr: string) => {
-    const parts = timeStr.split(/[\s,]+/); 
-    const dateStr = parts.find(p => p.includes('/'));
-    if (!dateStr) return '';
-    const [d, m, y] = dateStr.split('/');
-    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
-  };
-
-  const calendarData = (() => {
-    const data: Record<string, number> = {};
-    validInvoices.forEach(inv => {
-      const dateIso = parseInvDateToISO(inv.time);
-      if (!dateIso) return;
-      if (!data[dateIso]) data[dateIso] = 0;
-      data[dateIso] += (inv.total - inv.otherCosts);
-    });
-    paidExportOrders.forEach(o => {
-      const dateIso = parseInvDateToISO(o.date);
-      if (!dateIso) return;
-      if (!data[dateIso]) data[dateIso] = 0;
-      data[dateIso] += o.total;
-    });
-    return data;
-  })();
+  const calendarData = getRetailCalendarRevenue(invoices);
 
   const prevMonth = () => {
     if (calendarMonth === 0) {
@@ -96,7 +83,7 @@ export default function Reports() {
     const matchSearch = i.id.toLowerCase().includes(orderSearchQuery.toLowerCase()) || 
                         i.customer.name.toLowerCase().includes(orderSearchQuery.toLowerCase());
     const matchStatus = orderStatusTab === 'valid' ? i.status !== 'deleted' : i.status === 'deleted';
-    const matchDate = orderDateFilter ? parseInvDateToISO(i.time) === orderDateFilter : true;
+    const matchDate = orderDateFilter ? parseReportDateToISO(i.time) === orderDateFilter : true;
     return matchSearch && matchStatus && matchDate;
   });
 
@@ -108,7 +95,7 @@ export default function Reports() {
   const exportDoctorCSV = () => {
     const docInvoices = validInvoices.filter(inv => {
       if (!inv.customer.doctorName) return false;
-      const dateIso = parseInvDateToISO(inv.time);
+      const dateIso = parseReportDateToISO(inv.time);
       if (!dateIso) return false;
       const [year, month] = dateIso.split('-').map(Number);
       return year === calendarYear && month === calendarMonth + 1;
@@ -151,18 +138,17 @@ export default function Reports() {
 
   const todayISO = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
 
-  const invoicesToday = validInvoices.filter(inv => parseInvDateToISO(inv.time) === todayISO);
-  const exportsToday = paidExportOrders.filter(o => parseInvDateToISO(o.date) === todayISO);
-  
-  const otherCostsToday = invoicesToday.reduce((sum, inv) => sum + inv.otherCosts, 0);
-  const totalRevenueToday = invoicesToday.reduce((sum, inv) => sum + inv.total, 0) + exportsToday.reduce((sum, o) => sum + o.total, 0);
-  const netRevenueToday = totalRevenueToday - otherCostsToday;
+  const {
+    invoices: invoicesToday,
+    otherCosts: otherCostsToday,
+    netRevenue: netRevenueToday,
+  } = getRetailRevenueForDate(invoices, todayISO);
 
   // Filter for the new "Chi phí khác" list
   const [otherCostsDateFilter, setOtherCostsDateFilter] = useState(() => todayISO);
 
   const otherCostsList = validInvoices.filter(inv => 
-    inv.otherCosts > 0 && parseInvDateToISO(inv.time) === otherCostsDateFilter
+    inv.otherCosts > 0 && parseReportDateToISO(inv.time) === otherCostsDateFilter
   );
 
   const handleDeleteInvoice = async () => {
@@ -209,7 +195,7 @@ export default function Reports() {
               </div>
             </div>
             <div className="bg-white p-4 rounded-xl shadow-sm border-l-4 border-green-500 flex flex-col justify-center">
-              <h3 className="text-gray-500 text-xs font-bold mb-1 uppercase">Doanh thu ngày</h3>
+              <h3 className="text-gray-500 text-xs font-bold mb-1 uppercase">Doanh thu ngày (bán lẻ)</h3>
               <div className="text-xl font-bold text-green-700 font-mono truncate">{formatPrice(netRevenueToday)}</div>
               <div className="text-[11px] text-gray-400 mt-1 truncate">Trừ chi phí khác</div>
             </div>
@@ -233,7 +219,7 @@ export default function Reports() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="bg-white rounded-xl shadow-sm border p-5 flex flex-col">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="font-bold text-lg text-gray-800">Lịch doanh thu</h3>
+                <h3 className="font-bold text-lg text-gray-800">Lịch doanh thu bán lẻ</h3>
                 <div className="flex items-center gap-2">
                   <button onClick={prevMonth} className="text-gray-500 hover:text-teal-600 transition"><i className="fa-solid fa-chevron-left"></i></button>
                   <span className="text-sm font-bold w-20 text-center">T{calendarMonth + 1}/{calendarYear}</span>
@@ -279,7 +265,7 @@ export default function Reports() {
                       {activeDateStr === dateStr && hasData && (
                         <div className="absolute z-50 bottom-[calc(100%+8px)] left-1/2 -translate-x-1/2 bg-white text-gray-800 rounded-xl py-3 px-4 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.3)] whitespace-nowrap animate-[scaleIn_0.2s_ease-out] min-w-[160px] text-center" onClick={(e) => e.stopPropagation()}>
                           <div className="text-gray-400 text-[11px] uppercase tracking-wider font-bold mb-1">
-                            Doanh thu <span className="text-teal-600">{dateStr.split('-').reverse().join('/')}</span>
+                            Doanh thu bán lẻ <span className="text-teal-600">{dateStr.split('-').reverse().join('/')}</span>
                           </div>
                           <div className="text-xl font-bold font-mono text-gray-800">
                             {revenue.toLocaleString('vi-VN')}
