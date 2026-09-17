@@ -1,12 +1,16 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import { showNotification } from "../../utils/toast";
 import { usePos, ExportOrder } from "../../contexts/PosContext";
 import ProductAutocomplete from "../ProductAutocomplete";
+import { DosageFields, DosageToggle } from "../DosageAutocomplete";
+import { Dosage } from "../../utils/dosage";
 
 interface ExportRow {
   productId: number | "";
   qty: number;
   price: number;
+  dosageEnabled?: boolean;
+  dosage?: Dosage;
 }
 
 export default function ExportModal({
@@ -55,6 +59,8 @@ export default function ExportModal({
           productId: i.productId,
           qty: i.qty,
           price: i.price,
+          dosageEnabled: i.dosageEnabled,
+          dosage: i.dosage,
         }))
       : [{ productId: "", qty: 1, price: 0 }],
   );
@@ -88,6 +94,18 @@ export default function ExportModal({
       }),
     );
   };
+
+  const toggleDosage = (idx: number) =>
+    setItems((prev) =>
+      prev.map((row, i) =>
+        i === idx ? { ...row, dosageEnabled: !row.dosageEnabled } : row,
+      ),
+    );
+
+  const updateDosage = (idx: number, dosage: Dosage) =>
+    setItems((prev) =>
+      prev.map((row, i) => (i === idx ? { ...row, dosage } : row)),
+    );
 
   const goodsTotal = items.reduce(
     (s, i) => s + (i.qty || 0) * (i.price || 0),
@@ -140,6 +158,8 @@ export default function ExportModal({
         unit: p?.unit || "",
         qty: i.qty,
         price: i.price,
+        dosageEnabled: i.dosageEnabled,
+        dosage: i.dosage,
       };
     });
 
@@ -371,13 +391,21 @@ export default function ExportModal({
                   }
 
                   return (
-                    <tr key={idx} className="border-b">
+                    <Fragment key={idx}>
+                    <tr className={row.dosageEnabled ? "" : "border-b"}>
                       <td className="p-2">
                         <ProductAutocomplete
                           products={products}
                           value={row.productId}
                           onChange={(val) => updateRow(idx, "productId", val)}
                         />
+                        <div className="flex items-center gap-2 mt-1 text-[11px] text-gray-500">
+                          <span>Cách uống</span>
+                          <DosageToggle
+                            enabled={!!row.dosageEnabled}
+                            onToggle={() => toggleDosage(idx)}
+                          />
+                        </div>
                       </td>
                       <td className="p-2 text-center text-xs font-bold text-gray-500">
                         {p ? currentStock : "-"}
@@ -416,6 +444,17 @@ export default function ExportModal({
                         </button>
                       </td>
                     </tr>
+                    {row.dosageEnabled && (
+                      <tr className="border-b">
+                        <td colSpan={6} className="px-2 pb-2">
+                          <DosageFields
+                            dosage={row.dosage}
+                            onChange={(d) => updateDosage(idx, d)}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                    </Fragment>
                   );
                 })}
               </tbody>

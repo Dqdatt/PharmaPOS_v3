@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { showNotification } from '../utils/toast';
-import { normalizeDbTimestamp, writeWithLegacyFallback } from '../utils/dbFallback';
+import { LegacyFallbackTarget, normalizeDbTimestamp, writeWithLegacyFallback } from '../utils/dbFallback';
+import { Dosage, fromDbDosage, toDbDosage } from '../utils/dosage';
 
 // --- Types matching pos.html exactly ---
 export interface Product {
@@ -22,6 +23,8 @@ export interface CartItem {
   unit: string;
   price: number;
   qty: number;
+  dosageEnabled?: boolean;
+  dosage?: Dosage;
 }
 
 export interface User {
@@ -100,6 +103,8 @@ export interface ExportOrderItem {
   unit: string;
   qty: number;
   price: number;
+  dosageEnabled?: boolean;
+  dosage?: Dosage;
 }
 
 export interface ExportOrder {
@@ -118,6 +123,11 @@ export interface ExportOrder {
   employeeName: string;
   items: ExportOrderItem[];
 }
+
+const dosageFromRow = (row: { dosage?: unknown }) => {
+  const dosage = fromDbDosage(row.dosage);
+  return dosage ? { dosageEnabled: true, dosage } : {};
+};
 
 export interface InventoryHistory {
   id: number;
@@ -310,7 +320,8 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           method: inv.method, otherCosts: Number(inv.other_costs), total: Number(inv.total),
           status: inv.status,
           items: (inv.invoice_items || []).map((i: any) => ({
-            id: i.product_id, name: i.name, unit: i.unit, price: Number(i.price), qty: i.qty
+            id: i.product_id, name: i.name, unit: i.unit, price: Number(i.price), qty: i.qty,
+            ...dosageFromRow(i),
           }))
         })));
       }
@@ -354,7 +365,8 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           customerNote: ord.customer_note || '',
           status: ord.status, total: Number(ord.total), otherCosts: Number(ord.other_costs || 0), otherMedsFee: Number(ord.other_meds_fee || 0), paymentMethod: ord.payment_method || 'cash', note: ord.note || ord.customer_note || '', employeeName: ord.employee_name,
           items: (ord.export_order_items || []).map((i: any) => ({
-            productId: i.product_id, name: i.name, unit: i.unit, qty: i.qty, price: Number(i.price)
+            productId: i.product_id, name: i.name, unit: i.unit, qty: i.qty, price: Number(i.price),
+            ...dosageFromRow(i),
           }))
         })));
       }
@@ -375,6 +387,29 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }, [isCustomerView]);
 
   // --- SUPABASE MUTATIONS ---
+  // Items only carry the optional `dosage` column when at least one has a dosage, so
+  // orders without Cách uống send exactly the legacy payload. If the column has not been
+  // migrated yet, retry without it so checkout/export is never blocked.
+  const insertItemsWithDosage = async (
+    table: 'invoice_items' | 'export_order_items',
+    target: LegacyFallbackTarget,
+    baseRows: Record<string, unknown>[],
+    items: { dosageEnabled?: boolean; dosage?: Dosage }[],
+  ) => {
+    const dosages = items.map(i => toDbDosage(i.dosageEnabled, i.dosage));
+    if (dosages.every(d => d === null)) {
+      const { error } = await supabase.from(table).insert(baseRows);
+      if (error) throw error;
+      return;
+    }
+    await writeWithLegacyFallback(
+      target,
+      () => supabase.from(table).insert(baseRows.map((row, idx) => ({ ...row, dosage: dosages[idx] }))),
+      () => supabase.from(table).insert(baseRows),
+      `Column ${table}.dosage is missing in Supabase; saved items without Cách uống.`,
+    );
+  };
+
   const addProductToDB = async (product: Omit<Product, 'id'>) => {
     const { data, error } = await supabase.from('products').insert([{
       name: product.name, category: product.category, unit: product.unit,
@@ -433,8 +468,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const itemsToInsert = invoice.items.map(i => ({
       invoice_id: invoice.id, product_id: i.id, name: i.name, unit: i.unit, price: i.price, qty: i.qty
     }));
-    const { error: itmErr } = await supabase.from('invoice_items').insert(itemsToInsert);
-    if (itmErr) throw itmErr;
+    await insertItemsWithDosage('invoice_items', 'invoiceItems', itemsToInsert, invoice.items);
 
     setInvoices(prev => [invoice, ...prev]);
     setProducts(productsToUpdate);
@@ -600,8 +634,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const itemsToInsert = order.items.map(i => ({
       export_order_id: order.id, product_id: i.productId, name: i.name, unit: i.unit, qty: i.qty, price: i.price
     }));
-    const { error: itmErr } = await supabase.from('export_order_items').insert(itemsToInsert);
-    if (itmErr) throw itmErr;
+    await insertItemsWithDosage('export_order_items', 'exportOrderItems', itemsToInsert, order.items);
 
     if (order.status !== 'returned') {
       // Local update only, DB is handled by triggers
@@ -658,8 +691,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const itemsToInsert = updatedOrder.items.map(i => ({
       export_order_id: updatedOrder.id, product_id: i.productId, name: i.name, unit: i.unit, qty: i.qty, price: i.price
     }));
-    const { error: itmErr } = await supabase.from('export_order_items').insert(itemsToInsert);
-    if (itmErr) throw itmErr;
+    await insertItemsWithDosage('export_order_items', 'exportOrderItems', itemsToInsert, updatedOrder.items);
 
     // Local update only, DB is handled by triggers
     setProducts(productsToUpdate);

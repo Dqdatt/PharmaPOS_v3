@@ -1,4 +1,4 @@
-export type LegacyFallbackTarget = 'invoice' | 'purchase' | 'exportOrder';
+export type LegacyFallbackTarget = 'invoice' | 'purchase' | 'exportOrder' | 'invoiceItems' | 'exportOrderItems';
 
 const optionalColumnsByTarget: Record<LegacyFallbackTarget, string[]> = {
   invoice: ['customer_address', 'doctor_name', 'note'],
@@ -12,6 +12,8 @@ const optionalColumnsByTarget: Record<LegacyFallbackTarget, string[]> = {
     'locked_at',
   ],
   exportOrder: ['customer_address', 'customer_note'],
+  invoiceItems: ['dosage'],
+  exportOrderItems: ['dosage'],
 };
 
 export const getDbErrorMessage = (error: unknown) => {

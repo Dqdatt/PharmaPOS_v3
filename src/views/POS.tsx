@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Fragment } from 'react';
 import { usePos } from '../contexts/PosContext';
 import ProductModal from '../components/modals/ProductModal';
 import POModal from '../components/modals/POModal';
@@ -8,6 +8,8 @@ import { docTienBangChu } from '../utils/numberToWords';
 import mqtt from 'mqtt';
 import { bankInfo, formatQRText } from '../utils/bank';
 import { getDbErrorMessage } from '../utils/dbFallback';
+import { Dosage } from '../utils/dosage';
+import { DosageFields, DosageText, DosageToggle } from '../components/DosageAutocomplete';
 
 let globalMqttClient: mqtt.MqttClient | null = null;
 let isMqttConnecting = false;
@@ -102,6 +104,12 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
   };
 
   const removeFromCart = (index: number) => setCart(prev => prev.filter((_, i) => i !== index));
+
+  const toggleDosage = (index: number) =>
+    setCart(prev => prev.map((x, i) => i === index ? { ...x, dosageEnabled: !x.dosageEnabled } : x));
+
+  const updateDosage = (index: number, dosage: Dosage) =>
+    setCart(prev => prev.map((x, i) => i === index ? { ...x, dosage } : x));
 
   const cartTotalQty = cart.reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
   const cartTotalBase = cart.reduce((sum, item) => sum + item.price * (Number(item.qty) || 0), 0);
@@ -384,10 +392,14 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
                 </tr>
               ) : (
                 cart.map((item, index) => (
-                  <tr key={item.id} className="border-b hover:bg-gray-50">
+                  <Fragment key={item.id}>
+                  <tr className={`hover:bg-gray-50 ${item.dosageEnabled ? '' : 'border-b'}`}>
                     <td className="p-2">
                       <div className="font-medium text-gray-800 leading-tight">{item.name}</div>
-                      <div className="text-xs text-gray-500 mt-1">{formatPrice(item.price)}/{item.unit}</div>
+                      <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
+                        <span>{formatPrice(item.price)}/{item.unit}</span>
+                        <DosageToggle enabled={!!item.dosageEnabled} onToggle={() => toggleDosage(index)} />
+                      </div>
                     </td>
                     <td className="p-2 text-center align-middle">
                       <div className="flex items-center justify-center gap-1 bg-gray-100 rounded-lg p-1 border">
@@ -429,6 +441,14 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
                       </div>
                     </td>
                   </tr>
+                  {item.dosageEnabled && (
+                    <tr className="border-b">
+                      <td colSpan={3} className="px-2 pb-2">
+                        <DosageFields dosage={item.dosage} onChange={d => updateDosage(index, d)} />
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 ))
               )}
             </tbody>
@@ -628,7 +648,10 @@ export default function POS({ onOpenCustomerScreen }: { onOpenCustomerScreen: ()
               {printData.cart.map((item: any, index: number) => (
                 <tr key={index}>
                   <td className="border border-black p-2 text-center">{index + 1}</td>
-                  <td className="border border-black p-2">{item.name}</td>
+                  <td className="border border-black p-2">
+                    {item.name}
+                    <DosageText item={item} className="italic text-[13px]" />
+                  </td>
                   <td className="border border-black p-2 text-center">{item.qty}</td>
                   <td className="border border-black p-2 text-right">{item.price.toLocaleString()}</td>
                   <td className="border border-black p-2 text-right">{(item.price * (Number(item.qty) || 0)).toLocaleString()}</td>

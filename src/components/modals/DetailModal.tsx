@@ -5,6 +5,7 @@ import { bankInfo, formatQRText } from '../../utils/bank';
 import { docTienBangChu } from '../../utils/numberToWords';
 import { showNotification } from '../../utils/toast';
 import { createDbTimestamp, getDbErrorMessage } from '../../utils/dbFallback';
+import { DosageText } from '../DosageAutocomplete';
 interface Props {
   type: 'PO' | 'INV';
   data: Purchase | Invoice;
@@ -147,8 +148,8 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
   const supplierObj = po?.supplierId ? suppliers.find(s => s.id === po.supplierId) : null;
 
   const items = isPO
-    ? (data as Purchase).items.map(i => ({ name: i.name, unit: i.unit, qty: i.qty, price: i.cost }))
-    : (data as Invoice).items.map(i => ({ name: i.name, unit: i.unit, qty: i.qty, price: i.price }));
+    ? (data as Purchase).items.map(i => ({ name: i.name, unit: i.unit, qty: i.qty, price: i.cost, dosageItem: {} }))
+    : (data as Invoice).items.map(i => ({ name: i.name, unit: i.unit, qty: i.qty, price: i.price, dosageItem: i }));
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -248,7 +249,10 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
             <tbody>
               {items.map((item, i) => (
                 <tr key={i} className="border-b">
-                  <td className="p-2">{item.name}<br /><span className="text-xs text-gray-500">{item.unit}</span></td>
+                  <td className="p-2">
+                    {item.name}<br /><span className="text-xs text-gray-500">{item.unit}</span>
+                    <DosageText item={item.dosageItem} className="text-xs text-teal-700 italic mt-0.5" />
+                  </td>
                   <td className="p-2 text-center font-bold">{item.qty}</td>
                   <td className="p-2 text-right font-mono">{formatPrice(item.price)}</td>
                   <td className="p-2 text-right font-mono font-bold">{formatPrice(item.price * item.qty)}</td>
@@ -432,7 +436,10 @@ export default function DetailModal({ type, data, onClose, onEdit }: Props) {
               {items.map((item, index) => (
                 <tr key={index}>
                   <td className="border border-black p-2 text-center">{index + 1}</td>
-                  <td className="border border-black p-2">{item.name}</td>
+                  <td className="border border-black p-2">
+                    {item.name}
+                    <DosageText item={item.dosageItem} className="italic text-[13px]" />
+                  </td>
                   <td className="border border-black p-2 text-center">{item.qty}</td>
                   <td className="border border-black p-2 text-right">{item.price.toLocaleString()}</td>
                   <td className="border border-black p-2 text-right">{(item.price * item.qty).toLocaleString()}</td>

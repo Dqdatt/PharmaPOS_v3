@@ -3,6 +3,7 @@ import { usePos, ExportOrder } from "../../contexts/PosContext";
 import { VietQRConfig } from "./VietQRConfigModal";
 import { showNotification } from "../../utils/toast";
 import { docTienBangChu } from "../../utils/numberToWords";
+import { DosageText } from "../DosageAutocomplete";
 
 interface Props {
   order: ExportOrder;
@@ -228,6 +229,10 @@ export default function ExportDetailModal({ order, onClose, onEdit }: Props) {
                             ({item.unit})
                           </span>
                         </div>
+                        <DosageText
+                          item={item}
+                          className="text-[12px] italic text-teal-700 mt-0.5 print:text-black"
+                        />
                       </td>
                       <td className="py-2.5 px-4 text-center text-[13px] font-medium text-gray-800">
                         {item.qty}
@@ -415,7 +420,10 @@ export default function ExportDetailModal({ order, onClose, onEdit }: Props) {
                 <td className="border border-black p-1 text-center">
                   {index + 1}
                 </td>
-                <td className="border border-black p-1">{item.name}</td>
+                <td className="border border-black p-1">
+                  {item.name}
+                  <DosageText item={item} className="italic text-[11px]" />
+                </td>
                 <td className="border border-black p-1 text-center">
                   {item.unit}
                 </td>
