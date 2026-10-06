@@ -4,6 +4,7 @@ import {
   getReportRevenueSummary,
   getRetailCalendarRevenue,
   getRetailRevenueForDate,
+  isReportDateInRange,
   parseReportDateToISO,
 } from '../utils/reportRevenue';
 
@@ -48,5 +49,12 @@ describe('report revenue buckets', () => {
   it('parses both Vietnamese and ISO date strings', () => {
     assert.equal(parseReportDateToISO('10:31:11 13/8/2026'), '2026-08-13');
     assert.equal(parseReportDateToISO('2026-08-13T03:31:11.000Z'), '2026-08-13');
+  });
+
+  it('matches inclusive report date ranges', () => {
+    assert.equal(isReportDateInRange('08:00:00 1/8/2026', '2026-08-01', '2026-08-13'), true);
+    assert.equal(isReportDateInRange('10:31:11 13/8/2026', '2026-08-01', '2026-08-13'), true);
+    assert.equal(isReportDateInRange('2026-08-14T03:31:11.000Z', '2026-08-01', '2026-08-13'), false);
+    assert.equal(isReportDateInRange('không hợp lệ', '2026-08-01', '2026-08-13'), false);
   });
 });

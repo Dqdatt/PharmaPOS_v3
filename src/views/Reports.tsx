@@ -10,8 +10,14 @@ import {
   getRetailCalendarRevenue,
   getRetailRevenueForDate,
   getValidRetailInvoices,
+  isReportDateInRange,
   parseReportDateToISO,
 } from '../utils/reportRevenue';
+
+const getLocalTodayISO = () => {
+  const now = new Date();
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+};
 
 export default function Reports() {
   const { invoices, exportOrders, products, getStock, formatPrice, deleteInvoice } = usePos();
@@ -19,6 +25,9 @@ export default function Reports() {
   const [orderSearchQuery, setOrderSearchQuery] = useState('');
   const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null);
   const [showExportCKModal, setShowExportCKModal] = useState(false);
+  const [showDoctorExportModal, setShowDoctorExportModal] = useState(false);
+  const [doctorExportStartDate, setDoctorExportStartDate] = useState('');
+  const [doctorExportEndDate, setDoctorExportEndDate] = useState('');
   const [orderStatusTab, setOrderStatusTab] = useState<'valid' | 'deleted'>('valid');
   const [invoiceToDelete, setInvoiceToDelete] = useState<string | null>(null);
   const [orderDateFilter, setOrderDateFilter] = useState('');
@@ -92,16 +101,29 @@ export default function Reports() {
   const safeCurrentPage = Math.min(currentPage, totalPages);
   const paginatedInvoices = filteredInvoices.slice((safeCurrentPage - 1) * itemsPerPage, safeCurrentPage * itemsPerPage);
 
+  const openDoctorExportModal = () => {
+    const endDate = getLocalTodayISO();
+    setDoctorExportStartDate(`${endDate.slice(0, 7)}-01`);
+    setDoctorExportEndDate(endDate);
+    setShowDoctorExportModal(true);
+  };
+
   const exportDoctorCSV = () => {
+    if (!doctorExportStartDate) {
+      showNotification('Vui lòng chọn ngày bắt đầu xuất danh sách!', 'error');
+      return;
+    }
+    if (doctorExportStartDate > doctorExportEndDate) {
+      showNotification('Ngày bắt đầu không được sau ngày kết thúc!', 'error');
+      return;
+    }
+
     const docInvoices = validInvoices.filter(inv => {
       if (!inv.customer.doctorName) return false;
-      const dateIso = parseReportDateToISO(inv.time);
-      if (!dateIso) return false;
-      const [year, month] = dateIso.split('-').map(Number);
-      return year === calendarYear && month === calendarMonth + 1;
+      return isReportDateInRange(inv.time, doctorExportStartDate, doctorExportEndDate);
     });
     if (docInvoices.length === 0) {
-      showNotification('Không có đơn hàng nào có bác sĩ chỉ định trong tháng/năm này!', 'error');
+      showNotification('Không có đơn hàng nào có bác sĩ chỉ định trong khoảng ngày đã chọn!', 'error');
       return;
     }
     
@@ -130,13 +152,14 @@ export default function Reports() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `DS_Bac_Si_Thang_${calendarMonth + 1}_${calendarYear}.csv`);
+    link.setAttribute("download", `DS_Bac_Si_${doctorExportStartDate}_den_${doctorExportEndDate}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setShowDoctorExportModal(false);
   };
 
-  const todayISO = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
+  const todayISO = getLocalTodayISO();
 
   const {
     invoices: invoicesToday,
@@ -368,7 +391,7 @@ export default function Reports() {
                 className="p-2 border rounded-lg text-sm w-64 focus:ring-2 focus:ring-teal-500 focus:outline-none"
               />
               <button
-                onClick={exportDoctorCSV}
+                onClick={openDoctorExportModal}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg font-bold text-sm hover:bg-blue-700 transition flex items-center gap-2 shadow-sm whitespace-nowrap"
               >
                 <i className="fa-solid fa-user-doctor"></i> Xuất DS BS
@@ -493,6 +516,78 @@ export default function Reports() {
 
       {showExportCKModal && (
         <ExportCKModal onClose={() => setShowExportCKModal(false)} />
+      )}
+
+      {showDoctorExportModal && (
+        <div className="fixed inset-0 z-[100] bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="doctor-export-title"
+            className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-[scaleIn_0.2s_ease-out]"
+          >
+            <div className="p-5 border-b flex justify-between items-center bg-blue-50">
+              <h2 id="doctor-export-title" className="text-lg font-bold text-blue-700 flex items-center gap-2">
+                <i className="fa-solid fa-user-doctor"></i> Xuất danh sách bác sĩ
+              </h2>
+              <button
+                type="button"
+                onClick={() => setShowDoctorExportModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition"
+                aria-label="Đóng"
+              >
+                <i className="fa-solid fa-xmark text-xl"></i>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label htmlFor="doctor-export-start-date" className="block text-sm font-bold text-gray-700 mb-1.5">
+                  Từ ngày
+                </label>
+                <input
+                  id="doctor-export-start-date"
+                  type="date"
+                  value={doctorExportStartDate}
+                  max={doctorExportEndDate}
+                  onChange={e => setDoctorExportStartDate(e.target.value)}
+                  className="w-full p-2.5 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label htmlFor="doctor-export-end-date" className="block text-sm font-bold text-gray-700 mb-1.5">
+                  Đến ngày
+                </label>
+                <input
+                  id="doctor-export-end-date"
+                  type="date"
+                  value={doctorExportEndDate}
+                  readOnly
+                  className="w-full p-2.5 border rounded-lg text-sm bg-gray-100 text-gray-600 cursor-not-allowed"
+                />
+                <p className="text-xs text-gray-500 mt-1.5">Ngày kết thúc được tự động lấy theo ngày bấm xuất danh sách.</p>
+              </div>
+            </div>
+
+            <div className="p-4 bg-gray-50 flex gap-3 border-t">
+              <button
+                type="button"
+                onClick={() => setShowDoctorExportModal(false)}
+                className="flex-1 py-2.5 bg-white border border-gray-300 rounded-lg font-bold text-gray-600 hover:bg-gray-100 transition"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={exportDoctorCSV}
+                disabled={!doctorExportStartDate}
+                className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition shadow-sm disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                <i className="fa-solid fa-file-export mr-2"></i>Xuất danh sách
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {invoiceToDelete && (

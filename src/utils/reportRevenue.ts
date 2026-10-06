@@ -26,6 +26,11 @@ export const parseReportDateToISO = (timeStr: string) => {
   return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
 };
 
+export const isReportDateInRange = (timeStr: string, startDate: string, endDate: string) => {
+  const dateIso = parseReportDateToISO(timeStr);
+  return !!dateIso && !!startDate && !!endDate && dateIso >= startDate && dateIso <= endDate;
+};
+
 export const getValidRetailInvoices = <T extends ReportInvoice>(invoices: T[]): T[] =>
   invoices.filter(inv => inv.status !== 'deleted');
 
