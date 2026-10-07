@@ -1,0 +1,158 @@
+.label-preview-stage {
+  background-color: #e5e7eb;
+  background-image:
+    linear-gradient(45deg, rgba(255, 255, 255, 0.35) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(255, 255, 255, 0.35) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.35) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.35) 75%);
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+  background-size: 16px 16px;
+}
+
+.shipping-label {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 148mm;
+  height: 105mm;
+  margin: 0 auto;
+  padding: 9mm 9.5mm 8mm;
+  overflow: hidden;
+  color: #050505;
+  background: #fff;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.16);
+  font-family: "Times New Roman", Times, serif;
+  font-size: 5.1mm;
+  font-weight: 700;
+  line-height: 1.05;
+}
+
+.label-sender-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 3mm;
+}
+
+.label-no-wrap {
+  white-space: nowrap;
+}
+
+.label-recipient-line,
+.label-recipient-phone {
+  margin-top: 1mm;
+  text-transform: uppercase;
+}
+
+.label-dynamic {
+  font-weight: 700;
+}
+
+.label-dynamic--compact {
+  font-size: 0.88em;
+}
+
+.label-dynamic--empty {
+  color: #9ca3af;
+}
+
+.label-destination-block {
+  margin-top: 8mm;
+}
+
+.label-destination-line {
+  font-size: 6.1mm;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.label-address {
+  margin-top: 0.7mm;
+  font-size: 5.7mm;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1.08;
+}
+
+.label-address--compact {
+  font-size: 5mm;
+}
+
+.label-instructions {
+  margin-top: 5.5mm;
+  font-size: 4.5mm;
+  font-style: italic;
+  font-weight: 400;
+  line-height: 1.28;
+}
+
+.label-instruction--compact {
+  font-size: 4mm;
+}
+
+.label-urgent {
+  margin-top: auto;
+  padding-top: 2mm;
+  text-align: center;
+  font-size: 5.5mm;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+.label-print-portal {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .label-preview-stage {
+    display: flex;
+    justify-content: center;
+  }
+
+  .shipping-label {
+    flex: 0 0 148mm;
+    margin: 0;
+  }
+}
+
+@media print {
+  @page {
+    size: 148mm 105mm;
+    margin: 0;
+  }
+
+  html,
+  body,
+  .label-print-portal {
+    width: 148mm !important;
+    height: 105mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    background: #fff !important;
+  }
+
+  body > #root {
+    display: none !important;
+  }
+
+  body > .label-print-portal {
+    display: block !important;
+  }
+
+  .label-print-portal .shipping-label {
+    width: 148mm !important;
+    height: 105mm !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .label-dynamic--empty {
+    color: #000 !important;
+  }
+}
