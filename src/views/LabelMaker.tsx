@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import './LabelMaker.css';
 
@@ -113,7 +113,11 @@ const LabelContent = ({
   );
 };
 
+const LABEL_PRINT_CLASS = 'label-printing';
+const LABEL_PAGE_STYLE = '@page { size: 148mm 105mm; margin: 0; }';
+
 export default function LabelMaker() {
+  const printCleanupRef = useRef<(() => void) | null>(null);
   const [senderPhone, setSenderPhone] = useState(SENDER_PHONES[0]);
   const [recipientName, setRecipientName] = useState('');
   const [recipientPhone, setRecipientPhone] = useState('');
@@ -155,6 +159,31 @@ export default function LabelMaker() {
     deliveryLocation,
     note,
   };
+
+  // Only enable A6 label print styles for this print job, then restore
+  // so other print flows (export invoice...) keep their own layout.
+  const handlePrintLabel = () => {
+    printCleanupRef.current?.();
+
+    const root = document.documentElement;
+    const pageStyle = document.createElement('style');
+    pageStyle.setAttribute('media', 'print');
+    pageStyle.textContent = LABEL_PAGE_STYLE;
+    document.head.appendChild(pageStyle);
+    root.classList.add(LABEL_PRINT_CLASS);
+
+    const cleanup = () => {
+      root.classList.remove(LABEL_PRINT_CLASS);
+      pageStyle.remove();
+      window.removeEventListener('afterprint', cleanup);
+      printCleanupRef.current = null;
+    };
+    printCleanupRef.current = cleanup;
+    window.addEventListener('afterprint', cleanup);
+    window.print();
+  };
+
+  useEffect(() => () => printCleanupRef.current?.(), []);
 
   return (
     <div className="label-maker-view w-full h-full overflow-y-auto bg-gray-50/70 p-4 lg:p-6">
@@ -310,7 +339,7 @@ export default function LabelMaker() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => window.print()}
+                  onClick={handlePrintLabel}
                   disabled={!isReadyToPrint}
                   className="rounded-lg bg-teal-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:shadow-none"
                   title={isReadyToPrint ? 'In tem khổ A6 ngang' : 'Vui lòng nhập đủ các mục có dấu *'}

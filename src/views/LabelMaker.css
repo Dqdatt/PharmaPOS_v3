@@ -118,15 +118,13 @@
   }
 }
 
+/* Print rules only apply while LabelMaker toggles html.label-printing,
+   so other print flows (export invoice, POS invoice...) are unaffected.
+   @page size is injected at print time in LabelMaker.tsx. */
 @media print {
-  @page {
-    size: 148mm 105mm;
-    margin: 0;
-  }
-
-  html,
-  body,
-  .label-print-portal {
+  html.label-printing,
+  html.label-printing body,
+  html.label-printing .label-print-portal {
     width: 148mm !important;
     height: 105mm !important;
     margin: 0 !important;
@@ -135,15 +133,15 @@
     background: #fff !important;
   }
 
-  body > #root {
+  html.label-printing body > #root {
     display: none !important;
   }
 
-  body > .label-print-portal {
+  html.label-printing body > .label-print-portal {
     display: block !important;
   }
 
-  .label-print-portal .shipping-label {
+  html.label-printing .label-print-portal .shipping-label {
     width: 148mm !important;
     height: 105mm !important;
     margin: 0 !important;
@@ -152,7 +150,7 @@
     -webkit-print-color-adjust: exact;
   }
 
-  .label-dynamic--empty {
+  html.label-printing .label-dynamic--empty {
     color: #000 !important;
   }
 }
