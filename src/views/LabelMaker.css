@@ -38,10 +38,13 @@
   white-space: nowrap;
 }
 
-.label-recipient-line,
-.label-recipient-phone {
+.label-recipient-row {
   margin-top: 1mm;
   text-transform: uppercase;
+}
+
+.label-recipient-name {
+  min-width: 0;
 }
 
 .label-dynamic {

@@ -83,13 +83,15 @@ const LabelContent = ({
       <div className="label-no-wrap"><strong>SĐT:</strong> {senderPhone}</div>
     </div>
 
-    <div className="label-recipient-line">
-      <strong>NGƯỜI NHẬN:</strong>{' '}
-      <PreviewValue value={recipientName} placeholder="TÊN NGƯỜI NHẬN" compact={recipientName.length > 30} />
-    </div>
-    <div className="label-recipient-phone">
-      <strong>SĐT:</strong>{' '}
-      <PreviewValue value={recipientPhone} placeholder="SỐ ĐIỆN THOẠI" />
+    <div className="label-sender-row label-recipient-row">
+      <div className="label-recipient-name">
+        <strong>NGƯỜI NHẬN:</strong>{' '}
+        <PreviewValue value={recipientName} placeholder="TÊN NGƯỜI NHẬN" compact={recipientName.length > 18} />
+      </div>
+      <div className="label-no-wrap">
+        <strong>SĐT:</strong>{' '}
+        <PreviewValue value={recipientPhone} placeholder="SỐ ĐIỆN THOẠI" />
+      </div>
     </div>
 
     <div className="label-destination-block">
