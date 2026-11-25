@@ -2,6 +2,13 @@
 (function () {
   const request = DATA.webRequest;
   let sessions = [...DATA.webSessions];
+  let loginHistory = [
+    { id: 'h1', status: 'ok', title: 'Đã duyệt Chrome trên MacBook Pro', meta: 'Quận 3, TP.HCM, 08:12 hôm nay' },
+    { id: 'h2', status: 'bad', title: 'Đã từ chối Edge trên Windows', meta: 'Quận 7, TP.HCM, 22:41 hôm qua' },
+    { id: 'h3', status: 'exp', title: 'Yêu cầu hết hạn, Safari trên iPhone', meta: 'Quận 3, TP.HCM, 19:05 hôm qua' },
+    { id: 'h4', status: 'ok', title: 'Đã duyệt Safari trên iMac quầy thuốc', meta: 'Quận 3, TP.HCM, 07:55 hôm qua' },
+    { id: 'h5', status: 'ok', title: 'Đã duyệt Chrome trên MacBook Pro', meta: 'Quận 3, TP.HCM, 08:04 ngày 23/11' },
+  ];
   const active = (el) => el.isConnected && App.current()?.el === el;
 
   App.icons.wlTorch = '<path d="M8 3h8v4l-2 4v9a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-9L8 7zM8 7h8M12 14v2"/>';
@@ -91,6 +98,11 @@
 .wl-session-empty h2 { font-size: 17px; color: var(--ink); }
 .wl-session-empty p { margin-top: 8px; }
 .wl-sessions-view.loading .wl-sessions { pointer-events: none; }
+.wl-history .section-head { padding: 0 4px 12px; }
+.wl-history .row { grid-template-columns: auto minmax(0, 1fr); align-items: start; cursor: default; }
+.wl-history .row-title { overflow-wrap: anywhere; }
+.wl-note { display: flex; align-items: flex-start; gap: 10px; margin-top: 20px; padding: 0 4px 12px; font-size: 13px; line-height: 1.5; color: var(--ink-3); }
+.wl-note .ic { margin-top: 1px; }
 `);
 
   function actionSheet({ title, body, cancel, action, busy, delay, onClose, done }) {
@@ -330,21 +342,55 @@
       const { id, browser, os, device, place, ip, time } = request;
       sessions = [{ id, browser, os, device, place, ip, since: `${time} hôm nay`, lastActive: 'vừa xong' }, ...sessions.filter((session) => session.id !== id)];
       DATA.webSessions = sessions;
+      const doneEntry = {
+        id: `done-${id}`,
+        status: 'ok',
+        title: `Đã duyệt ${browser} trên ${device}`,
+        meta: `${place}, ${time} hôm nay`,
+      };
+      loginHistory = [doneEntry, ...loginHistory.filter((item) => item.id !== doneEntry.id)];
       el.querySelector('[data-wl-home]').onclick = () => App.reset('home');
       el.querySelector('[data-wl-sessions]').onclick = () => App.reset('webSessions', { fromDone: true });
     },
   });
 
   const sessionTitle = (session) => `${session.browser} trên ${session.device}`;
+  const historyTile = {
+    ok: { cls: ' ok', icon: 'check' },
+    bad: { cls: ' bad', icon: 'x' },
+    exp: { cls: '', icon: 'clock' },
+  };
+  function historySection() {
+    return `
+      <div class="section wl-history">
+        <div class="section-head"><h2>Lịch sử đăng nhập web</h2></div>
+        <div class="card">
+          ${loginHistory.map((item) => {
+            const t = historyTile[item.status] || historyTile.exp;
+            return `
+              <div class="row">
+                <div class="tile${t.cls}">${App.icon(t.icon, 20)}</div>
+                <div class="row-main">
+                  <div class="row-title">${App.esc(item.title)}</div>
+                  <div class="row-sub">${App.esc(item.meta)}</div>
+                </div>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>
+      <div class="wl-note">
+        ${App.icon('shield', 18)}
+        <span>Mỗi lần đăng nhập web đều cần điện thoại này duyệt. Phiên tự đăng xuất sau 12 giờ không dùng.</span>
+      </div>`;
+  }
   function sessionList(items) {
-    if (!items.length) return `
+    const activeHtml = !items.length ? `
       <div class="empty wl-session-empty">
         <div class="tile">${App.icon('monitor', 28)}</div>
         <h2>Chưa có máy tính nào đăng nhập.</h2>
         <p>Mở trang đăng nhập PharmaPOS trên máy tính rồi quét mã.</p>
         <button class="btn btn-primary tap" data-go="webScan" data-mode="up">Quét mã</button>
-      </div>`;
-    return items.map((session) => `
+      </div>` : items.map((session) => `
       <div class="wl-session" data-wl-session="${App.esc(session.id)}">
         <div class="card">
           <div class="row">
@@ -359,6 +405,7 @@
         </div>
       </div>`).join('') + (items.length >= 2 ? `
       <button class="btn btn-secondary block tap" data-wl-all data-skel>Đăng xuất tất cả máy tính</button>` : '');
+    return activeHtml + historySection();
   }
 
   App.screen('webSessions', {
