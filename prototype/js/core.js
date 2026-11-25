@@ -291,7 +291,8 @@
       states.forEach((s, i) => { (groups[s.group] = groups[s.group] || []).push(`<button data-i="${i}">${App.esc(s.label)}</button>`); });
       qa.innerHTML = `<div class="qa-brand">${App.appIcon()}<div><b>PharmaPOS Mobile</b><span>Prototype v0.1</span></div></div>` +
         Object.entries(groups).map(([g, b]) => `<div class="qa-group"><h4>${App.esc(g)}</h4>${b.join('')}</div>`).join('') +
-        `<label><input type="checkbox" id="qaFidFail"> Face ID không khớp</label>`;
+        `<label><input type="checkbox" id="qaFidFail"> Face ID không khớp</label>` +
+        `<div class="qa-group"><h4>Thương hiệu</h4><button onclick="location.href='logo.html'">Bộ logo</button></div>`;
       qa.addEventListener('click', (e) => { const b = e.target.closest('[data-i]'); if (b) states[+b.dataset.i].run(); });
       qa.querySelector('#qaFidFail').addEventListener('change', (e) => { App.faceIdFail = e.target.checked; });
     }

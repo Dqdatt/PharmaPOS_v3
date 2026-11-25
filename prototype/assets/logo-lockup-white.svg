@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 100">
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M34 76V24" stroke="#F4FBFA" stroke-width="10"/><path d="M34 24h18a16 16 0 0 1 0 32H34" stroke="#F4FBFA" stroke-width="10"/><path d="M51 33.5v13M44.5 40h13" stroke="#9FF0E2" stroke-width="5.5"/></g>
+  <text x="94" y="66" font-family="'Be Vietnam Pro', -apple-system, sans-serif" font-size="44" fill="#F4FBFA" letter-spacing="-0.5"><tspan font-weight="600">Pharma</tspan><tspan font-weight="800">POS</tspan></text>
+</svg>

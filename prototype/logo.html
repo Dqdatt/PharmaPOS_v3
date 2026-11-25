@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PharmaPOS Logo</title>
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="css/app.css">
+  <style>
+    body { background: var(--page); }
+    .lg { max-width: 1080px; margin: 0 auto; padding: 48px 24px 80px; }
+    .lg-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
+    .lg-top h1 { font-size: 36px; font-weight: 800; letter-spacing: -.02em; }
+    .lg-top p { font-size: 16px; color: var(--ink-2); line-height: 1.5; margin-top: 8px; max-width: 560px; }
+    .lg-top a { font-size: 15px; font-weight: 600; color: var(--teal-700); text-decoration: none; }
+    h2 { font-size: 20px; font-weight: 700; margin: 56px 0 6px; }
+    .lg-note { font-size: 15px; color: var(--ink-2); line-height: 1.5; margin-bottom: 20px; max-width: 640px; }
+    .lg-grid { display: grid; gap: 16px; }
+    .g3 { grid-template-columns: 1.3fr 1fr 1fr; }
+    .g2 { grid-template-columns: 1fr 1fr; }
+    .tile-lg { border-radius: 28px; min-height: 300px; display: grid; place-items: center; position: relative; overflow: hidden; border: 1px solid var(--line); background: var(--card); }
+    .tile-lg.brand { background: var(--brand-grad); border: 0; }
+    .tile-lg.ink { background: var(--teal-950); border: 0; }
+    .tile-lg .cap { position: absolute; left: 20px; bottom: 16px; font-size: 13px; color: var(--ink-3); }
+    .tile-lg.brand .cap, .tile-lg.ink .cap { color: var(--on-dark-2); }
+    .hero-icon { width: 200px; height: 200px; filter: drop-shadow(0 24px 40px rgba(13, 63, 59, .35)); }
+    .mark-l { width: 150px; height: 150px; }
+    .replay { position: absolute; top: 14px; right: 14px; height: 36px; padding: 0 14px; border-radius: 18px; font-size: 13px; font-weight: 600; }
+    .draw .lm-stem, .draw .lm-bowl { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw .62s var(--ease) forwards; }
+    .draw .lm-bowl { animation-delay: .22s; animation-duration: .7s; }
+    .draw .lm-plus { transform-origin: 51px 40px; transform: scale(0) rotate(-90deg); animation: lgPlus .6s var(--pop) .72s forwards; }
+    @keyframes lgPlus { to { transform: none; } }
+    .lockup { width: 80%; max-width: 360px; height: auto; }
+    .stack { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+    .stack img { width: 96px; }
+    .stack b { font-size: 28px; font-weight: 600; letter-spacing: -.01em; } .stack b span { font-weight: 800; }
+    .con { position: relative; width: 320px; height: 320px; }
+    .con svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .con-legend { display: flex; flex-direction: column; gap: 14px; justify-content: center; padding: 32px; }
+    .con-legend div { font-size: 15px; line-height: 1.5; color: var(--ink-2); }
+    .con-legend b { display: block; color: var(--ink); font-size: 16px; }
+    .sizes { display: flex; align-items: flex-end; gap: 32px; flex-wrap: wrap; padding: 32px; }
+    .sizes figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-3); }
+    .homescreen { background: var(--brand-grad); border-radius: 28px; padding: 32px; display: grid; grid-template-columns: repeat(4, 64px); gap: 24px 28px; justify-content: center; }
+    .homescreen figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 12px; color: var(--on-dark); }
+    .homescreen .ph { width: 64px; height: 64px; border-radius: 15px; background: rgba(255, 255, 255, .16); }
+    .homescreen img { width: 64px; height: 64px; }
+    .sw { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+    .sw div { border-radius: 20px; height: 132px; padding: 14px; display: flex; flex-direction: column; justify-content: flex-end; font-size: 14px; font-weight: 600; }
+    .sw span { font-size: 13px; font-weight: 500; opacity: .75; margin-top: 2px; }
+    .rules { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .rules .card { padding: 20px; font-size: 15px; line-height: 1.5; color: var(--ink-2); }
+    .rules .card b { display: block; color: var(--ink); margin-bottom: 4px; }
+    .dl { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .dl a { display: flex; justify-content: space-between; align-items: center; padding: 16px 18px; border-radius: 16px; background: var(--card); border: 1px solid var(--line);
+      color: var(--ink); text-decoration: none; font-size: 15px; font-weight: 500; }
+    .dl a span { font-size: 13px; color: var(--ink-3); }
+    @media (max-width: 800px) { .g3, .g2, .rules, .dl { grid-template-columns: 1fr; } .sw { grid-template-columns: repeat(2, 1fr); } }
+  </style>
+</head>
+<body>
+<main class="lg">
+  <div class="lg-top">
+    <div><h1>Logo PharmaPOS</h1>
+      <p>Chữ P ôm dấu cộng nhà thuốc trong lòng chữ. Nét bo tròn đều, màu teal lấy từ bản web để app và web nhận ra là một.</p></div>
+    <a href="index.html">Mở prototype app</a>
+  </div>
+
+  <h2>Biểu tượng chính</h2>
+  <p class="lg-note">Icon app dùng nền gradient teal có ánh sáng từ trên, giống màn splash. Logo vẽ nét khi mở app.</p>
+  <div class="lg-grid g3">
+    <div class="tile-lg"><img class="hero-icon" src="assets/app-icon.svg" alt="Icon app PharmaPOS"><span class="cap">Icon app</span></div>
+    <div class="tile-lg brand"><svg id="drawMark" class="mark-l draw" viewBox="0 0 100 100" fill="none" stroke-linecap="round" stroke-linejoin="round" style="color:var(--on-dark)">
+        <path class="lm-stem" pathLength="1" d="M34 76V24" stroke="currentColor" stroke-width="10"/>
+        <path class="lm-bowl" pathLength="1" d="M34 24h18a16 16 0 0 1 0 32H34" stroke="currentColor" stroke-width="10"/>
+        <path class="lm-plus" d="M51 33.5v13M44.5 40h13" stroke="var(--mint)" stroke-width="5.5"/></svg>
+      <button class="replay glass-clear" id="replay">Chạy lại</button><span class="cap">Trên nền thương hiệu, hiệu ứng splash</span></div>
+    <div class="tile-lg"><img class="mark-l" src="assets/logo-mark.svg" alt="Logo PharmaPOS màu teal"><span class="cap">Trên nền sáng</span></div>
+  </div>
+
+  <h2>Logo kèm chữ</h2>
+  <p class="lg-note">Bản ngang cho thanh trên của web, hóa đơn, tem A6. Bản dọc cho màn đăng nhập và tài liệu in.</p>
+  <div class="lg-grid g2">
+    <div class="tile-lg" style="min-height:200px"><svg class="lockup" viewBox="0 0 400 100" role="img" aria-label="PharmaPOS ngang">
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M34 76V24" stroke="#0F6F67" stroke-width="10"/><path d="M34 24h18a16 16 0 0 1 0 32H34" stroke="#0F6F67" stroke-width="10"/><path d="M51 33.5v13M44.5 40h13" stroke="#16A394" stroke-width="5.5"/></g>
+  <text x="94" y="66" font-family="'Be Vietnam Pro', -apple-system, sans-serif" font-size="44" fill="#10201F" letter-spacing="-0.5"><tspan font-weight="600">Pharma</tspan><tspan font-weight="800">POS</tspan></text>
+</svg><span class="cap">Ngang, nền sáng</span></div>
+    <div class="tile-lg ink" style="min-height:200px"><svg class="lockup" viewBox="0 0 400 100" role="img" aria-label="PharmaPOS ngang nền tối">
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M34 76V24" stroke="#F4FBFA" stroke-width="10"/><path d="M34 24h18a16 16 0 0 1 0 32H34" stroke="#F4FBFA" stroke-width="10"/><path d="M51 33.5v13M44.5 40h13" stroke="#9FF0E2" stroke-width="5.5"/></g>
+  <text x="94" y="66" font-family="'Be Vietnam Pro', -apple-system, sans-serif" font-size="44" fill="#F4FBFA" letter-spacing="-0.5"><tspan font-weight="600">Pharma</tspan><tspan font-weight="800">POS</tspan></text>
+</svg><span class="cap">Ngang, nền tối</span></div>
+    <div class="tile-lg" style="min-height:240px"><div class="stack"><img src="assets/app-icon.svg" alt=""><b>Pharma<span>POS</span></b></div><span class="cap">Dọc</span></div>
+    <div class="tile-lg" style="min-height:240px"><img class="mark-l" src="assets/logo-mark-mono.svg" alt="Logo một màu"><span class="cap">Một màu, cho in hóa đơn nhiệt và đóng dấu</span></div>
+  </div>
+
+  <h2>Cấu trúc</h2>
+  <p class="lg-note">Vẽ trên lưới 100 đơn vị. Giữ đúng tỷ lệ nét khi dựng lại ở app native.</p>
+  <div class="lg-grid g2">
+    <div class="tile-lg"><div class="con">
+      <svg viewBox="0 0 100 100" fill="none" id="grid" aria-hidden="true"></svg>
+      <svg viewBox="0 0 100 100" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M34 76V24" stroke="var(--teal-700)" stroke-width="10" opacity=".9"/><path d="M34 24h18a16 16 0 0 1 0 32H34" stroke="var(--teal-700)" stroke-width="10" opacity=".9"/>
+        <path d="M51 33.5v13M44.5 40h13" stroke="var(--teal-500)" stroke-width="5.5"/>
+        <circle cx="52" cy="40" r="16" stroke="var(--bad)" stroke-width=".5" stroke-dasharray="1.5 1.5"/>
+        <circle cx="51" cy="40" r=".9" fill="var(--bad)"/>
+      </svg></div><span class="cap">Lưới 100 × 100</span></div>
+    <div class="card con-legend">
+      <div><b>Thân chữ P</b>Nét 10, từ y 24 tới 76, hai đầu bo tròn.</div>
+      <div><b>Lòng chữ P</b>Bán kính 16 (vòng đỏ đứt), cao 32, nét 10.</div>
+      <div><b>Dấu cộng</b>Nét 5,5, dài 13, tâm (51, 40), màu nhạt hơn thân một bậc.</div>
+      <div><b>Khoảng trống quanh logo</b>Tối thiểu bằng độ dày nét thân (10 đơn vị) ở mọi phía.</div>
+    </div>
+  </div>
+
+  <h2>Kích thước nhỏ</h2>
+  <p class="lg-note">Vẫn đọc được ở cỡ icon cài đặt và thông báo. Dưới 24px thì dùng icon app, không dùng logo kèm chữ.</p>
+  <div class="lg-grid g2">
+    <div class="card sizes">
+      <figure><img src="assets/app-icon.svg" width="120" alt="">120</figure>
+      <figure><img src="assets/app-icon.svg" width="80" alt="">80</figure>
+      <figure><img src="assets/app-icon.svg" width="60" alt="">60</figure>
+      <figure><img src="assets/app-icon.svg" width="40" alt="">40</figure>
+      <figure><img src="assets/app-icon.svg" width="29" alt="">29</figure>
+      <figure><img src="assets/logo-mark.svg" width="24" alt="">24</figure>
+    </div>
+    <div class="homescreen">
+      <figure><span class="ph"></span>Ảnh</figure><figure><span class="ph"></span>Zalo</figure><figure><img src="assets/app-icon.svg" alt="">PharmaPOS</figure><figure><span class="ph"></span>Ngân hàng</figure>
+      <figure><span class="ph"></span>Lịch</figure><figure><span class="ph"></span>Ghi chú</figure><figure><span class="ph"></span>Camera</figure><figure><span class="ph"></span>Cài đặt</figure>
+    </div>
+  </div>
+
+  <h2>Màu</h2>
+  <div class="sw">
+    <div style="background:var(--teal-700);color:var(--on-dark)">Teal chính<span>#0F6F67</span></div>
+    <div style="background:var(--teal-500);color:var(--on-dark)">Teal sáng<span>#16A394</span></div>
+    <div style="background:var(--mint);color:var(--teal-900)">Bạc hà<span>#9FF0E2</span></div>
+    <div style="background:var(--teal-950);color:var(--on-dark)">Xanh đêm<span>#0A2826</span></div>
+    <div style="background:var(--ink);color:var(--on-dark)">Mực<span>#10201F</span></div>
+  </div>
+
+  <h2>Dùng đúng</h2>
+  <div class="rules">
+    <div class="card"><b>Không xoay, không kéo méo</b>Logo luôn đứng thẳng, giữ tỷ lệ 1:1.</div>
+    <div class="card"><b>Không đổi màu dấu cộng thành đỏ</b>Dấu cộng đỏ dễ nhầm với y tế cấp cứu; giữ teal hoặc bạc hà.</div>
+    <div class="card"><b>Không đặt trên ảnh rối</b>Đặt trên nền đặc hoặc gradient thương hiệu, đủ tương phản.</div>
+  </div>
+
+  <h2>Tải về</h2>
+  <div class="dl">
+    <a href="assets/app-icon-1024.png" download>Icon app 1024, vuông cho Xcode <span>PNG</span></a>
+    <a href="assets/app-icon-180.png" download>Icon app 180, vuông <span>PNG</span></a>
+    <a href="assets/app-icon.svg" download>Icon app <span>SVG</span></a>
+    <a href="assets/logo-mark.svg" download>Logo teal <span>SVG</span></a>
+    <a href="assets/logo-mark-white.svg" download>Logo trắng <span>SVG</span></a>
+    <a href="assets/logo-mark-mono.svg" download>Logo một màu <span>SVG</span></a>
+    <a href="assets/logo-lockup.png" download>Logo kèm chữ <span>PNG</span></a>
+    <a href="assets/logo-lockup-white.png" download>Logo kèm chữ trắng <span>PNG</span></a>
+    <a href="assets/logo-mark-512.png" download>Logo teal 512 <span>PNG</span></a>
+  </div>
+</main>
+<script>
+  // lưới 10 đơn vị cho phần cấu trúc
+  const g = document.getElementById('grid');
+  let h = '';
+  for (let i = 0; i <= 100; i += 10) h += `<path d="M${i} 0V100M0 ${i}H100" stroke="var(--line)" stroke-width=".35"/>`;
+  g.innerHTML = h;
+  document.getElementById('replay').addEventListener('click', () => {
+    const m = document.getElementById('drawMark');
+    m.classList.remove('draw'); void m.getBoundingClientRect(); m.classList.add('draw');
+  });
+</script>
+</body>
+</html>
