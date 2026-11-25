@@ -132,12 +132,13 @@
     watchScroll(el);
     return { name, p: p || {}, el, def };
   }
-  function enter(v) {
+  function enter(v) { chrome(v); try { v.def.mount && v.def.mount(v.el, v.p); } catch (e) { console.error(e); } }
+  // Quay lại màn cũ: chỉ đổi status bar/dock, KHÔNG mount lại (tránh gắn trùng sự kiện)
+  function chrome(v) {
     root.classList.toggle('status-light', !!(typeof v.def.statusLight === 'function' ? v.def.statusLight(v.p) : v.def.statusLight));
     dock.classList.toggle('off', !v.def.tab);
     dock.classList.remove('hidden');
     if (v.def.tab) setTab(v.def.tab);
-    try { v.def.mount && v.def.mount(v.el, v.p); } catch (e) { console.error(e); }
   }
   function watchScroll(el) {
     let last = 0;
@@ -180,7 +181,7 @@
   App.back = () => {
     if (moving || stack.length < 2) return;
     const from = stack.pop(), to = stack[stack.length - 1];
-    to.el.hidden = false; enter(to);
+    to.el.hidden = false; chrome(to);
     transition(from, to, from.mode === 'up' ? 'down' : 'pop', true);
   };
   App.reset = (name, p = {}, mode = 'fade') => {
