@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "test": "node --import tsx --test src/__tests__/*.test.ts"
+    "test": "node --import tsx --test src/__tests__/*.test.ts",
+    "build:pwa": "node pwa/build.mjs",
+    "check:pwa": "node pwa/build.mjs && node pwa/tools/check.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",

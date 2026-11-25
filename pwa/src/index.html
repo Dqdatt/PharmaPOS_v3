@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#0F6F67">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MediPOS">
+  <meta name="format-detection" content="telephone=no">
+  <title>MediPOS</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/app-icon-180.png">
+  <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap">
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="stylesheet" href="pwa.css">
+</head>
+<body>
+  <div class="stage">
+    <div class="phone"></div>
+  </div>
+  <div class="rotate-lock" aria-hidden="true"><img src="assets/logo-mark-white.svg" alt=""><p>Xoay dọc điện thoại để dùng MediPOS</p></div>
+  <script src="js/core.js"></script>
+  <script src="js/data.js"></script>
+  <script src="screens/splash.js"></script>
+  <script src="screens/home.js"></script>
+  <script src="screens/auth.js"></script>
+  <script src="screens/weblogin.js"></script>
+  <script src="screens/revenue.js"></script>
+  <script src="screens/tools.js"></script>
+  <script src="screens/account.js"></script>
+  <script>
+    App.boot();
+    if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch((e) => console.warn('SW', e)));
+  </script>
+</body>
+</html>
