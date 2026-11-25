@@ -86,7 +86,8 @@ async function captureState(context, baseUrl, stateIndex, label, logBucket) {
   const page = await context.newPage();
   attachErrorCollector(page, label, logBucket);
   try {
-    await page.clock.install({ time: new Date('2026-11-25T14:36:00+07:00') });
+    await page.clock.install({ time: new Date('2026-11-25T14:35:59+07:00') });
+    await page.clock.pauseAt(new Date('2026-11-25T14:36:00+07:00'));
     await page.goto(baseUrl, { waitUntil: 'load' });
     await page.evaluate(() => document.fonts.ready);
     await page.clock.runFor(2500);
@@ -96,7 +97,7 @@ async function captureState(context, baseUrl, stateIndex, label, logBucket) {
       try { a.finish(); } catch { a.pause(); }
     }));
     await page.addStyleTag({ content: '*,*::before,*::after{caret-color:transparent!important}' });
-    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+    await page.clock.runFor(34);
     return await page.screenshot();
   } finally {
     await page.close();
