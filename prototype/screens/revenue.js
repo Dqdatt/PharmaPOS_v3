@@ -60,6 +60,15 @@ App.css(`
 .rv-search .ic { color: var(--ink-3); }
 .rv-search input { flex: 1; min-width: 0; border: 0; background: none; font: inherit; font-size: 15px; color: var(--ink); outline: none; }
 .rv-search input::placeholder { color: var(--ink-3); }
+.rv-inv-summary { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 20px 8px; }
+.rv-inv-sum-right { text-align: right; }
+.rv-inv-sum-val { font-size: 20px; font-weight: 700; line-height: 1.25; color: var(--ink); }
+.rv-inv-sum-sub { font-size: 13px; color: var(--ink-3); margin-top: 2px; }
+.rv-chips { display: flex; gap: 8px; overflow-x: auto; padding: 0 16px 12px; scrollbar-width: none; }
+.rv-chips::-webkit-scrollbar { display: none; }
+.rv-chips .chip { flex: none; cursor: pointer; transition: background .2s var(--ease), color .2s var(--ease); }
+.rv-chips .chip.on { background: var(--teal-700); color: var(--on-dark); }
+.rv-inv-group { font-size: 13px; font-weight: 600; color: var(--ink-2); padding: 4px 20px 8px; }
 
 .rv-receipt { position: relative; background: var(--card); margin: 16px 16px 20px; padding: 24px 20px; border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
 .rv-receipt::before, .rv-receipt::after { content: ""; position: absolute; left: -1px; right: -1px; height: 8px; pointer-events: none; }
@@ -70,16 +79,53 @@ App.css(`
 .rv-rc-head p { font-size: 13px; color: var(--ink-2); margin-top: 4px; line-height: 1.4; }
 .rv-rc-meta { font-size: 13px; color: var(--ink-3); margin-top: 10px; }
 .rv-rc-dash { border-top: 1px dashed var(--line); margin: 16px 0; }
-.rv-rc-item { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 6px 0; font-size: 15px; }
-.rv-rc-item span:last-child { color: var(--ink-2); white-space: nowrap; }
+.rv-rc-item { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 6px 0; font-size: 15px; }
+.rv-rc-item-main { min-width: 0; flex: 1; }
+.rv-rc-usage { font-size: 13px; color: var(--ink-3); margin-top: 2px; line-height: 1.4; }
+.rv-rc-item > span:last-child { color: var(--ink-2); white-space: nowrap; }
 .rv-rc-total { display: flex; justify-content: space-between; align-items: baseline; font-size: 20px; font-weight: 700; }
 .rv-rc-info { display: flex; justify-content: space-between; font-size: 14px; color: var(--ink-2); margin-top: 8px; }
-.rv-rc-actions { padding: 4px 16px 28px; }
+.rv-rc-cust .row { grid-template-columns: auto minmax(0, 1fr); cursor: default; }
+.rv-rc-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 20px 16px calc(var(--sab) + 16px); }
+.rv-rc-actions .btn { padding: 0 12px; width: 100%; }
 `);
+
+App.icons.rvSend = '<path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/>';
 
 (function () {
   const itemsText = (a) => (a.length <= 2 ? a.join(', ') : `${a.slice(0, 2).join(', ')} và ${a.length - 2} món khác`);
   const initials = (name) => name.trim().split(/\s+/).slice(-2).map((w) => w[0]).join('').toUpperCase();
+
+  const EXTRA_INVOICES = [
+    { id: 'HD2511-081', time: '13:28', items: ['Efferalgan 500mg', 'Vitamin C 500'], total: 118000, staff: 'Ngọc Hân', pay: 'Chuyển khoản' },
+    { id: 'HD2511-080', time: '13:06', items: ['Decolgen Forte', 'Strepsils'], total: 74000, staff: 'Thu Trang', pay: 'Tiền mặt' },
+    { id: 'HD2511-079', time: '12:42', items: ['Panadol Extra', 'Oresol 245'], total: 68000, staff: 'Minh Tuấn', pay: 'Tiền mặt' },
+    { id: 'HD2511-078', time: '12:15', items: ['Telfast HD 180', 'Nước muối sinh lý'], total: 145000, staff: 'Ngọc Hân', pay: 'Chuyển khoản' },
+    { id: 'HD2511-077', time: '11:48', items: ['Smecta', 'Berberin 100mg', 'Oresol'], total: 112000, staff: 'Minh Tuấn', pay: 'Thẻ' },
+    { id: 'HD2511-076', time: '11:24', items: ['Augmentin 625mg', 'Men vi sinh Enterogermina'], total: 315000, staff: 'Ngọc Hân', pay: 'Chuyển khoản' },
+    { id: 'HD2511-075', time: '11:05', items: ['Berberin 100mg'], total: 48000, staff: 'Thu Trang', pay: 'Tiền mặt' },
+  ];
+  const ALL_INVOICES = [...DATA.invoices, ...EXTRA_INVOICES];
+  const PAY_FILTERS = ['Tất cả', 'Chuyển khoản', 'Tiền mặt', 'Thẻ'];
+  const USAGE_GUIDE = {
+    'Panadol Extra': 'Khi đau hoặc sốt, cách 4 đến 6 giờ',
+    'Berberin': 'Sáng 2, tối 2 viên, sau ăn',
+    'Berberin 100mg': 'Sáng 2, tối 2 viên, sau ăn',
+    'Oresol': 'Pha 1 gói với 200 ml nước',
+    'Oresol 245': 'Pha 1 gói với 200 ml nước',
+    'Vitamin C 500': 'Sáng 1 viên, sau ăn',
+    'Augmentin 625mg': 'Sáng 1, tối 1 viên, sau ăn',
+    'Telfast HD 180': 'Tối 1 viên trước khi ngủ',
+    'Strepsils': 'Ngậm 1 viên khi đau họng, cách 3 giờ',
+    'Smecta': 'Sáng 1, chiều 1 gói, pha với nước',
+    'Men vi sinh Enterogermina': 'Sáng 1, tối 1 ống, lắc đều trước khi uống',
+    'Gaviscon': 'Chiều tối 1 gói sau ăn 30 phút',
+    'Efferalgan 500mg': 'Khi sốt, pha 1 viên với nước, cách 4 đến 6 giờ',
+    'Decolgen Forte': 'Sáng 1, chiều 1 viên, sau ăn',
+    'Nước muối sinh lý': 'Nhỏ hoặc rửa mũi 2 đến 3 lần mỗi ngày',
+  };
+  const usageOf = (name) => USAGE_GUIDE[name] || 'Theo chỉ dẫn của dược sĩ';
+  const hourOf = (iv) => Number(String(iv.time).split(':')[0]) || 0;
 
   function buildReceiptLines(iv) {
     const items = iv.items || [];
@@ -300,44 +346,86 @@ App.css(`
       const q = p.q || '';
       return `
         ${App.header({ title: 'Hóa đơn hôm nay' })}
+        <div class="rv-inv-summary">
+          <div>
+            <div class="rv-inv-sum-val num">${DATA.today.invoices} hóa đơn</div>
+            <div class="rv-inv-sum-sub">hôm nay</div>
+          </div>
+          <div class="rv-inv-sum-right">
+            <div class="rv-inv-sum-val num">${App.money(DATA.today.revenue)}</div>
+            <div class="rv-inv-sum-sub">tổng tiền</div>
+          </div>
+        </div>
         <div class="rv-search-wrap">
           <div class="rv-search">
             ${App.icon('search', 18)}
             <input type="search" placeholder="Tìm theo mã hoặc tên thuốc" value="${App.esc(q)}">
           </div>
         </div>
+        <div class="rv-chips" role="tablist" aria-label="Lọc theo hình thức thanh toán">
+          ${PAY_FILTERS.map((f, i) => `<button class="chip${i === 0 ? ' on' : ''}" data-pay="${App.esc(f)}" aria-pressed="${i === 0}">${App.esc(f)}</button>`).join('')}
+        </div>
         <div class="rv-inv-list"></div>`;
     },
     mount: (el, p) => {
       const input = el.querySelector('input');
+      const chips = [...el.querySelectorAll('.rv-chips .chip')];
       const list = el.querySelector('.rv-inv-list');
-      const draw = (q) => {
-        const kw = q.trim().toLowerCase();
-        const rows = DATA.invoices.filter((iv) => !kw || iv.id.toLowerCase().includes(kw) || iv.items.some((m) => m.toLowerCase().includes(kw)));
-        if (!rows.length) {
-          list.innerHTML = `<div class="empty"><div class="tile">${App.icon('search', 26)}</div>Không thấy hóa đơn khớp với "${App.esc(q.trim())}".</div>`;
-          return;
-        }
-        list.innerHTML = `<div class="card rv-recent" style="margin:0 16px 24px">${rows.map((iv) => `
+      let activePay = 'Tất cả';
+      const renderGroup = (label, rows, last) => `
+        <div class="rv-inv-group">${label}</div>
+        <div class="card rv-recent" style="margin:0 16px ${last ? 24 : 16}px">${rows.map((iv) => `
           <div class="row tap" data-go="invoiceDetail" data-p='${JSON.stringify({ id: iv.id })}'>
             <div class="rv-time num">${iv.time}</div>
             <div class="row-main"><div class="row-title">${App.esc(itemsText(iv.items))}</div><div class="row-sub">${App.esc(iv.staff)}, ${App.esc(iv.pay.toLowerCase())}</div></div>
             <div class="row-end num">${App.money(iv.total)}</div>
           </div>`).join('')}</div>`;
+      const draw = (q) => {
+        const kw = q.trim().toLowerCase();
+        const rows = ALL_INVOICES.filter((iv) => {
+          const matchPay = activePay === 'Tất cả' || iv.pay === activePay;
+          const matchKw = !kw || iv.id.toLowerCase().includes(kw) || iv.items.some((m) => m.toLowerCase().includes(kw));
+          return matchPay && matchKw;
+        });
+        if (!rows.length) {
+          const msg = kw
+            ? `Không thấy hóa đơn khớp với "${App.esc(q.trim())}".`
+            : `Không có hóa đơn thanh toán bằng ${App.esc(activePay.toLowerCase())}.`;
+          list.innerHTML = `<div class="empty"><div class="tile">${App.icon('search', 26)}</div>${msg}</div>`;
+          return;
+        }
+        const afternoon = rows.filter((iv) => hourOf(iv) >= 13);
+        const morning = rows.filter((iv) => hourOf(iv) < 13);
+        const groups = [];
+        if (afternoon.length) groups.push(['Chiều', afternoon]);
+        if (morning.length) groups.push(['Sáng', morning]);
+        list.innerHTML = groups.map(([label, grp], idx) => renderGroup(label, grp, idx === groups.length - 1)).join('');
       };
       draw(p.q || '');
       input.addEventListener('input', () => draw(input.value));
+      chips.forEach((chip) => chip.addEventListener('click', () => {
+        activePay = chip.dataset.pay;
+        chips.forEach((c) => {
+          const on = c === chip;
+          c.classList.toggle('on', on);
+          c.setAttribute('aria-pressed', String(on));
+        });
+        draw(input.value);
+      }));
     },
   });
 
   App.screen('invoiceDetail', {
     render: (p) => {
-      const iv = DATA.invoices.find((x) => x.id === p.id);
+      const iv = ALL_INVOICES.find((x) => x.id === p.id);
       if (!iv) {
         return `${App.header({ title: 'Chi tiết hóa đơn' })}
           <div class="empty"><div class="tile">${App.icon('receipt', 28)}</div>Không tìm thấy hóa đơn này.</div>`;
       }
       const lines = buildReceiptLines(iv);
+      const customer = iv.id === 'HD2511-085'
+        ? { title: 'Chị Lan', sub: '0912 *** 208, mua lần thứ 6' }
+        : { title: 'Khách lẻ', sub: 'Không lưu thông tin khách' };
       return `
         ${App.header({ title: iv.id })}
         <div class="rv-receipt">
@@ -349,7 +437,10 @@ App.css(`
           <div class="rv-rc-dash"></div>
           ${lines.map((l) => `
             <div class="rv-rc-item">
-              <span>${App.esc(l.name)}</span>
+              <div class="rv-rc-item-main">
+                <div>${App.esc(l.name)}</div>
+                <div class="rv-rc-usage">${App.esc(usageOf(l.name))}</div>
+              </div>
               <span class="num">${l.qty} x ${App.money(l.unit)}</span>
             </div>`).join('')}
           <div class="rv-rc-dash"></div>
@@ -360,17 +451,38 @@ App.css(`
           <div class="rv-rc-info"><span>Thanh toán</span><span>${App.esc(iv.pay)}</span></div>
           <div class="rv-rc-info"><span>Người bán</span><span>${App.esc(iv.staff)}</span></div>
         </div>
+        <div class="section rv-rc-cust">
+          <div class="section-head"><h2>Khách hàng</h2></div>
+          <div class="card" style="margin:0 16px">
+            <div class="row">
+              <div class="tile">${App.icon('user', 20)}</div>
+              <div class="row-main">
+                <div class="row-title">${App.esc(customer.title)}</div>
+                <div class="row-sub">${App.esc(customer.sub)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="rv-rc-actions">
-          <button class="btn btn-secondary block tap" data-print>${App.icon('printer', 20)}In lại hóa đơn</button>
+          <button class="btn btn-secondary tap" data-print>${App.icon('printer', 20)}In lại</button>
+          <button class="btn btn-secondary tap" data-zalo>${App.icon('rvSend', 20)}Gửi Zalo</button>
         </div>`;
     },
     mount: (el) => {
-      const btn = el.querySelector('[data-print]');
-      if (!btn) return;
-      btn.addEventListener('click', () => {
-        const done = App.busy(btn, 'Đang gửi tới máy in...');
-        setTimeout(() => { done(); App.toast('Đã in hóa đơn', 'printer'); }, 1000);
-      });
+      const printBtn = el.querySelector('[data-print]');
+      if (printBtn) {
+        printBtn.addEventListener('click', () => {
+          const done = App.busy(printBtn, 'Đang gửi tới máy in...');
+          setTimeout(() => { done(); App.toast('Đã in hóa đơn', 'printer'); }, 1000);
+        });
+      }
+      const zaloBtn = el.querySelector('[data-zalo]');
+      if (zaloBtn) {
+        zaloBtn.addEventListener('click', () => {
+          const done = App.busy(zaloBtn, 'Đang gửi...');
+          setTimeout(() => { done(); App.toast('Đã gửi hóa đơn qua Zalo'); }, 900);
+        });
+      }
     },
   });
 
