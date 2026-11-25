@@ -74,13 +74,11 @@
     `<svg class="${cls}" viewBox="-16 0 512 512" fill="currentColor" aria-hidden="true">
       <path class="lm-back" d="${LOGO_BACK}"/><path class="lm-doc" fill-rule="evenodd" d="${LOGO_DOC}"/>
     </svg>`;
-  // id gradient riêng mỗi lần vẽ: trùng id thì icon trỏ nhầm sang bản đang ẩn (bảng QA) và mất màu
-  let aiN = 0;
-  App.appIcon = (cls = '', n = ++aiN) =>
+  App.appIcon = (cls = '') =>
     `<svg class="${cls}" viewBox="0 0 100 100" aria-label="MediPOS">
-      <defs><linearGradient id="aiG${n}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1FB8A7"/><stop offset=".55" stop-color="#0F6F67"/><stop offset="1" stop-color="#0D3F3B"/></linearGradient>
-      <radialGradient id="aiH${n}" cx=".5" cy="0" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>
-      <rect width="100" height="100" rx="23" fill="url(#aiG${n})"/><rect width="100" height="100" rx="23" fill="url(#aiH${n})"/>
+      <defs><linearGradient id="aiG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1FB8A7"/><stop offset=".55" stop-color="#0F6F67"/><stop offset="1" stop-color="#0D3F3B"/></linearGradient>
+      <radialGradient id="aiH" cx=".5" cy="0" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>
+      <rect width="100" height="100" rx="23" fill="url(#aiG)"/><rect width="100" height="100" rx="23" fill="url(#aiH)"/>
       <svg x="21" y="21" width="58" height="58" viewBox="-16 0 512 512" fill="#F4FBFA"><path d="${LOGO_BACK}"/><path fill-rule="evenodd" d="${LOGO_DOC}"/></svg>
     </svg>`;
 

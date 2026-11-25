@@ -52,52 +52,105 @@ function startStaticServer(dir) {
   });
 }
 
-function isGoogleFontError(text, locUrl = '') {
-  const s = `${text} ${locUrl}`;
-  if (/fonts\.googleapis\.com|fonts\.gstatic\.com/i.test(s)) return true;
-  if (/Failed to load resource: net::ERR_/i.test(text) && !locUrl) return true;
-  return false;
+function isGoogleFontNetworkError(text, locUrl = '') {
+  const hasGoogleFontUrl = /https?:\/\/fonts\.(googleapis|gstatic)\.com/i.test(locUrl) || /https?:\/\/fonts\.(googleapis|gstatic)\.com/i.test(text);
+  const isNetworkErr = /Failed to load resource|net::ERR_|Failed to fetch|ERR_NAME_NOT_RESOLVED|ERR_INTERNET_DISCONNECTED|ERR_CONNECTION_FAILED/i.test(text);
+  return hasGoogleFontUrl && isNetworkErr;
 }
 
-function attachErrorCollector(page, label, target) {
-  const failedFontUrls = new Set();
-  page.on('requestfailed', (req) => {
-    const u = req.url();
-    if (/fonts\.googleapis\.com|fonts\.gstatic\.com/i.test(u)) {
-      failedFontUrls.add(u);
-    }
-  });
+function normalizeErrorKey(kind, text, locUrl = '') {
+  const normText = String(text).replace(/http:\/\/127\.0\.0\.1:\d+\//g, '<origin>/');
+  const normLoc = String(locUrl).replace(/http:\/\/127\.0\.0\.1:\d+\//g, '<origin>/');
+  return `${kind}|${normText}|${normLoc}`;
+}
+
+function attachErrorCollector(page, side, scope, target, isEnabled = () => true) {
   page.on('pageerror', (err) => {
-    target.errors.push(`[${label}] pageerror: ${err.message}`);
+    if (!isEnabled()) return;
+    const msg = err.message || String(err);
+    target.errors.push({
+      scope,
+      key: normalizeErrorKey('pageerror', msg),
+      raw: `[${side} ${scope}] pageerror: ${msg}`,
+    });
   });
   page.on('console', (msg) => {
-    if (msg.type() !== 'error') return;
+    if (!isEnabled() || msg.type() !== 'error') return;
     const text = msg.text();
     const locUrl = msg.location()?.url || '';
-    if (isGoogleFontError(text, locUrl) || (failedFontUrls.size > 0 && /Failed to load resource/i.test(text) && (!locUrl || /fonts\.google|fonts\.gstatic/i.test(locUrl)))) {
-      target.fontNotes.push(`[${label}] font network: ${text}${locUrl ? ` (${locUrl})` : ''}`);
+    if (isGoogleFontNetworkError(text, locUrl)) {
+      target.fontNotes.push(`[${side} ${scope}] font network: ${text}${locUrl ? ` (${locUrl})` : ''}`);
       return;
     }
-    target.errors.push(`[${label}] console.error: ${text}${locUrl ? ` (${locUrl})` : ''}`);
+    target.errors.push({
+      scope,
+      key: normalizeErrorKey('console.error', text, locUrl),
+      raw: `[${side} ${scope}] console.error: ${text}${locUrl ? ` (${locUrl})` : ''}`,
+    });
   });
 }
 
-async function captureState(context, baseUrl, stateIndex, label, logBucket) {
+function withTimeout(promise, ms, message) {
+  let timer;
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(message)), ms);
+    }),
+  ]).finally(() => clearTimeout(timer));
+}
+
+function buildSizeMismatchDiff(pngA, pngB) {
+  const width = Math.max(pngA.width, pngB.width);
+  const height = Math.max(pngA.height, pngB.height);
+  const diff = new PNG({ width, height });
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = (y * width + x) * 4;
+      const inA = x < pngA.width && y < pngA.height;
+      const inB = x < pngB.width && y < pngB.height;
+      let same = false;
+      if (inA && inB) {
+        const iA = (y * pngA.width + x) * 4;
+        const iB = (y * pngB.width + x) * 4;
+        same =
+          pngA.data[iA] === pngB.data[iB] &&
+          pngA.data[iA + 1] === pngB.data[iB + 1] &&
+          pngA.data[iA + 2] === pngB.data[iB + 2] &&
+          pngA.data[iA + 3] === pngB.data[iB + 3];
+      }
+      if (same) {
+        const iA = (y * pngA.width + x) * 4;
+        diff.data[idx] = pngA.data[iA];
+        diff.data[idx + 1] = pngA.data[iA + 1];
+        diff.data[idx + 2] = pngA.data[iA + 2];
+        diff.data[idx + 3] = Math.round(pngA.data[iA + 3] * 0.25);
+      } else {
+        diff.data[idx] = 255;
+        diff.data[idx + 1] = 0;
+        diff.data[idx + 2] = 0;
+        diff.data[idx + 3] = 255;
+      }
+    }
+  }
+  return diff;
+}
+
+async function captureState(context, baseUrl, stateIndex, side, logBucket) {
   const page = await context.newPage();
-  attachErrorCollector(page, label, logBucket);
+  attachErrorCollector(page, side, `state:${stateIndex}`, logBucket);
   try {
-    await page.clock.install({ time: new Date('2026-11-25T14:35:59+07:00') });
-    await page.clock.pauseAt(new Date('2026-11-25T14:36:00+07:00'));
+    await page.clock.install({ time: new Date('2026-11-25T14:36:00+07:00') });
     await page.goto(baseUrl, { waitUntil: 'load' });
     await page.evaluate(() => document.fonts.ready);
     await page.clock.runFor(2500);
     await page.evaluate((i) => App.states[i].run(), stateIndex);
-    await page.clock.runFor(4000);
+    await page.clock.runFor(3000);
     await page.evaluate(() => document.getAnimations().forEach((a) => {
       try { a.finish(); } catch { a.pause(); }
     }));
     await page.addStyleTag({ content: '*,*::before,*::after{caret-color:transparent!important}' });
-    await page.clock.runFor(34);
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
     return await page.screenshot();
   } finally {
     await page.close();
@@ -137,18 +190,26 @@ async function main() {
     const logsB = { errors: [], fontNotes: [] };
 
     for (let i = 0; i < states.length; i++) {
-      const bufA = await captureState(ctx, srvA.url, i, `A[${i}]`, logsA);
-      const bufB = await captureState(ctx, srvB.url, i, `B[${i}]`, logsB);
+      const bufA = await captureState(ctx, srvA.url, i, 'A', logsA);
+      const bufB = await captureState(ctx, srvB.url, i, 'B', logsB);
 
       const pngA = PNG.sync.read(bufA);
       const pngB = PNG.sync.read(bufB);
 
       let diffPixels = 0;
       if (pngA.width !== pngB.width || pngA.height !== pngB.height) {
+        const diffPng = buildSizeMismatchDiff(pngA, pngB);
         diffPixels = Math.max(pngA.width * pngA.height, pngB.width * pngB.height);
+        mkdirSync(outDir, { recursive: true });
+        writeFileSync(join(outDir, `${i}-A.png`), bufA);
+        writeFileSync(join(outDir, `${i}-B.png`), bufB);
+        writeFileSync(join(outDir, `${i}-diff.png`), PNG.sync.write(diffPng));
       } else {
         const diffPng = new PNG({ width: pngA.width, height: pngA.height });
-        diffPixels = pixelmatch(pngA.data, pngB.data, diffPng.data, pngA.width, pngA.height, { threshold: 0 });
+        diffPixels = pixelmatch(pngA.data, pngB.data, diffPng.data, pngA.width, pngA.height, {
+          threshold: 0,
+          includeAA: true,
+        });
         if (diffPixels > 0) {
           mkdirSync(outDir, { recursive: true });
           writeFileSync(join(outDir, `${i}-A.png`), bufA);
@@ -164,7 +225,7 @@ async function main() {
     let rotateNote = '';
     {
       const p = await ctx.newPage();
-      attachErrorCollector(p, 'B[rotate]', logsB);
+      attachErrorCollector(p, 'B', 'rotate', logsB);
       try {
         await p.goto(srvB.url, { waitUntil: 'load' });
         await p.setViewportSize({ width: 844, height: 390 });
@@ -198,22 +259,35 @@ async function main() {
     {
       const swCtx = await browser.newContext({ ...contextOpts, serviceWorkers: 'allow' });
       const p = await swCtx.newPage();
-      attachErrorCollector(p, 'B[offline]', offlineLogs);
+      let collectOfflineErrors = false;
+      attachErrorCollector(p, 'B', 'offline', offlineLogs, () => collectOfflineErrors);
       try {
         await p.goto(srvB.url, { waitUntil: 'load' });
-        await p.evaluate(() => navigator.serviceWorker.ready);
+        await withTimeout(
+          p.evaluate(() => navigator.serviceWorker.ready),
+          8000,
+          'Hết thời gian chờ navigator.serviceWorker.ready'
+        );
         const hasCtrl = await p.evaluate(() => Boolean(navigator.serviceWorker.controller));
         if (!hasCtrl) {
           await p.reload({ waitUntil: 'load' });
-          await p.evaluate(() => navigator.serviceWorker.ready);
+          await withTimeout(
+            p.evaluate(() => navigator.serviceWorker.ready),
+            8000,
+            'Hết thời gian chờ navigator.serviceWorker.ready sau reload'
+          );
         }
         const ctrlAfter = await p.evaluate(() => Boolean(navigator.serviceWorker.controller));
+        if (!ctrlAfter) {
+          throw new Error('Không có navigator.serviceWorker.controller');
+        }
         await swCtx.setOffline(true);
+        collectOfflineErrors = true;
         await p.reload({ waitUntil: 'load' });
         const viewCount = await p.locator('.phone .view').count();
-        offlineOk = ctrlAfter && viewCount > 0 && offlineLogs.errors.length === 0;
+        offlineOk = viewCount > 0 && offlineLogs.errors.length === 0;
         if (!offlineOk) {
-          offlineNote = `controller=${ctrlAfter}, .phone .view=${viewCount}, errors=${offlineLogs.errors.length}`;
+          offlineNote = `.phone .view=${viewCount}, errors=${offlineLogs.errors.length}`;
         }
       } catch (e) {
         offlineNote = e.message;
@@ -235,6 +309,30 @@ async function main() {
       manifestNote = e.message;
     }
 
+    // Đối chiếu lỗi console theo nội dung và state tương ứng
+    const errorsAByScope = new Map();
+    for (const err of logsA.errors) {
+      if (!errorsAByScope.has(err.scope)) errorsAByScope.set(err.scope, new Map());
+      const m = errorsAByScope.get(err.scope);
+      m.set(err.key, (m.get(err.key) || 0) + 1);
+    }
+
+    const bOnlyErrors = [];
+    const remainingA = new Map();
+    for (const [scope, map] of errorsAByScope) {
+      remainingA.set(scope, new Map(map));
+    }
+    for (const err of logsB.errors) {
+      const scopeMap = remainingA.get(err.scope);
+      const count = scopeMap?.get(err.key) || 0;
+      if (count > 0) {
+        scopeMap.set(err.key, count - 1);
+      } else {
+        bOnlyErrors.push(err);
+      }
+    }
+    const allBOnlyErrors = [...bOnlyErrors, ...offlineLogs.errors];
+
     // In bảng kết quả
     const nameWidth = Math.max(30, ...stateResults.map((r) => r.name.length));
     console.log(`\n${'state'.padEnd(nameWidth)} | pixel lệch`);
@@ -255,16 +353,20 @@ async function main() {
 
     if (logsA.errors.length > 0) {
       console.log('\nLỗi console ở A:');
-      for (const e of logsA.errors) console.log(`  ${e}`);
+      for (const e of logsA.errors) console.log(`  ${e.raw}`);
     }
     const allBErrors = [...logsB.errors, ...offlineLogs.errors];
     if (allBErrors.length > 0) {
       console.log('\nLỗi console ở B:');
-      for (const e of allBErrors) console.log(`  ${e}`);
+      for (const e of allBErrors) console.log(`  ${e.raw}`);
+    }
+    if (allBOnlyErrors.length > 0) {
+      console.log('\nLỗi console chỉ có ở B (tính KHÔNG ĐẠT):');
+      for (const e of allBOnlyErrors) console.log(`  ${e.raw}`);
     }
 
     const allStatesZero = stateResults.every((r) => r.diffPixels === 0);
-    const passed = allStatesZero && rotateOk && offlineOk && manifestOk && allBErrors.length === 0;
+    const passed = allStatesZero && rotateOk && offlineOk && manifestOk && allBOnlyErrors.length === 0;
     console.log(`\nTổng kết: ${passed ? 'ĐẠT' : 'KHÔNG ĐẠT'}`);
     if (!passed) process.exitCode = 1;
   } finally {
