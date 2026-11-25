@@ -39,18 +39,19 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+    const updatePromise = caches.open(FONT_CACHE).then((cache) =>
+      fetch(request).then((res) => {
+        if (res && (res.ok || res.type === 'opaque')) {
+          return cache.put(request, res.clone()).then(() => res);
+        }
+        return res;
+      })
+    );
+    event.waitUntil(updatePromise.catch(() => undefined));
     event.respondWith(
-      caches.open(FONT_CACHE).then((cache) =>
-        cache.match(request).then((cached) => {
-          const networkFetch = fetch(request)
-            .then((res) => {
-              if (res && res.ok) cache.put(request, res.clone());
-              return res;
-            })
-            .catch(() => cached);
-          return cached || networkFetch;
-        })
-      )
+      caches.open(FONT_CACHE)
+        .then((cache) => cache.match(request))
+        .then((cached) => cached || updatePromise)
     );
     return;
   }

@@ -25,8 +25,13 @@ function listFiles(dir, base = dir) {
 function readPngSize(filePath) {
   const buf = readFileSync(filePath);
   const sig = '89504e470d0a1a0a';
-  if (buf.length < 24 || buf.subarray(0, 8).toString('hex') !== sig) {
+  if (buf.length < 33 || buf.subarray(0, 8).toString('hex') !== sig) {
     throw new Error('không phải file PNG hợp lệ');
+  }
+  const chunkLen = buf.readUInt32BE(8);
+  const chunkType = buf.subarray(12, 16).toString('ascii');
+  if (chunkType !== 'IHDR' || chunkLen !== 13) {
+    throw new Error(`chunk đầu PNG không hợp lệ (${chunkType}, length=${chunkLen})`);
   }
   return { width: buf.readUInt32BE(16), height: buf.readUInt32BE(20) };
 }
@@ -36,10 +41,11 @@ if (!existsSync(distDir)) {
   process.exit(1);
 }
 
-// 1. Kiểm tra byte-for-byte 4 thư mục từ prototype
+// 1. Kiểm tra byte-for-byte 4 thư mục từ prototype (cả hai chiều)
 for (const sub of ['css', 'js', 'screens', 'assets']) {
   const protoFiles = listFiles(join(protoDir, sub));
   const distFiles = listFiles(join(distDir, sub));
+  const protoSet = new Set(protoFiles);
   const distSet = new Set(distFiles);
 
   for (const rel of protoFiles) {
@@ -50,6 +56,11 @@ for (const sub of ['css', 'js', 'screens', 'assets']) {
     const h1 = sha256(readFileSync(join(protoDir, sub, rel)));
     const h2 = sha256(readFileSync(join(distDir, sub, rel)));
     if (h1 !== h2) errs.push(`file ${sub}/${rel} khác sha256 so với prototype`);
+  }
+  for (const rel of distFiles) {
+    if (!protoSet.has(rel)) {
+      errs.push(`thừa file ${sub}/${rel} trong pwa/dist`);
+    }
   }
 }
 
@@ -66,7 +77,18 @@ if (JSON.stringify(protoScripts) !== JSON.stringify(distScripts)) {
 if (/class="qa"/.test(distHtml)) errs.push('index.html vẫn còn class="qa"');
 if (!/class="rotate-lock"/.test(distHtml)) errs.push('index.html thiếu .rotate-lock');
 
+const getImportantLinks = (html) =>
+  [...html.matchAll(/<link\s+[^>]*>/g)]
+    .map((m) => m[0].replace(/\s+/g, ' ').trim())
+    .filter((tag) => /rel="icon"|fonts\.googleapis\.com|fonts\.gstatic\.com/.test(tag));
+const protoLinks = getImportantLinks(protoHtml);
+const distLinks = getImportantLinks(distHtml);
+if (JSON.stringify(protoLinks) !== JSON.stringify(distLinks)) {
+  errs.push('favicon hoặc các link Google Fonts trong index.html không khớp prototype');
+}
+
 const requiredTags = [
+  /<meta\s+name="viewport"\s+content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">/,
   /<meta\s+name="apple-mobile-web-app-capable"\s+content="yes">/,
   /<meta\s+name="mobile-web-app-capable"\s+content="yes">/,
   /<meta\s+name="apple-mobile-web-app-status-bar-style"\s+content="black-translucent">/,
@@ -130,10 +152,11 @@ if (!filesMatch) {
 } else {
   try {
     const swFiles = JSON.parse(filesMatch[1]);
+    const distFileSet = new Set(listFiles(distDir));
     for (const f of swFiles) {
       const target = f === './' ? 'index.html' : f;
-      if (!existsSync(join(distDir, target))) {
-        errs.push(`mục FILES trong sw.js không tồn tại trong dist: ${f}`);
+      if (!distFileSet.has(target)) {
+        errs.push(`mục FILES trong sw.js không phải tệp hợp lệ trong dist: ${f}`);
       }
     }
   } catch (e) {
