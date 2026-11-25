@@ -34,7 +34,7 @@
   <script src="screens/tools.js"></script>
   <script src="screens/account.js"></script>
   <script>
-    // iOS standalone: 100dvh co lại sau khi đóng bàn phím (lỗi WebKit), nên lấy chiều cao màn máy (app khóa dọc)
+    // iOS standalone: WebKit báo innerHeight thiếu status bar (848/896) nên trang hở đáy; cho trang cao bằng màn máy (app khóa dọc)
     if (navigator.standalone) {
       document.documentElement.classList.add('ios-standalone');
       document.documentElement.style.setProperty('--app-h', Math.max(screen.width, screen.height) + 'px');
