@@ -145,9 +145,15 @@ async function captureState(context, baseUrl, stateIndex, side, logBucket) {
     await page.evaluate(() => document.fonts.ready);
     await page.clock.runFor(2500);
     await page.evaluate((i) => App.states[i].run(), stateIndex);
-    await page.clock.runFor(3000);
+    for (let k = 0; k < 8; k++) {
+      await page.waitForTimeout(150);
+      await page.evaluate(() => document.getAnimations().forEach((a) => {
+        try { a.finish(); } catch { a.pause(); a.currentTime = 0; }
+      }));
+      await page.clock.runFor(1000);
+    }
     await page.evaluate(() => document.getAnimations().forEach((a) => {
-      try { a.finish(); } catch { a.pause(); }
+      try { a.finish(); } catch { a.pause(); a.currentTime = 0; }
     }));
     await page.addStyleTag({ content: '*,*::before,*::after{caret-color:transparent!important}' });
     await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
