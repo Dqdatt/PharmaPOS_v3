@@ -14,7 +14,6 @@ function listFiles(dir, base = dir) {
   if (!existsSync(dir)) return [];
   const out = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name === '.DS_Store') continue;
     const full = join(dir, entry.name);
     if (entry.isDirectory()) out.push(...listFiles(full, base));
     else if (entry.isFile()) out.push(relative(base, full).split('\\').join('/'));
@@ -65,45 +64,68 @@ for (const sub of ['css', 'js', 'screens', 'assets']) {
 }
 
 // 2. Kiểm tra pwa/dist/index.html
-const protoHtml = readFileSync(join(protoDir, 'index.html'), 'utf8');
-const distHtml = readFileSync(join(distDir, 'index.html'), 'utf8');
+const stripComments = (html) => html.replace(/<!--[\s\S]*?-->/g, '');
+function parseTags(html, tagName) {
+  const re = new RegExp(`<${tagName}\\b([^>]*)>`, 'gi');
+  const tags = [];
+  for (const m of html.matchAll(re)) {
+    const attrs = {};
+    for (const a of m[1].matchAll(/([a-zA-Z0-9:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/g)) {
+      attrs[a[1].toLowerCase()] = a[2] ?? a[3] ?? a[4] ?? '';
+    }
+    tags.push(attrs);
+  }
+  return tags;
+}
 
-const getScripts = (html) => [...html.matchAll(/<script\s+[^>]*src="([^"]+)"/g)].map((m) => m[1]);
+const protoHtml = stripComments(readFileSync(join(protoDir, 'index.html'), 'utf8'));
+const distHtml = stripComments(readFileSync(join(distDir, 'index.html'), 'utf8'));
+
+const getScripts = (html) => parseTags(html, 'script').filter((a) => 'src' in a).map((a) => a.src);
 const protoScripts = getScripts(protoHtml);
 const distScripts = getScripts(distHtml);
 if (JSON.stringify(protoScripts) !== JSON.stringify(distScripts)) {
   errs.push(`danh sách <script src> trong index.html không khớp prototype (${distScripts.join(', ')})`);
 }
-if (/class="qa"/.test(distHtml)) errs.push('index.html vẫn còn class="qa"');
-if (!/class="rotate-lock"/.test(distHtml)) errs.push('index.html thiếu .rotate-lock');
+
+const classList = [...distHtml.matchAll(/\bclass\s*=\s*(?:"([^"]*)"|'([^']*)')/gi)]
+  .flatMap((m) => (m[1] ?? m[2] ?? '').trim().split(/\s+/).filter(Boolean));
+if (classList.includes('qa')) errs.push('index.html vẫn còn class qa');
+if (!classList.includes('rotate-lock')) errs.push('index.html thiếu .rotate-lock');
 
 const getImportantLinks = (html) =>
-  [...html.matchAll(/<link\s+[^>]*>/g)]
-    .map((m) => m[0].replace(/\s+/g, ' ').trim())
-    .filter((tag) => /rel="icon"|fonts\.googleapis\.com|fonts\.gstatic\.com/.test(tag));
-const protoLinks = getImportantLinks(protoHtml);
-const distLinks = getImportantLinks(distHtml);
-if (JSON.stringify(protoLinks) !== JSON.stringify(distLinks)) {
+  parseTags(html, 'link').filter((a) => a.rel === 'icon' || /fonts\.googleapis\.com|fonts\.gstatic\.com/.test(a.href || ''));
+if (JSON.stringify(getImportantLinks(protoHtml)) !== JSON.stringify(getImportantLinks(distHtml))) {
   errs.push('favicon hoặc các link Google Fonts trong index.html không khớp prototype');
 }
 
-const requiredTags = [
-  /<meta\s+name="viewport"\s+content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">/,
-  /<meta\s+name="apple-mobile-web-app-capable"\s+content="yes">/,
-  /<meta\s+name="mobile-web-app-capable"\s+content="yes">/,
-  /<meta\s+name="apple-mobile-web-app-status-bar-style"\s+content="black-translucent">/,
-  /<meta\s+name="apple-mobile-web-app-title"\s+content="MediPOS">/,
-  /<meta\s+name="format-detection"\s+content="telephone=no">/,
-  /<meta\s+name="theme-color"\s+content="#0F6F67">/,
-  /<link\s+rel="manifest"\s+href="manifest\.webmanifest">/,
-  /<link\s+rel="apple-touch-icon"\s+href="assets\/app-icon-180\.png">/,
-  /serviceWorker\.register\('sw\.js'\)/
+const metas = parseTags(distHtml, 'meta');
+const hasMeta = (name, content) => metas.some((a) => a.name === name && a.content === content);
+const requiredMetas = [
+  ['viewport', 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover'],
+  ['apple-mobile-web-app-capable', 'yes'],
+  ['mobile-web-app-capable', 'yes'],
+  ['apple-mobile-web-app-status-bar-style', 'black-translucent'],
+  ['apple-mobile-web-app-title', 'MediPOS'],
+  ['format-detection', 'telephone=no'],
+  ['theme-color', '#0F6F67']
 ];
-for (const re of requiredTags) {
-  if (!re.test(distHtml)) errs.push(`index.html thiếu thẻ/đoạn khớp ${re}`);
+for (const [name, content] of requiredMetas) {
+  if (!hasMeta(name, content)) errs.push(`index.html thiếu meta ${name}="${content}"`);
 }
-const appCssIdx = distHtml.indexOf('href="css/app.css"');
-const pwaCssIdx = distHtml.indexOf('href="pwa.css"');
+
+const links = parseTags(distHtml, 'link');
+if (!links.some((a) => a.rel === 'manifest' && a.href === 'manifest.webmanifest')) {
+  errs.push('index.html thiếu link rel="manifest"');
+}
+if (!links.some((a) => a.rel === 'apple-touch-icon' && a.href === 'assets/app-icon-180.png')) {
+  errs.push('index.html thiếu link rel="apple-touch-icon"');
+}
+if (!/serviceWorker\.register\('sw\.js'\)/.test(distHtml)) {
+  errs.push('index.html thiếu đăng ký sw.js');
+}
+const appCssIdx = links.findIndex((a) => a.rel === 'stylesheet' && a.href === 'css/app.css');
+const pwaCssIdx = links.findIndex((a) => a.rel === 'stylesheet' && a.href === 'pwa.css');
 if (appCssIdx === -1 || pwaCssIdx === -1 || pwaCssIdx < appCssIdx) {
   errs.push('pwa.css phải đặt sau css/app.css trong index.html');
 }

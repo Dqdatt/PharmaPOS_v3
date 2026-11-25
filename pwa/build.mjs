@@ -11,7 +11,6 @@ const distDir = join(rootDir, 'pwa', 'dist');
 function copyDir(src, dest) {
   mkdirSync(dest, { recursive: true });
   for (const entry of readdirSync(src, { withFileTypes: true })) {
-    if (entry.name === '.DS_Store') continue;
     const srcPath = join(src, entry.name);
     const destPath = join(dest, entry.name);
     if (entry.isDirectory()) {

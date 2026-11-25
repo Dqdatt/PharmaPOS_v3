@@ -4,6 +4,13 @@ input, textarea, [contenteditable] { -webkit-user-select: text; user-select: tex
 .rotate-lock { display: none; position: fixed; inset: 0; z-index: 1000; background: var(--brand-grad); color: var(--on-dark);
   flex-direction: column; align-items: center; justify-content: center; gap: 16px; font-size: 16px; font-weight: 600; text-align: center; padding: 24px; }
 .rotate-lock img { width: 56px; height: 56px; }
+@media (display-mode: standalone), (max-width: 600px) {
+  :root { --sat: max(env(safe-area-inset-top, 0px), 12px); --sab: max(env(safe-area-inset-bottom, 0px), 12px); }
+  .stage { padding: 0; height: 100%; display: block; }
+  .phone { width: 100%; height: 100%; border-radius: 0; box-shadow: none; background: transparent; }
+  .app { border-radius: 0; }
+  .island, .statusbar { display: none; }
+}
 @media (orientation: landscape) and (max-height: 520px) {
   .rotate-lock { display: flex; }
   .stage { visibility: hidden; }
