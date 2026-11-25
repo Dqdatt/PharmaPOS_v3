@@ -1,40 +1,36 @@
-# HANDOFF — MediPOS (repo PharmaPOS_V3), 25/11/2026
+# HANDOFF — MediPOS (repo PharmaPOS_V3), 25/11/2026 tối
 
 ## Mục tiêu phiên vừa rồi
-Rút gu UI/UX của người dùng từ Kavor, đưa dự án vào workflow (`/batdau`) và dựng prototype app điện thoại MediPOS (liquid glass, đủ màn, splash, logo) có dùng `giao`.
+Dựng PWA MediPOS giống 100% prototype đã chốt, cấu hình PWA và khóa xoay dọc, đưa link cho người dùng test trên điện thoại.
 
-## Đã xong (nhánh `prototype-mobile`, chưa gộp main, chưa push)
-- `/batdau`: `AGENTS.md` (quy tắc dự án + luật UI prototype), `CLAUDE.md` = `@AGENTS.md`, `docs/TASKS.md` — 678c736.
-- Khung `prototype/` (core, token, router, kính, splash, Trang chủ) — 678c736, fa9d907. Xem: preview `prototype` (http.server 4173), bảng QA bên trái nhảy tới mọi màn.
-- Giao 011–014: đăng nhập/OTP/Face ID/PIN, đăng nhập web (QR + chọn số), doanh thu + tiện ích, tài khoản; sửa sau review — 0d329dc.
-- Vòng góp ý: nền `--wash` (d0799b6), tab bar (ed3dbe2), đăng nhập có dải thương hiệu, OTP có bàn phím số iOS, PIN không tràn (7d37c79), giao 015/016 làm đầy 10 màn trống (6a7900f).
-- Logo + tên như web: MediPOS, icon notes-medical; `prototype/logo.html`, file SVG/PNG ở `prototype/assets/` — 91036aa.
-- Kiểm: `node prototype/tools/check.mjs` đạt (24 màn, 48 state); bấm trọn luồng trên preview, console sạch.
-
-## PWA (phiên 25/11 tối)
-- `pwa/` chạy nguyên file prototype (copy byte): giao 017 (vỏ PWA: manifest portrait, SW cache theo hash, màn che khi xoay ngang, status bar iOS black-translucent), giao 018 (`npm run verify:pwa`: so ảnh 48 state prototype vs PWA, 0 pixel, + ngang/offline/manifest) — đạt 4/5 lần chạy (lần đầu lệch, chưa rõ state nào).
-- Sửa lỗi prototype: `App.appIcon()` trùng id gradient (60e0b77).
-- Deploy: đẩy `pwa/dist` lên nhánh `gh-pages` (orphan, làm trong scratchpad), Pages đã bật → https://dqdatt.github.io/PharmaPOS_v3/. Hai lượt deploy bị GitHub trả 500 — chưa lên. Đẩy lại: build, copy dist ra thư mục tạm, commit, `git push -f origin gh-pages`.
-- Cập nhật app trên máy: SW cache-first → bản mới hiện ở lần mở thứ 2.
+## Đã xong (nhánh `prototype-mobile`, chưa push, chưa gộp main)
+- `pwa/` chạy NGUYÊN file prototype (build copy byte `css/js/screens/assets`), không có giao diện riêng — giao 017 (50ad01a): `pwa/src/` (index.html bỏ bảng QA + meta iOS, `pwa.css`, manifest portrait/standalone, icon 192/512, `sw.js` precache theo hash + HTML network-first + font stale-while-revalidate), `pwa/build.mjs`, `pwa/tools/check.mjs`.
+- Kiểm chứng giao 018 (e5a359b): `npm run verify:pwa` (Playwright) so ảnh 48 state prototype vs PWA ở 390×844, ngưỡng 0, + xoay ngang/offline/manifest. Đạt 4/5 lần chạy.
+- Sửa lỗi prototype: `App.appIcon()` trùng id gradient nên icon banner thông báo mất màu (60e0b77).
+- Đã thử trên preview: luồng đăng nhập → OTP chạy, SW cài được, màn xoay ngang hiện, console sạch.
+- Preview `pwa` trong `.claude/launch.json` (python http.server 4174 -d pwa/dist).
+- Luật mới trong `AGENTS.md`: mọi yêu cầu sửa (kể cả góp ý qua lại) → đặc tả + chia qua `giao`.
 
 ## Đang dở
-Không có. Prototype chờ người dùng góp ý tiếp. Chưa commit: `HANDOFF.md`, `supabase/.gitignore`, `supabase/config.toml` (2 file supabase có từ trước phiên, không đụng).
+- Người dùng test qua LINK LOCAL: http://192.168.1.30:4174/ (cùng Wi-Fi, Mac bật; IP có thể đổi → `ipconfig getifaddr en0`). Đầu phiên: `npm run build:pwa` rồi preview_start `pwa`. Http nên SW/offline không chạy — bình thường.
+- GitHub Pages: nhánh `gh-pages` đã đẩy, Pages đã bật nhưng 2 lượt deploy bị GitHub lỗi 500. Người dùng nói KHÔNG cần đợi Pages nữa.
+- Chưa commit: `supabase/.gitignore`, `supabase/config.toml` (có từ trước, không đụng).
 
 ## Quyết định đã chốt
-- Tên hiển thị **MediPOS**, logo = icon web (`public/favicon.svg`, Font Awesome Free CC BY 4.0), teal như web. Chỉ giao diện sáng.
-- Đăng nhập web: web hiện QR + số 2 chữ số → app quét → chọn đúng số trong 3 → Face ID. Chọn sai = hủy luôn. Dự phòng: nhập SĐT trên web → app nhận thông báo đẩy để duyệt.
-- Kính chỉ ở lớp nổi; không nét "AI" ("·", chấm màu, đốm blur, chữ gradient); chữ ≥ 12px; màn sáng có nền `--wash`; màn ít nội dung thì thêm nội dung có ích, không để trống nửa dưới.
-- Màn mẫu: `prototype/screens/home.js`. Khung (core, app.css, data, splash, home) Claude giữ; mỗi nhóm màn một file để giao không đụng nhau.
-- Dữ liệu mẫu: 14:36 thứ Tư 25/11, ca sáng hết 14:00, đơn sau 14:00 do Thu Trang bán.
+- Sửa giao diện ở `prototype/` rồi build lại `pwa/`; không sửa màn trong `pwa/`.
+- Status bar iOS `black-translucent` (chữ giờ/pin luôn trắng, nhạt trên màn sáng — đã chấp nhận). iOS bỏ qua `orientation`, khóa dọc bằng màn che `.rotate-lock`.
+- Link HTTPS (khi cần) = GitHub Pages https://dqdatt.github.io/PharmaPOS_v3/ (repo public).
+- Mọi việc sửa chia qua `giao`; Claude đặc tả, duyệt, chạy preview thật trước `giao xong`.
 
 ## Nợ Ponytail
-- Không có `shortcut:` mới. Lỗi vặt chưa sửa: Enter ở form đăng nhập không gửi; bấm "Ở lại" trong 800ms đăng xuất vẫn đăng xuất; vài bóng đổ rgba cứng; ô mật khẩu chưa có bàn phím chữ mô phỏng — sửa khi port native hoặc khi người dùng thấy.
-- SVG logo kèm chữ để chữ dạng font (chưa chuyển nét) — gửi ra ngoài dùng PNG.
+- Không có `shortcut:` mới. `verify:pwa` còn chập chờn ~1/5 lần (chuyển màn theo giờ thật vs đồng hồ giả) — gặp lại thì lưu log và xem state nào.
+- Trên màn > 520px `html/body` bị khóa cuộn, khung máy cao 844px có thể bị cắt nếu cửa sổ thấp — chỉ ảnh hưởng máy tính bảng/desktop.
+- Nhân viên Gemini (agy) từng đọc ngược chỉ dẫn và hoàn tác file Claude → luôn `git diff prototype-mobile giao/ID -- prototype` trước `giao xong`.
 
 ## Việc tiếp theo
-1. Góp ý prototype vòng sau, sửa trên `prototype-mobile` — [opus high]
-2. Thiết kế thật đăng nhập web bằng điện thoại (API, token, QR hết hạn 2 phút, thu hồi phiên) + bỏ so PIN ở trình duyệt trong `src/views/Login.tsx` — [opus xhigh]
-3. Chốt nền tảng app (Expo/React Native như Kavor), port prototype 1:1 có so ảnh — [opus high]
+1. Nhận góp ý của người dùng khi test link local → đặc tả, giao sửa ở `prototype/`, build lại, kiểm `verify:pwa` — [opus high]
+2. Khi cần HTTPS: đẩy lại `gh-pages` (build, copy `pwa/dist` ra thư mục tạm, commit, push) — [haiku]
+3. Thiết kế thật đăng nhập web bằng điện thoại + bỏ so PIN ở trình duyệt — [opus xhigh]
 
 ## File cần đọc đầu tiên
-`AGENTS.md` · `prototype/js/core.js` · `prototype/screens/home.js` · `docs/prototype-specs/_chung.md` · `docs/TASKS.md`
+`AGENTS.md` · `pwa/src/index.html` · `pwa/src/sw.js` · `prototype/js/core.js` · `docs/TASKS.md`

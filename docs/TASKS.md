@@ -12,4 +12,6 @@
 - [ ] Prototype: góp ý vòng sau của người dùng — [opus high]
 - [ ] Prototype: lỗi vặt (Enter form đăng nhập, hủy đăng xuất khi bấm Ở lại, rgba cứng) — [sonnet]
 - [ ] Gộp nhánh `prototype-mobile` vào main khi người dùng chốt — [haiku]
-- [ ] PWA MediPOS từ prototype (giao 017 vỏ PWA, 018 kiểm chứng 0 pixel) + link GitHub Pages — [opus high]
+- [x] PWA MediPOS từ prototype (giao 017 vỏ PWA, 018 kiểm chứng 0 pixel) — [opus high]
+- [ ] PWA: góp ý của người dùng khi test link local (sửa ở prototype/, build lại) — [opus high]
+- [ ] PWA: deploy lại GitHub Pages khi cần HTTPS (lần trước GitHub lỗi 500) — [haiku]
