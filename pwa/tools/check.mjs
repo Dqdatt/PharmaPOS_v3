@@ -193,6 +193,9 @@ const pwaCss = readFileSync(join(distDir, 'pwa.css'), 'utf8');
 if (!pwaCss.includes('html.ios-standalone .phone') || !pwaCss.includes('var(--app-h)')) {
   errs.push('pwa.css thiếu rule html.ios-standalone .phone dùng var(--app-h)');
 }
+if (!pwaCss.includes('html.ios-standalone, html.ios-standalone body') || !pwaCss.includes('position: static')) {
+  errs.push('pwa.css thiếu rule html.ios-standalone, html.ios-standalone body với position: static');
+}
 if (/#[0-9a-fA-F]{3,8}\b/.test(pwaCss)) {
   errs.push('pwa.css có mã màu hex cứng, chỉ được dùng var(--...)');
 }
