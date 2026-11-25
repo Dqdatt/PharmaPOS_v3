@@ -8,4 +8,7 @@
 - [ ] Thiết kế thật luồng đăng nhập web bằng điện thoại (API, token, hết hạn QR, thu hồi phiên) — [opus xhigh]
 - [ ] Bỏ so PIN ở trình duyệt trong `Login.tsx` (PIN đang đọc từ bảng users về client) — [opus xhigh]
 - [ ] Chọn nền tảng app thật (Expo/React Native như Kavor) và port prototype 1:1 — [opus high]
-- [ ] Prototype: góp ý của người dùng sau khi xem bản đầy đủ — [opus high]
+- [x] Prototype: góp ý vòng 2 (nền, tab bar, đăng nhập, OTP, màn trống, logo MediPOS) — [opus high]
+- [ ] Prototype: góp ý vòng sau của người dùng — [opus high]
+- [ ] Prototype: lỗi vặt (Enter form đăng nhập, hủy đăng xuất khi bấm Ở lại, rgba cứng) — [sonnet]
+- [ ] Gộp nhánh `prototype-mobile` vào main khi người dùng chốt — [haiku]
