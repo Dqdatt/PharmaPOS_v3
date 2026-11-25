@@ -1,4 +1,4 @@
-/* PharmaPOS Mobile prototype — router, chuyển màn, lớp phủ, helper. Claude giữ file này.
+/* MediPOS Mobile prototype — router, chuyển màn, lớp phủ, helper. Claude giữ file này.
    Màn đăng ký: App.screen(name, { render(p) -> html, mount?(el, p), tab?, statusLight?, cls? })
    Trạng thái QA: App.state(label, run, group) */
 (function () {
@@ -66,21 +66,20 @@
   App.icon = (name, size = 24, cls = '') =>
     `<svg class="ic ${cls}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ICONS.info}</svg>`;
 
-  // ---------- Logo: chữ P có dấu cộng nhà thuốc trong lòng ----------
+  // ---------- Logo: giống bản web MediPOS (icon notes-medical của Font Awesome Free, CC BY 4.0) ----------
+  // Hai phần để làm hiệu ứng: tờ phiếu có dấu cộng khoét rỗng (lm-doc) và tờ lót phía sau (lm-back).
+  const LOGO_DOC = 'M96 352V96c0-35.3 28.7-64 64-64H416c35.3 0 64 28.7 64 64V293.5c0 17-6.7 33.3-18.7 45.3l-58.5 58.5c-12 12-28.3 18.7-45.3 18.7H160c-35.3 0-64-28.7-64-64zM272 128c-8.8 0-16 7.2-16 16v48H208c-8.8 0-16 7.2-16 16v32c0 8.8 7.2 16 16 16h48v48c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16v-48h48c8.8 0 16-7.2 16-16v-32c0-8.8-7.2-16-16-16h-48v-48c0-8.8-7.2-16-16-16H272z';
+  const LOGO_BACK = 'M48 120c0-13.3-10.7-24-24-24S0 106.7 0 120V344c0 75.1 60.9 136 136 136H456c13.3 0 24-10.7 24-24s-10.7-24-24-24H136c-48.6 0-88-39.4-88-88V120z';
   App.logoMark = (cls = '') =>
-    `<svg class="${cls}" viewBox="0 0 100 100" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-      <path class="lm-stem" pathLength="1" d="M34 76V24" stroke="currentColor" stroke-width="10"/>
-      <path class="lm-bowl" pathLength="1" d="M34 24h18a16 16 0 0 1 0 32H34" stroke="currentColor" stroke-width="10"/>
-      <path class="lm-plus" d="M51 33.5v13M44.5 40h13" stroke="var(--mint)" stroke-width="5.5"/>
+    `<svg class="${cls}" viewBox="-16 0 512 512" fill="currentColor" aria-hidden="true">
+      <path class="lm-back" d="${LOGO_BACK}"/><path class="lm-doc" fill-rule="evenodd" d="${LOGO_DOC}"/>
     </svg>`;
   App.appIcon = (cls = '') =>
-    `<svg class="${cls}" viewBox="0 0 100 100" aria-label="PharmaPOS">
+    `<svg class="${cls}" viewBox="0 0 100 100" aria-label="MediPOS">
       <defs><linearGradient id="aiG" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1FB8A7"/><stop offset=".55" stop-color="#0F6F67"/><stop offset="1" stop-color="#0D3F3B"/></linearGradient>
       <radialGradient id="aiH" cx=".5" cy="0" r=".8"><stop offset="0" stop-color="#fff" stop-opacity=".32"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient></defs>
       <rect width="100" height="100" rx="23" fill="url(#aiG)"/><rect width="100" height="100" rx="23" fill="url(#aiH)"/>
-      <g transform="translate(14 14) scale(.72)" fill="none" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M34 76V24" stroke="#F4FBFA" stroke-width="10"/><path d="M34 24h18a16 16 0 0 1 0 32H34" stroke="#F4FBFA" stroke-width="10"/>
-        <path d="M51 33.5v13M44.5 40h13" stroke="#9FF0E2" stroke-width="5.5"/></g>
+      <svg x="21" y="21" width="58" height="58" viewBox="-16 0 512 512" fill="#F4FBFA"><path d="${LOGO_BACK}"/><path fill-rule="evenodd" d="${LOGO_DOC}"/></svg>
     </svg>`;
 
   // ---------- Khối dựng sẵn ----------
@@ -289,7 +288,7 @@
     if (qa) {
       const groups = {};
       states.forEach((s, i) => { (groups[s.group] = groups[s.group] || []).push(`<button data-i="${i}">${App.esc(s.label)}</button>`); });
-      qa.innerHTML = `<div class="qa-brand">${App.appIcon()}<div><b>PharmaPOS Mobile</b><span>Prototype v0.1</span></div></div>` +
+      qa.innerHTML = `<div class="qa-brand">${App.appIcon()}<div><b>MediPOS Mobile</b><span>Prototype v0.1</span></div></div>` +
         Object.entries(groups).map(([g, b]) => `<div class="qa-group"><h4>${App.esc(g)}</h4>${b.join('')}</div>`).join('') +
         `<label><input type="checkbox" id="qaFidFail"> Face ID không khớp</label>` +
         `<div class="qa-group"><h4>Thương hiệu</h4><button onclick="location.href='logo.html'">Bộ logo</button></div>`;

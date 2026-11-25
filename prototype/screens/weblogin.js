@@ -138,7 +138,7 @@
         </header>
         ${p.state === 'denied' ? `
           <div class="wl-camera-center"><div class="empty wl-camera-denied">
-            <p>PharmaPOS cần camera để quét mã đăng nhập web. Camera chỉ bật khi bạn mở màn này.</p>
+            <p>MediPOS cần camera để quét mã đăng nhập web. Camera chỉ bật khi bạn mở màn này.</p>
             <button class="btn btn-primary tap" data-wl-settings>Mở Cài đặt</button>
           </div></div>` : `
           <div class="wl-camera-center"><div class="wl-camera-frame" aria-hidden="true">
@@ -146,7 +146,7 @@
             <span class="wl-scan-line"></span>${App.icon('qr', 96)}
           </div></div>
           <div class="wl-camera-help glass-clear">
-            <p>Mở trang đăng nhập PharmaPOS trên máy tính, rồi đưa mã QR vào khung.</p>
+            <p>Mở trang đăng nhập MediPOS trên máy tính, rồi đưa mã QR vào khung.</p>
             <button class="wl-torch tap" data-wl-torch aria-label="Đèn pin" aria-pressed="false">${App.icon('wlTorch', 22)}</button>
           </div>`}
       </div>`,
@@ -388,7 +388,7 @@
       <div class="empty wl-session-empty">
         <div class="tile">${App.icon('monitor', 28)}</div>
         <h2>Chưa có máy tính nào đăng nhập.</h2>
-        <p>Mở trang đăng nhập PharmaPOS trên máy tính rồi quét mã.</p>
+        <p>Mở trang đăng nhập MediPOS trên máy tính rồi quét mã.</p>
         <button class="btn btn-primary tap" data-go="webScan" data-mode="up">Quét mã</button>
       </div>` : items.map((session) => `
       <div class="wl-session" data-wl-session="${App.esc(session.id)}">

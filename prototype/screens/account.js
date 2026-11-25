@@ -78,7 +78,7 @@ App.css(`
   function showSupportSheet() {
     App.sheet(`
       <h3>Hỗ trợ kỹ thuật</h3>
-      <p>Tổng đài dược sĩ và kỹ thuật PharmaPOS luôn sẵn sàng hỗ trợ nhà thuốc.</p>
+      <p>Tổng đài dược sĩ và kỹ thuật MediPOS luôn sẵn sàng hỗ trợ nhà thuốc.</p>
       <div style="display:flex;flex-direction:column;gap:10px;margin-top:20px">
         <a class="btn btn-primary block tap" id="acCallAction" href="tel:19006868" style="text-decoration:none">${App.icon('phone', 20)}Gọi 1900 6868</a>
         <button class="btn btn-secondary block tap" id="acZaloAction">Nhắn Zalo</button>
@@ -90,7 +90,7 @@ App.css(`
         });
         sheetEl.querySelector('#acZaloAction')?.addEventListener('click', () => {
           close();
-          App.toast('Đang mở Zalo PharmaPOS', 'check');
+          App.toast('Đang mở Zalo MediPOS', 'check');
         });
       },
     });
@@ -520,7 +520,7 @@ App.css(`
           </div>
         </div>
         <div class="section ac-store-section ac-bottom">
-          <div class="section-head"><h2>Gói PharmaPOS</h2></div>
+          <div class="section-head"><h2>Gói MediPOS</h2></div>
           <div class="card" style="margin:0 16px">
             <div class="row ac-detail-row">
               <div class="row-main">

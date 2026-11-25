@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PharmaPOS Logo</title>
+  <title>MediPOS Logo</title>
   <link rel="icon" href="assets/app-icon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -29,10 +29,9 @@
     .hero-icon { width: 200px; height: 200px; filter: drop-shadow(0 24px 40px rgba(13, 63, 59, .35)); }
     .mark-l { width: 150px; height: 150px; }
     .replay { position: absolute; top: 14px; right: 14px; height: 36px; padding: 0 14px; border-radius: 18px; font-size: 13px; font-weight: 600; }
-    .draw .lm-stem, .draw .lm-bowl { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw .62s var(--ease) forwards; }
-    .draw .lm-bowl { animation-delay: .22s; animation-duration: .7s; }
-    .draw .lm-plus { transform-origin: 51px 40px; transform: scale(0) rotate(-90deg); animation: lgPlus .6s var(--pop) .72s forwards; }
-    @keyframes lgPlus { to { transform: none; } }
+    .draw .lm-back { opacity: 0; transform: translate(-90px, 90px); animation: lgIn .6s var(--ease) .1s forwards; }
+    .draw .lm-doc { transform-box: fill-box; transform-origin: 50% 50%; opacity: 0; transform: scale(.5); animation: lgIn .65s var(--pop) .35s forwards; }
+    @keyframes lgIn { to { opacity: 1; transform: none; } }
     .lockup { width: 80%; max-width: 360px; height: auto; }
     .stack { display: flex; flex-direction: column; align-items: center; gap: 16px; }
     .stack img { width: 96px; }
@@ -64,54 +63,47 @@
 <body>
 <main class="lg">
   <div class="lg-top">
-    <div><h1>Logo PharmaPOS</h1>
-      <p>Chữ P ôm dấu cộng nhà thuốc trong lòng chữ. Nét bo tròn đều, màu teal lấy từ bản web để app và web nhận ra là một.</p></div>
+    <div><h1>Logo MediPOS</h1>
+      <p>Cùng biểu tượng và tên với bản web: tờ đơn thuốc có dấu cộng, màu teal. App và web nhìn là biết một hệ thống.</p></div>
     <a href="index.html">Mở prototype app</a>
   </div>
 
   <h2>Biểu tượng chính</h2>
-  <p class="lg-note">Icon app dùng nền gradient teal có ánh sáng từ trên, giống màn splash. Logo vẽ nét khi mở app.</p>
+  <p class="lg-note">Icon app dùng nền gradient teal có ánh sáng từ trên, giống màn splash. Khi mở app, tờ lót trượt vào rồi tờ phiếu bật lên.</p>
   <div class="lg-grid g3">
-    <div class="tile-lg"><img class="hero-icon" src="assets/app-icon.svg" alt="Icon app PharmaPOS"><span class="cap">Icon app</span></div>
-    <div class="tile-lg brand"><svg id="drawMark" class="mark-l draw" viewBox="0 0 100 100" fill="none" stroke-linecap="round" stroke-linejoin="round" style="color:var(--on-dark)">
-        <path class="lm-stem" pathLength="1" d="M34 76V24" stroke="currentColor" stroke-width="10"/>
-        <path class="lm-bowl" pathLength="1" d="M34 24h18a16 16 0 0 1 0 32H34" stroke="currentColor" stroke-width="10"/>
-        <path class="lm-plus" d="M51 33.5v13M44.5 40h13" stroke="var(--mint)" stroke-width="5.5"/></svg>
+    <div class="tile-lg"><img class="hero-icon" src="assets/app-icon.svg" alt="Icon app MediPOS"><span class="cap">Icon app</span></div>
+    <div class="tile-lg brand"><svg id="drawMark" class="mark-l draw" viewBox="-16 0 512 512" style="fill:var(--on-dark)" aria-hidden="true"><path class="lm-back" d="M48 120c0-13.3-10.7-24-24-24S0 106.7 0 120V344c0 75.1 60.9 136 136 136H456c13.3 0 24-10.7 24-24s-10.7-24-24-24H136c-48.6 0-88-39.4-88-88V120z"/><path class="lm-doc" fill-rule="evenodd" d="M96 352V96c0-35.3 28.7-64 64-64H416c35.3 0 64 28.7 64 64V293.5c0 17-6.7 33.3-18.7 45.3l-58.5 58.5c-12 12-28.3 18.7-45.3 18.7H160c-35.3 0-64-28.7-64-64zM272 128c-8.8 0-16 7.2-16 16v48H208c-8.8 0-16 7.2-16 16v32c0 8.8 7.2 16 16 16h48v48c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16v-48h48c8.8 0 16-7.2 16-16v-32c0-8.8-7.2-16-16-16h-48v-48c0-8.8-7.2-16-16-16H272z"/></svg>
       <button class="replay glass-clear" id="replay">Chạy lại</button><span class="cap">Trên nền thương hiệu, hiệu ứng splash</span></div>
-    <div class="tile-lg"><img class="mark-l" src="assets/logo-mark.svg" alt="Logo PharmaPOS màu teal"><span class="cap">Trên nền sáng</span></div>
+    <div class="tile-lg"><img class="mark-l" src="assets/logo-mark.svg" alt="Logo MediPOS màu teal"><span class="cap">Trên nền sáng</span></div>
   </div>
 
   <h2>Logo kèm chữ</h2>
   <p class="lg-note">Bản ngang cho thanh trên của web, hóa đơn, tem A6. Bản dọc cho màn đăng nhập và tài liệu in.</p>
   <div class="lg-grid g2">
-    <div class="tile-lg" style="min-height:200px"><svg class="lockup" viewBox="0 0 400 100" role="img" aria-label="PharmaPOS ngang">
-  <g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M34 76V24" stroke="#0F6F67" stroke-width="10"/><path d="M34 24h18a16 16 0 0 1 0 32H34" stroke="#0F6F67" stroke-width="10"/><path d="M51 33.5v13M44.5 40h13" stroke="#16A394" stroke-width="5.5"/></g>
-  <text x="94" y="66" font-family="'Be Vietnam Pro', -apple-system, sans-serif" font-size="44" fill="#10201F" letter-spacing="-0.5"><tspan font-weight="600">Pharma</tspan><tspan font-weight="800">POS</tspan></text>
+    <div class="tile-lg" style="min-height:200px"><svg class="lockup" viewBox="0 0 304 100" role="img" aria-label="MediPOS ngang">
+  <svg x="12" y="18" width="64" height="64" viewBox="-16 0 512 512"><path fill="#0F766E" d="M48 120c0-13.3-10.7-24-24-24S0 106.7 0 120V344c0 75.1 60.9 136 136 136H456c13.3 0 24-10.7 24-24s-10.7-24-24-24H136c-48.6 0-88-39.4-88-88V120z"/><path fill="#0F766E" fill-rule="evenodd" d="M96 352V96c0-35.3 28.7-64 64-64H416c35.3 0 64 28.7 64 64V293.5c0 17-6.7 33.3-18.7 45.3l-58.5 58.5c-12 12-28.3 18.7-45.3 18.7H160c-35.3 0-64-28.7-64-64zM272 128c-8.8 0-16 7.2-16 16v48H208c-8.8 0-16 7.2-16 16v32c0 8.8 7.2 16 16 16h48v48c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16v-48h48c8.8 0 16-7.2 16-16v-32c0-8.8-7.2-16-16-16h-48v-48c0-8.8-7.2-16-16-16H272z"/></svg>
+  <text x="92" y="66" font-family="'Be Vietnam Pro', -apple-system, sans-serif" font-size="44" fill="#10201F" letter-spacing="-0.5"><tspan font-weight="600">Medi</tspan><tspan font-weight="800">POS</tspan></text>
 </svg><span class="cap">Ngang, nền sáng</span></div>
-    <div class="tile-lg ink" style="min-height:200px"><svg class="lockup" viewBox="0 0 400 100" role="img" aria-label="PharmaPOS ngang nền tối">
-  <g fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M34 76V24" stroke="#F4FBFA" stroke-width="10"/><path d="M34 24h18a16 16 0 0 1 0 32H34" stroke="#F4FBFA" stroke-width="10"/><path d="M51 33.5v13M44.5 40h13" stroke="#9FF0E2" stroke-width="5.5"/></g>
-  <text x="94" y="66" font-family="'Be Vietnam Pro', -apple-system, sans-serif" font-size="44" fill="#F4FBFA" letter-spacing="-0.5"><tspan font-weight="600">Pharma</tspan><tspan font-weight="800">POS</tspan></text>
+    <div class="tile-lg ink" style="min-height:200px"><svg class="lockup" viewBox="0 0 304 100" role="img" aria-label="MediPOS ngang nền tối">
+  <svg x="12" y="18" width="64" height="64" viewBox="-16 0 512 512"><path fill="#F4FBFA" d="M48 120c0-13.3-10.7-24-24-24S0 106.7 0 120V344c0 75.1 60.9 136 136 136H456c13.3 0 24-10.7 24-24s-10.7-24-24-24H136c-48.6 0-88-39.4-88-88V120z"/><path fill="#F4FBFA" fill-rule="evenodd" d="M96 352V96c0-35.3 28.7-64 64-64H416c35.3 0 64 28.7 64 64V293.5c0 17-6.7 33.3-18.7 45.3l-58.5 58.5c-12 12-28.3 18.7-45.3 18.7H160c-35.3 0-64-28.7-64-64zM272 128c-8.8 0-16 7.2-16 16v48H208c-8.8 0-16 7.2-16 16v32c0 8.8 7.2 16 16 16h48v48c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16v-48h48c8.8 0 16-7.2 16-16v-32c0-8.8-7.2-16-16-16h-48v-48c0-8.8-7.2-16-16-16H272z"/></svg>
+  <text x="92" y="66" font-family="'Be Vietnam Pro', -apple-system, sans-serif" font-size="44" fill="#F4FBFA" letter-spacing="-0.5"><tspan font-weight="600">Medi</tspan><tspan font-weight="800">POS</tspan></text>
 </svg><span class="cap">Ngang, nền tối</span></div>
-    <div class="tile-lg" style="min-height:240px"><div class="stack"><img src="assets/app-icon.svg" alt=""><b>Pharma<span>POS</span></b></div><span class="cap">Dọc</span></div>
+    <div class="tile-lg" style="min-height:240px"><div class="stack"><img src="assets/app-icon.svg" alt=""><b>Medi<span>POS</span></b></div><span class="cap">Dọc</span></div>
     <div class="tile-lg" style="min-height:240px"><img class="mark-l" src="assets/logo-mark-mono.svg" alt="Logo một màu"><span class="cap">Một màu, cho in hóa đơn nhiệt và đóng dấu</span></div>
   </div>
 
   <h2>Cấu trúc</h2>
-  <p class="lg-note">Vẽ trên lưới 100 đơn vị. Giữ đúng tỷ lệ nét khi dựng lại ở app native.</p>
+  <p class="lg-note">Giữ nguyên biểu tượng đang dùng trên web MediPOS để chủ nhà thuốc nhận ra ngay.</p>
   <div class="lg-grid g2">
     <div class="tile-lg"><div class="con">
-      <svg viewBox="0 0 100 100" fill="none" id="grid" aria-hidden="true"></svg>
-      <svg viewBox="0 0 100 100" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M34 76V24" stroke="var(--teal-700)" stroke-width="10" opacity=".9"/><path d="M34 24h18a16 16 0 0 1 0 32H34" stroke="var(--teal-700)" stroke-width="10" opacity=".9"/>
-        <path d="M51 33.5v13M44.5 40h13" stroke="var(--teal-500)" stroke-width="5.5"/>
-        <circle cx="52" cy="40" r="16" stroke="var(--bad)" stroke-width=".5" stroke-dasharray="1.5 1.5"/>
-        <circle cx="51" cy="40" r=".9" fill="var(--bad)"/>
-      </svg></div><span class="cap">Lưới 100 × 100</span></div>
+      <svg viewBox="-16 0 512 512" fill="none" id="grid" aria-hidden="true"></svg>
+      <svg viewBox="-16 0 512 512" aria-hidden="true"><path style="fill:var(--teal-300)" d="M48 120c0-13.3-10.7-24-24-24S0 106.7 0 120V344c0 75.1 60.9 136 136 136H456c13.3 0 24-10.7 24-24s-10.7-24-24-24H136c-48.6 0-88-39.4-88-88V120z"/><path style="fill:var(--teal-700)" fill-rule="evenodd" d="M96 352V96c0-35.3 28.7-64 64-64H416c35.3 0 64 28.7 64 64V293.5c0 17-6.7 33.3-18.7 45.3l-58.5 58.5c-12 12-28.3 18.7-45.3 18.7H160c-35.3 0-64-28.7-64-64zM272 128c-8.8 0-16 7.2-16 16v48H208c-8.8 0-16 7.2-16 16v32c0 8.8 7.2 16 16 16h48v48c0 8.8 7.2 16 16 16h32c8.8 0 16-7.2 16-16v-48h48c8.8 0 16-7.2 16-16v-32c0-8.8-7.2-16-16-16h-48v-48c0-8.8-7.2-16-16-16H272z"/></svg>
+    </div><span class="cap">Lưới 512 × 512</span></div>
     <div class="card con-legend">
-      <div><b>Thân chữ P</b>Nét 10, từ y 24 tới 76, hai đầu bo tròn.</div>
-      <div><b>Lòng chữ P</b>Bán kính 16 (vòng đỏ đứt), cao 32, nét 10.</div>
-      <div><b>Dấu cộng</b>Nét 5,5, dài 13, tâm (51, 40), màu nhạt hơn thân một bậc.</div>
-      <div><b>Khoảng trống quanh logo</b>Tối thiểu bằng độ dày nét thân (10 đơn vị) ở mọi phía.</div>
+      <div><b>Tờ phiếu</b>Khung bo góc 64, góc dưới phải gấp chéo như tờ đơn thuốc.</div>
+      <div><b>Dấu cộng</b>Khoét rỗng giữa tờ phiếu, nhìn xuyên nền; không tô màu riêng.</div>
+      <div><b>Tờ lót</b>Nét chữ L ôm góc dưới trái, gợi chồng phiếu, sổ sách nhà thuốc.</div>
+      <div><b>Nguồn</b>Biểu tượng notes-medical của Font Awesome Free (giấy phép CC BY 4.0), đang dùng ở favicon và đầu trang web.</div>
     </div>
   </div>
 
@@ -127,14 +119,14 @@
       <figure><img src="assets/logo-mark.svg" width="24" alt="">24</figure>
     </div>
     <div class="homescreen">
-      <figure><span class="ph"></span>Ảnh</figure><figure><span class="ph"></span>Zalo</figure><figure><img src="assets/app-icon.svg" alt="">PharmaPOS</figure><figure><span class="ph"></span>Ngân hàng</figure>
+      <figure><span class="ph"></span>Ảnh</figure><figure><span class="ph"></span>Zalo</figure><figure><img src="assets/app-icon.svg" alt="">MediPOS</figure><figure><span class="ph"></span>Ngân hàng</figure>
       <figure><span class="ph"></span>Lịch</figure><figure><span class="ph"></span>Ghi chú</figure><figure><span class="ph"></span>Camera</figure><figure><span class="ph"></span>Cài đặt</figure>
     </div>
   </div>
 
   <h2>Màu</h2>
   <div class="sw">
-    <div style="background:var(--teal-700);color:var(--on-dark)">Teal chính<span>#0F6F67</span></div>
+    <div style="background:var(--teal-700);color:var(--on-dark)">Teal chính<span>#0F766E như web</span></div>
     <div style="background:var(--teal-500);color:var(--on-dark)">Teal sáng<span>#16A394</span></div>
     <div style="background:var(--mint);color:var(--teal-900)">Bạc hà<span>#9FF0E2</span></div>
     <div style="background:var(--teal-950);color:var(--on-dark)">Xanh đêm<span>#0A2826</span></div>
@@ -144,7 +136,7 @@
   <h2>Dùng đúng</h2>
   <div class="rules">
     <div class="card"><b>Không xoay, không kéo méo</b>Logo luôn đứng thẳng, giữ tỷ lệ 1:1.</div>
-    <div class="card"><b>Không đổi màu dấu cộng thành đỏ</b>Dấu cộng đỏ dễ nhầm với y tế cấp cứu; giữ teal hoặc bạc hà.</div>
+    <div class="card"><b>Không tô đỏ dấu cộng</b>Dấu cộng là phần khoét rỗng; tô đỏ dễ nhầm với ký hiệu cấp cứu.</div>
     <div class="card"><b>Không đặt trên ảnh rối</b>Đặt trên nền đặc hoặc gradient thương hiệu, đủ tương phản.</div>
   </div>
 
@@ -165,7 +157,7 @@
   // lưới 10 đơn vị cho phần cấu trúc
   const g = document.getElementById('grid');
   let h = '';
-  for (let i = 0; i <= 100; i += 10) h += `<path d="M${i} 0V100M0 ${i}H100" stroke="var(--line)" stroke-width=".35"/>`;
+  for (let i = -16; i <= 496; i += 32) h += `<path d="M${i} 0V512M-16 ${i + 16}H496" stroke="var(--line)" stroke-width="1.6"/>`;
   g.innerHTML = h;
   document.getElementById('replay').addEventListener('click', () => {
     const m = document.getElementById('drawMark');

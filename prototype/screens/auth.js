@@ -200,7 +200,7 @@
       const phoneErr = p.phoneError ? 'Số điện thoại cần đủ 10 số. Kiểm tra lại rồi thử.' : '';
       return `<div class="au-login"><div class="au-hero">
         <div class="au-hero-mark glass-clear rise">${App.logoMark()}</div>
-        <div class="au-hero-word">Pharma<b>POS</b></div>
+        <div class="au-hero-word">Medi<b>POS</b></div>
         <p class="au-hero-sub">Duyệt đăng nhập web và xem doanh thu nhà thuốc ngay trên điện thoại.</p>
       </div>
       <div class="au-wrap">

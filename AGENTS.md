@@ -1,7 +1,7 @@
 # PharmaPOS V3 — quy tắc dự án (Claude, Codex, Antigravity cùng đọc)
 
 Phần mềm bán hàng + quản lý nhà thuốc chạy trên web (bán lẻ, kho, nhập/xuất, báo cáo, nhân viên, in tem/hóa đơn).
-Đang làm thêm **app điện thoại cho chủ nhà thuốc**: duyệt đăng nhập web bằng điện thoại, xem doanh thu, tiện ích. Bước hiện tại là prototype HTML ở `prototype/`.
+Tên hiển thị cho người dùng là **MediPOS** (web và app), logo là icon notes-medical (`public/favicon.svg`). Đang làm thêm **app điện thoại cho chủ nhà thuốc**: duyệt đăng nhập web bằng điện thoại, xem doanh thu, tiện ích. Bước hiện tại là prototype HTML ở `prototype/`.
 
 ## Stack
 - Web: React 19 + Vite 6 + TypeScript 5.8, Tailwind 4 (`@tailwindcss/vite`), `motion`, `lucide-react`, `recharts`, `react-router-dom` 7.
