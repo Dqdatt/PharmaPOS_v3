@@ -329,6 +329,7 @@
     mount(el) {
       const { id, browser, os, device, place, ip, time } = request;
       sessions = [{ id, browser, os, device, place, ip, since: `${time} hôm nay`, lastActive: 'vừa xong' }, ...sessions.filter((session) => session.id !== id)];
+      DATA.webSessions = sessions;
       el.querySelector('[data-wl-home]').onclick = () => App.reset('home');
       el.querySelector('[data-wl-sessions]').onclick = () => App.reset('webSessions', { fromDone: true });
     },
@@ -398,6 +399,7 @@
             const leaving = target ? [target] : cards;
             const ids = leaving.map((card) => card.dataset.wlSession);
             sessions = sessions.filter((item) => !ids.includes(item.id));
+            DATA.webSessions = sessions;
             list.querySelectorAll('button').forEach((button) => { button.disabled = true; });
             leaving.forEach((card) => {
               card.style.height = `${card.offsetHeight}px`;

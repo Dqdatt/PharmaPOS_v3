@@ -17,7 +17,7 @@ App.css(`
 .rv-bar { justify-self: center; width: 12px; border-radius: 6px; background: var(--teal-200); transform-origin: bottom; transform: scaleY(0); }
 .rv-bar.now { background: var(--teal-700); }
 .rv-bar.later { background: var(--soft); }
-.rv-bars.grow .rv-bar, .rv-bars.grow .rv-wbar { animation: rvGrow .5s var(--spring) forwards; }
+.rv-bars.grow .rv-bar, .rv-wbars.grow .rv-wbar { animation: rvGrow .5s var(--spring) forwards; }
 @keyframes rvGrow { to { transform: none; } }
 .rv-axis { display: grid; grid-template-columns: repeat(16, 1fr); margin-top: 8px; font-size: 12px; color: var(--ink-3); height: 18px; }
 .rv-axis span { justify-self: center; white-space: nowrap; }

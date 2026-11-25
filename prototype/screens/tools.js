@@ -101,7 +101,7 @@ App.css(`
             </div>
             <div class="row tap" data-go="payables">
               <div class="tile">${App.icon('wallet', 20)}</div>
-              <div class="row-main"><div class="row-title">Công nợ nhà cung cấp</div></div>
+              <div class="row-main"><div class="row-title">Công nợ</div></div>
               <div class="row-end num">${App.money(totalPay)}${App.icon('chev', 18)}</div>
             </div>
           </div>

@@ -23,13 +23,14 @@
   .au-eye { position: absolute; right: 6px; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: var(--ink-3); }
   .au-err { display: flex; align-items: flex-start; gap: 6px; margin-top: 8px; font-size: 13px; line-height: 1.4; color: var(--bad); }
   .au-err .ic { margin-top: 1px; }
+  .au-err[hidden] { display: none; }
   .au-forgot { align-self: flex-end; font-size: 14px; font-weight: 600; color: var(--teal-700); padding: 4px 0; }
   .au-foot { margin-top: auto; padding-top: 24px; display: flex; flex-direction: column; gap: 8px; }
 
   /* OTP */
   .au-otp-zone { position: relative; margin-top: 32px; }
   .au-otp-input { position: absolute; inset: 0; opacity: 0; pointer-events: none; font-size: 16px; }
-  .au-otp-row { display: grid; grid-template-columns: repeat(6, 48px); justify-content: space-between; gap: 8px; }
+  .au-otp-row { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
   .au-otp-row.shake { animation: shake .45s var(--ease); }
   .au-otp-box { height: 56px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--card);
     display: grid; place-items: center; font-size: 24px; font-weight: 700; color: var(--ink);
@@ -95,7 +96,7 @@
   .au-lock .au-dot.on { border-color: var(--on-dark); background: var(--on-dark); }
   .au-lock .au-dot.ok { border-color: var(--mint); background: var(--mint); }
   .au-lock .au-pin-err { color: var(--mint); }
-  .au-lock .au-key { border: 0; color: var(--on-dark); }
+  .au-lock .au-key { border: 0; color: var(--on-dark); background: var(--glass-clear); }
   .au-lock .au-key span { color: var(--on-dark-2); }
   .au-lock .au-key.del { background: transparent; box-shadow: none; }
   .au-lock .au-key.del::before { display: none; }

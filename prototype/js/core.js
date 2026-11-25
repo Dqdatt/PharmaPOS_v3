@@ -162,7 +162,7 @@
   function transition(from, to, mode, dropFrom) {
     const t = T[mode];
     if (!from || !t) { if (from) finish(from, dropFrom); return; }
-    moving = true;
+    moving = mode !== 'fade' && mode !== 'reveal'; // fade/reveal không khóa: state QA hay gọi reset rồi go ngay
     (t[3] === 'to' ? to : from).el.style.zIndex = 2;
     (t[3] === 'to' ? from : to).el.style.zIndex = 1;
     const opt = { duration: t[2], easing: 'cubic-bezier(.22,.8,.24,1)' };
@@ -172,8 +172,11 @@
   }
   function finish(v, drop) { v.el.style.zIndex = ''; if (drop) v.el.remove(); else v.el.hidden = true; }
 
+  let navAt = 0;
   App.go = (name, p = {}, mode = 'push') => {
-    if (moving) return;
+    // khóa chống bấm đúp; lệnh gọi liền nhau trong code (state QA reset → go → go) vẫn qua
+    if (moving && performance.now() - navAt > 30) return;
+    navAt = performance.now();
     const from = stack[stack.length - 1];
     const to = makeView(name, p); to.mode = mode;
     stack.push(to); enter(to); transition(from, to, mode, false);
@@ -185,6 +188,7 @@
     transition(from, to, from.mode === 'up' ? 'down' : 'pop', true);
   };
   App.reset = (name, p = {}, mode = 'fade') => {
+    navAt = performance.now();
     const from = stack[stack.length - 1];
     stack.slice(0, -1).forEach((v) => v.el.remove());
     const to = makeView(name, p); stack = [to]; enter(to); transition(from, to, mode, true);

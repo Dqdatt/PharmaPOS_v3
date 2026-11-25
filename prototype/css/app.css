@@ -202,7 +202,7 @@ h1, h2, h3, p { margin: 0; }
 .toast.show { transform: translate(-50%, 0); }
 .toast .ic { color: var(--teal-700); }
 
-.banner { position: absolute; left: 8px; right: 8px; top: 8px; border-radius: 26px; padding: 14px 16px; display: grid; grid-template-columns: 40px 1fr auto; gap: 12px;
+.banner { position: absolute; left: 8px; right: 8px; top: calc(var(--sat) + 4px); border-radius: 26px; padding: 14px 16px; display: grid; grid-template-columns: 40px 1fr auto; gap: 12px;
   align-items: center; cursor: pointer; transform: translateY(-140%); transition: transform .5s var(--spring); }
 .banner.show { transform: none; }
 .banner-icon { width: 40px; height: 40px; border-radius: 10px; overflow: hidden; }
