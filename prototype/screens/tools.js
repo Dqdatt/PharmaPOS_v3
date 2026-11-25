@@ -83,8 +83,8 @@ App.css(`
   ];
   const PAYMENT_DATE = '25/11';
   const SHIFT_REVENUE = [
-    { title: 'Ca sáng, đã xong', amount: 9860000, detail: '58 hóa đơn, Ngọc Hân và Minh Tuấn' },
-    { title: 'Ca chiều, đang chạy', amount: 2620000, detail: '28 hóa đơn, Thu Trang' },
+    { title: 'Ca sáng, đã xong', amount: 10350000, detail: '70 hóa đơn, Ngọc Hân và Minh Tuấn' },
+    { title: 'Ca chiều, đang chạy', amount: 2130000, detail: '16 hóa đơn, Thu Trang' },
   ];
   const BEST_SELLERS = [
     { name: 'Panadol Extra', sold: 18, left: 3, unit: 'hộp', revenue: 1260000 },

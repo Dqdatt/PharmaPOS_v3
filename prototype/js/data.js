@@ -18,9 +18,9 @@
     ],
     month: { label: 'Tháng 11', revenue: 318650000, lastMonthSameDay: 296400000, invoices: 2214, target: 400000000 },
     invoices: [
-      { id: 'HD2511-086', time: '14:32', items: ['Panadol Extra', 'Berberin', 'Oresol', 'Vitamin C 500'], total: 186000, staff: 'Ngọc Hân', pay: 'Chuyển khoản' },
-      { id: 'HD2511-085', time: '14:20', items: ['Augmentin 625mg'], total: 245000, staff: 'Minh Tuấn', pay: 'Tiền mặt' },
-      { id: 'HD2511-084', time: '14:05', items: ['Telfast HD 180', 'Strepsils'], total: 132000, staff: 'Ngọc Hân', pay: 'Chuyển khoản' },
+      { id: 'HD2511-086', time: '14:32', items: ['Panadol Extra', 'Berberin', 'Oresol', 'Vitamin C 500'], total: 186000, staff: 'Thu Trang', pay: 'Chuyển khoản' },
+      { id: 'HD2511-085', time: '14:20', items: ['Augmentin 625mg'], total: 245000, staff: 'Thu Trang', pay: 'Tiền mặt' },
+      { id: 'HD2511-084', time: '14:05', items: ['Telfast HD 180', 'Strepsils'], total: 132000, staff: 'Thu Trang', pay: 'Chuyển khoản' },
       { id: 'HD2511-083', time: '13:51', items: ['Smecta', 'Oresol', 'Men vi sinh Enterogermina'], total: 158000, staff: 'Thu Trang', pay: 'Tiền mặt' },
       { id: 'HD2511-082', time: '13:40', items: ['Gaviscon'], total: 96000, staff: 'Minh Tuấn', pay: 'Thẻ' },
     ],
@@ -38,9 +38,9 @@
     ],
     payables: [{ supplier: 'Công ty Dược Phúc Long', amount: 4200000, due: '28/11' }],
     shifts: [
-      { name: 'Ngọc Hân', shift: 'Ca sáng 7:00 đến 14:00', status: 'Đang làm' },
-      { name: 'Minh Tuấn', shift: 'Ca sáng 7:00 đến 14:00', status: 'Đang làm' },
-      { name: 'Thu Trang', shift: 'Ca chiều 14:00 đến 22:00', status: 'Vào ca lúc 13:56' },
+      { name: 'Ngọc Hân', shift: 'Ca sáng 7:00 đến 14:00', status: 'Hết ca 14:02' },
+      { name: 'Minh Tuấn', shift: 'Ca sáng 7:00 đến 14:00', status: 'Hết ca 14:00' },
+      { name: 'Thu Trang', shift: 'Ca chiều 14:00 đến 22:00', status: 'Đang làm' },
     ],
     webSessions: [
       { id: 'w1', browser: 'Chrome', os: 'macOS', device: 'MacBook Pro', place: 'Quận 3, TP.HCM', ip: '113.161.24.8', since: '08:12 hôm nay', lastActive: '2 phút trước' },
