@@ -28,7 +28,7 @@ App.css(`
 .tl-status-muted { font-size: 14px; font-weight: 500; color: var(--ink-2); }
 
 .tl-search-nav { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 10px;
-  padding: calc(var(--sat) + 4px) 16px 10px; background: var(--page); }
+  padding: calc(var(--sat) + 4px) 16px 10px; background: var(--glass-strong); backdrop-filter: var(--gl-blur); -webkit-backdrop-filter: var(--gl-blur); }
 .tl-search-box { flex: 1; display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px;
   background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
 .tl-search-box .ic { color: var(--ink-3); }

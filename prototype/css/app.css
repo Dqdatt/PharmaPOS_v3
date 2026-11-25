@@ -22,6 +22,10 @@
   --brand-grad: radial-gradient(120% 70% at 50% -10%, rgba(255,255,255,.30), rgba(255,255,255,0) 62%),
                 linear-gradient(165deg, #1AAE9E 0%, #0F6F67 52%, #0D3F3B 100%);
 
+  /* Nền màn sáng: ánh xanh nhà thuốc rọi từ góc trên, nhạt dần về --page (không đốm blur) */
+  --wash: radial-gradient(120% 55% at 88% -12%, rgba(159, 240, 226, .62), rgba(159, 240, 226, 0) 62%),
+          linear-gradient(180deg, #CBECE5 0px, #DCF0EB 150px, #E9F3F1 300px, rgba(239, 244, 243, 0) 460px);
+
   --radius: 20px;
   --radius-sm: 12px;
 
@@ -68,6 +72,7 @@ h1, h2, h3, p { margin: 0; }
 .view { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; background: var(--page); scrollbar-width: none; overscroll-behavior: contain; }
 .view::-webkit-scrollbar { display: none; }
 .view.dark { background: var(--teal-950); }
+.view:not(.dark) { background: var(--wash) top / 100% 460px no-repeat local, var(--page); }
 
 .island { position: absolute; top: 11px; left: 50%; width: 124px; height: 36px; margin-left: -62px; border-radius: 20px; background: #050707; z-index: 60; pointer-events: none; }
 .statusbar { position: absolute; top: 0; left: 0; right: 0; height: var(--sat); padding: 16px 30px 0 44px; display: flex; justify-content: space-between;
