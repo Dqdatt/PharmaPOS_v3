@@ -28,7 +28,8 @@ App.css(`
 .tl-status-muted { font-size: 14px; font-weight: 500; color: var(--ink-2); }
 
 .tl-search-nav { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 10px;
-  padding: calc(var(--sat) + 4px) 16px 10px; background: var(--glass-strong); backdrop-filter: var(--gl-blur); -webkit-backdrop-filter: var(--gl-blur); }
+  padding: calc(var(--sat) + 4px) 16px 10px; transition: background .25s var(--ease), box-shadow .25s var(--ease); }
+.tl-search-nav.scrolled { background: var(--glass-strong); backdrop-filter: var(--gl-blur); -webkit-backdrop-filter: var(--gl-blur); box-shadow: 0 1px 0 var(--line); }
 .tl-search-box { flex: 1; display: flex; align-items: center; gap: 8px; height: 44px; padding: 0 14px;
   background: var(--card); border: 1px solid var(--line); border-radius: 14px; }
 .tl-search-box .ic { color: var(--ink-3); }
@@ -307,7 +308,7 @@ App.css(`
 
   App.screen('stockSearch', {
     render: () => `
-      <header class="tl-search-nav">
+      <header class="tl-search-nav" data-nav>
         <button class="nav-btn glass tap" data-back aria-label="Quay lại">${App.icon('back', 22)}</button>
         <div class="tl-search-box">
           ${App.icon('search', 18)}

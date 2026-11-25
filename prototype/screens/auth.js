@@ -6,7 +6,7 @@
 
   App.css(`
   .au-wrap { min-height: 100%; display: flex; flex-direction: column; padding: calc(var(--sat) + 28px) 20px calc(var(--sab) + 16px); }
-  .au-wrap.has-nav { padding-top: 8px; }
+  .au-wrap.has-nav { padding-top: 8px; min-height: calc(100% - var(--sat) - 56px); }
   .au-logo { width: 72px; height: 72px; border-radius: 18px; display: block; box-shadow: 0 12px 28px -12px color-mix(in srgb, var(--teal-700) 45%, transparent); }
   .au-h1 { font-size: 28px; font-weight: 700; line-height: 1.25; margin-top: 24px; color: var(--ink); }
   .au-sub { font-size: 15px; line-height: 1.5; color: var(--ink-2); margin-top: 8px; }
@@ -24,6 +24,17 @@
   .au-err { display: flex; align-items: flex-start; gap: 6px; margin-top: 8px; font-size: 13px; line-height: 1.4; color: var(--bad); }
   .au-err .ic { margin-top: 1px; }
   .au-err[hidden] { display: none; }
+  .au-login { min-height: 100%; display: flex; flex-direction: column; }
+  .au-hero { position: relative; background: var(--brand-grad); color: var(--on-dark); padding: calc(var(--sat) + 28px) 24px 44px;
+    -webkit-mask: radial-gradient(circle 7px at 50% 100%, transparent 96%, black 100%) 0 0 / 20px 100% repeat-x;
+            mask: radial-gradient(circle 7px at 50% 100%, transparent 96%, black 100%) 0 0 / 20px 100% repeat-x; }
+  .au-hero-mark { width: 64px; height: 64px; border-radius: 20px; display: grid; place-items: center; }
+  .au-hero-mark svg { width: 48px; height: 48px; color: var(--on-dark); }
+  .au-hero-word { font-size: 28px; font-weight: 600; margin-top: 20px; }
+  .au-hero-word b { font-weight: 800; }
+  .au-hero-sub { font-size: 15px; line-height: 1.5; color: var(--on-dark-2); margin-top: 6px; max-width: 290px; }
+  .au-login .au-wrap { min-height: 0; flex: 1; padding-top: 24px; }
+  .au-login .au-h1 { margin-top: 0; font-size: 22px; }
   .au-forgot { align-self: flex-end; font-size: 14px; font-weight: 600; color: var(--teal-700); padding: 4px 0; }
   .au-foot { margin-top: auto; padding-top: 24px; display: flex; flex-direction: column; gap: 8px; }
 
@@ -42,6 +53,19 @@
   @keyframes auBlink { 50% { opacity: 0; } }
   .au-resend { margin-top: 24px; font-size: 14px; color: var(--ink-2); min-height: 24px; }
   .au-resend button { font-size: 14px; font-weight: 600; color: var(--teal-700); }
+
+  .au-kb { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 6px var(--sab); z-index: 5;
+    background: color-mix(in srgb, var(--soft) 72%, var(--ink-3)); animation: auKbIn .38s var(--ease) both; }
+  @keyframes auKbIn { from { transform: translateY(100%); } }
+  .au-kb-suggest { width: 100%; height: 44px; display: flex; align-items: center; justify-content: center; gap: 2px; flex-direction: column; font-size: 13px; color: var(--ink-2); }
+  .au-kb-suggest b { font-size: 16px; font-weight: 600; color: var(--ink); letter-spacing: .04em; }
+  .au-kb-keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding-bottom: 6px; }
+  .au-kb-keys button { height: 46px; border-radius: 6px; background: var(--card); box-shadow: 0 1px 0 color-mix(in srgb, var(--ink) 35%, transparent);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--ink); }
+  .au-kb-keys button:active { background: var(--soft); }
+  .au-kb-keys b { font-size: 24px; font-weight: 400; line-height: 1; }
+  .au-kb-keys span { font-size: 12px; font-weight: 600; letter-spacing: .1em; color: var(--ink-2); }
+  .au-kb-keys .blank, .au-kb-keys .del { background: none; box-shadow: none; }
 
   /* Face ID setup */
   .au-bio-mid { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 12px; }
@@ -170,12 +194,17 @@
 
   // ---------- 1. Đăng nhập ----------
   App.screen('login', {
+    statusLight: true,
     render: (p) => {
       const phone = p.phone ? formatPhone(p.phone) : '';
       const phoneErr = p.phoneError ? 'Số điện thoại cần đủ 10 số. Kiểm tra lại rồi thử.' : '';
-      return `<div class="au-wrap">
-        <div class="au-logo rise">${App.appIcon()}</div>
-        <h1 class="au-h1">Đăng nhập PharmaPOS</h1>
+      return `<div class="au-login"><div class="au-hero">
+        <div class="au-hero-mark glass-clear rise">${App.logoMark()}</div>
+        <div class="au-hero-word">Pharma<b>POS</b></div>
+        <p class="au-hero-sub">Duyệt đăng nhập web và xem doanh thu nhà thuốc ngay trên điện thoại.</p>
+      </div>
+      <div class="au-wrap">
+        <h1 class="au-h1">Đăng nhập</h1>
         <p class="au-sub">Dùng tài khoản chủ nhà thuốc, giống trên web.</p>
         <form class="au-form" novalidate>
           <div class="au-field">
@@ -199,7 +228,7 @@
         <div class="au-foot">
           <button type="button" class="btn btn-primary block" data-submit>Đăng nhập</button>
         </div>
-      </div>`;
+      </div></div>`;
     },
     mount: (el) => {
       const phoneIn = el.querySelector('#auPhone');
@@ -286,6 +315,13 @@
             <div class="au-err" ${errMsg ? '' : 'hidden'}>${App.icon('alert', 16)}<span>${App.esc(errMsg)}</span></div>
           </div>
           <div class="au-resend">Gửi lại mã sau <span class="num" data-cd>0:45</span></div>
+        </div>
+        <div class="au-kb" aria-hidden="true">
+          <button type="button" class="au-kb-suggest" data-fill="482913">Từ Tin nhắn<b class="num">482913</b></button>
+          <div class="au-kb-keys">${['1|', '2|ABC', '3|DEF', '4|GHI', '5|JKL', '6|MNO', '7|PQRS', '8|TUV', '9|WXYZ'].map((k) => {
+            const [d, l] = k.split('|'); return `<button type="button" data-k="${d}"><b>${d}</b><span>${l}</span></button>`; }).join('')}
+            <span class="blank"></span><button type="button" data-k="0"><b>0</b></button>
+            <button type="button" class="del" data-k="del" aria-label="Xóa">${App.icon('backspace', 24)}</button></div>
         </div>`;
     },
     mount: (el, p) => {
@@ -312,6 +348,14 @@
       };
 
       const focusInput = () => { if (!locked) inp.focus({ preventScroll: true }); };
+      // Bàn phím mô phỏng: gõ vào ô ẩn như bàn phím thật
+      el.querySelector('.au-kb').addEventListener('click', (e) => {
+        const b = e.target.closest('[data-k],[data-fill]');
+        if (!b || locked) return;
+        const k = b.dataset.k;
+        inp.value = b.dataset.fill || (k === 'del' ? inp.value.slice(0, -1) : (inp.value + k).slice(0, 6));
+        inp.dispatchEvent(new Event('input'));
+      });
       row.addEventListener('click', focusInput);
       setTimeout(focusInput, 120);
 

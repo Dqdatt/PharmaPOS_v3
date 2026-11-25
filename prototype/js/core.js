@@ -143,7 +143,7 @@
   function watchScroll(el) {
     let last = 0;
     el.addEventListener('scroll', () => {
-      const y = el.scrollTop, nav = el.querySelector('.nav');
+      const y = el.scrollTop, nav = el.querySelector('.nav, [data-nav]');
       if (nav) nav.classList.toggle('scrolled', y > 4);
       if (y > 60 && y - last > 6) dock.classList.add('hidden');
       else if (last - y > 6 || y <= 60) dock.classList.remove('hidden');
