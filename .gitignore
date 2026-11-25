@@ -2,6 +2,7 @@ node_modules/
 build/
 dist/
 pwa/dist/
+pwa/tools/out/
 coverage/
 .DS_Store
 *.log
