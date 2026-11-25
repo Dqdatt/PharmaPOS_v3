@@ -7,7 +7,7 @@
   App.css(`
   .au-wrap { min-height: 100%; display: flex; flex-direction: column; padding: calc(var(--sat) + 28px) 20px calc(var(--sab) + 16px); }
   .au-wrap.has-nav { padding-top: 8px; }
-  .au-logo { width: 72px; height: 72px; border-radius: 18px; display: block; box-shadow: 0 12px 28px -12px rgba(15, 111, 103, .45); }
+  .au-logo { width: 72px; height: 72px; border-radius: 18px; display: block; box-shadow: 0 12px 28px -12px color-mix(in srgb, var(--teal-700) 45%, transparent); }
   .au-h1 { font-size: 28px; font-weight: 700; line-height: 1.25; margin-top: 24px; color: var(--ink); }
   .au-sub { font-size: 15px; line-height: 1.5; color: var(--ink-2); margin-top: 8px; }
   .au-form { margin-top: 28px; display: flex; flex-direction: column; gap: 18px; }
@@ -262,6 +262,9 @@
 
       submitBtn.addEventListener('click', submit);
       el.querySelector('.au-form').addEventListener('submit', (e) => { e.preventDefault(); submit(); });
+      [phoneIn, passIn].forEach((inp) => inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); if (!submitBtn.disabled) submit(); }
+      }));
     },
   });
 
