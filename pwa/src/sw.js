@@ -32,7 +32,7 @@ self.addEventListener('fetch', (event) => {
   if (request.mode === 'navigate') {
     event.respondWith(
       fetch(request).catch(() =>
-        caches.match('./').then((res) => res || caches.match('index.html'))
+        caches.match('./', { cacheName: CACHE_NAME }).then((res) => res || caches.match('index.html', { cacheName: CACHE_NAME }))
       )
     );
     return;
@@ -54,7 +54,7 @@ self.addEventListener('fetch', (event) => {
 
   if (url.origin === self.location.origin) {
     event.respondWith(
-      caches.match(request).then((cached) => cached || fetch(request))
+      caches.match(request, { cacheName: CACHE_NAME }).then((cached) => cached || fetch(request))
     );
   }
 });

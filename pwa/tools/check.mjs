@@ -65,17 +65,16 @@ for (const sub of ['css', 'js', 'screens', 'assets']) {
 
 // 2. Kiểm tra pwa/dist/index.html
 const stripComments = (html) => html.replace(/<!--[\s\S]*?-->/g, '');
+function parseAttrs(attrStr) {
+  const attrs = {};
+  for (const a of attrStr.matchAll(/([a-zA-Z0-9:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/g)) {
+    attrs[a[1].toLowerCase()] = a[2] ?? a[3] ?? a[4] ?? '';
+  }
+  return attrs;
+}
 function parseTags(html, tagName) {
   const re = new RegExp(`<${tagName}\\b([^>]*)>`, 'gi');
-  const tags = [];
-  for (const m of html.matchAll(re)) {
-    const attrs = {};
-    for (const a of m[1].matchAll(/([a-zA-Z0-9:-]+)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/g)) {
-      attrs[a[1].toLowerCase()] = a[2] ?? a[3] ?? a[4] ?? '';
-    }
-    tags.push(attrs);
-  }
-  return tags;
+  return [...html.matchAll(re)].map((m) => parseAttrs(m[1]));
 }
 
 const protoHtml = stripComments(readFileSync(join(protoDir, 'index.html'), 'utf8'));
@@ -88,8 +87,8 @@ if (JSON.stringify(protoScripts) !== JSON.stringify(distScripts)) {
   errs.push(`danh sách <script src> trong index.html không khớp prototype (${distScripts.join(', ')})`);
 }
 
-const classList = [...distHtml.matchAll(/\bclass\s*=\s*(?:"([^"]*)"|'([^']*)')/gi)]
-  .flatMap((m) => (m[1] ?? m[2] ?? '').trim().split(/\s+/).filter(Boolean));
+const classList = parseTags(distHtml, '[a-zA-Z][a-zA-Z0-9-]*')
+  .flatMap((a) => (a.class ? a.class.trim().split(/\s+/).filter(Boolean) : []));
 if (classList.includes('qa')) errs.push('index.html vẫn còn class qa');
 if (!classList.includes('rotate-lock')) errs.push('index.html thiếu .rotate-lock');
 
