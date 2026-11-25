@@ -12,6 +12,7 @@ Tên hiển thị cho người dùng là **MediPOS** (web và app), logo là ico
 - `npm run dev` → http://localhost:3000 (preview tên `dev` trong `.claude/launch.json`)
 - `npm run build` · `npm run lint` (= `tsc --noEmit`) · `npm test` (node:test, `src/__tests__/*.test.ts`)
 - Prototype app: `python3 -m http.server 4173 -d prototype` → http://localhost:4173 (preview tên `prototype`); kiểm tự động `node prototype/tools/check.mjs`
+- PWA (`pwa/`, chạy nguyên file prototype): `npm run build:pwa` → `pwa/dist/`; `npm run check:pwa`; `npm run verify:pwa` (so ảnh 0 pixel với prototype). Link test: GitHub Pages nhánh `gh-pages` (https://dqdatt.github.io/PharmaPOS_v3/)
 
 ## Cấu trúc
 - `src/views/` — mỗi màn web một file (POS, Inventory, Imports, Exports, Reports, Employees, LabelMaker, Login, MainApp, CustomerView)
@@ -23,6 +24,10 @@ Tên hiển thị cho người dùng là **MediPOS** (web và app), logo là ico
 - Giao diện tiếng Việt; màu thương hiệu teal (`teal-600/700` trên web). Thông báo qua `showNotification` (`src/utils/toast.ts`).
 - Lỗi DB đọc qua `getDbErrorMessage`; cột mới có fallback payload cũ (`src/utils/dbFallback.ts`).
 - Commit dạng `v3.x.y - mô tả ngắn không dấu`.
+
+## Chia việc
+- Mọi yêu cầu sửa/dựng (kể cả góp ý qua lại trong phiên) → Claude viết đặc tả, chia qua `giao`; Claude chỉ tự làm vùng nhạy cảm và file khung.
+- PWA không có giao diện riêng: sửa giao diện ở `prototype/`, rồi build lại `pwa/`.
 
 ## Vùng nhạy cảm (chỉ Claude phiên chính làm, effort xhigh)
 - Tiền: doanh thu/báo cáo (`reportRevenue.ts`), thanh toán nhập hàng (`purchasePayment.ts`), VietQR/ngân hàng.

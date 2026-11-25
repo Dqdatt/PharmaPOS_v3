@@ -1,7 +1,38 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "dev", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 3000 },
-    { "name": "prototype", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "http.server", "4173", "-d", "prototype"], "port": 4173 }
+    {
+      "name": "dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "prototype",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "4173",
+        "-d",
+        "prototype"
+      ],
+      "port": 4173
+    },
+    {
+      "name": "pwa",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "4174",
+        "-d",
+        "pwa/dist"
+      ],
+      "port": 4174
+    }
   ]
 }
