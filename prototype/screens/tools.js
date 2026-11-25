@@ -18,14 +18,31 @@ App.css(`
 .tl-ls-list { margin-bottom: auto; }
 .tl-float-bar { position: sticky; bottom: max(8px, calc(var(--sab) - 18px)); margin: 16px 8px 8px; padding: 10px; border-radius: 28px; z-index: 15; }
 
+.tl-exp-hero { padding: 12px 20px 0; font-size: 13px; color: var(--ink-2); }
+.tl-exp-total { margin: 4px 0; font-size: 28px; font-weight: 700; color: var(--ink); }
+.tl-bottom { padding-bottom: var(--sab); }
 .tl-pay-hero { padding: 12px 20px 20px; }
 .tl-pay-lbl { font-size: 14px; color: var(--ink-2); }
 .tl-pay-total { font-size: 34px; font-weight: 800; margin-top: 4px; }
+.tl-pay-current { display: flow-root; min-height: 192px; }
+.tl-paid-list .row { min-height: 90px; }
+.tl-paid-list .row-end { color: var(--ink-2); }
 
 .tl-ava { width: 36px; height: 36px; border-radius: 18px; background: var(--teal-50); color: var(--teal-700);
   display: grid; place-items: center; font-size: 13px; font-weight: 700; }
 .tl-status-ok { font-size: 14px; font-weight: 600; color: var(--ok); }
 .tl-status-muted { font-size: 14px; font-weight: 500; color: var(--ink-2); }
+.tl-shift-time { position: relative; margin: 16px 24px 20px; height: 56px; font-size: 12px; }
+.tl-shift-bars { position: absolute; inset: 23px 0 auto; display: grid; grid-template-columns: 7fr 8fr; }
+.tl-shift-bars span { height: 10px; border-radius: 5px; background: var(--teal-200); margin-right: 2px; }
+.tl-shift-bars span + span { background: var(--teal-600); margin: 0 0 0 2px; }
+.tl-shift-now { position: absolute; left: 50.6667%; top: 0; color: var(--ink); transform: translateX(-50%); white-space: nowrap; }
+.tl-shift-now::after { content: ""; position: absolute; width: 1px; height: 20px; background: currentColor; left: 50%; top: 18px; }
+.tl-shift-axis { position: absolute; inset: auto -8px 0; display: flex; justify-content: space-between; color: var(--ink-3); }
+.tl-shift-staff .row { min-height: 92px; }
+.tl-shift-revenue .row { min-height: 96px; }
+.tl-text-row { grid-template-columns: 1fr auto; cursor: default; }
+.tl-text-row + .tl-text-row::before { left: 16px; }
 
 .tl-search-nav { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 10px;
   padding: calc(var(--sat) + 4px) 16px 10px; transition: background .25s var(--ease), box-shadow .25s var(--ease); }
@@ -35,6 +52,9 @@ App.css(`
 .tl-search-box .ic { color: var(--ink-3); }
 .tl-search-box input { flex: 1; min-width: 0; border: 0; background: none; font: inherit; font-size: 15px; color: var(--ink); outline: none; }
 .tl-search-box input::placeholder { color: var(--ink-3); }
+.tl-best-list .row { min-height: 68px; cursor: default; }
+.tl-rank { width: 24px; font-size: 14px; font-weight: 700; color: var(--ink-3); }
+.tl-best-list .row + .row::before { left: 52px; }
 .tl-sheet-meta { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
 .tl-sheet-line { display: flex; justify-content: space-between; font-size: 15px; color: var(--ink-2); }
 .tl-sheet-line b { color: var(--ink); font-weight: 600; }
@@ -44,14 +64,44 @@ App.css(`
 
 (function () {
   const RECENT_SEARCH = ['Panadol Extra', 'Augmentin 625mg', 'Oresol 245'];
+  const EXPIRING_VALUES = { L2304: 1470000, SM118: 112000, DC072: 126000 };
+  const LATER_EXPIRING = [
+    { name: 'Hapacol 250', lot: 'HP2506', exp: '30/12/2026', days: 35, qty: '12 hộp', value: 480000 },
+    { name: 'Vitamin C 500 DHG', lot: 'VC510', exp: '12/01/2027', days: 48, qty: '10 lọ', value: 620000 },
+    { name: 'Gaviscon', lot: 'GV126', exp: '27/01/2027', days: 63, qty: '8 hộp', value: 768000 },
+    { name: 'Strepsils', lot: 'ST246', exp: '16/02/2027', days: 83, qty: '15 vỉ', value: 525000 },
+  ];
+  const EXPIRING = [
+    ...DATA.expiring.map((x) => ({ ...x, value: EXPIRING_VALUES[x.lot] || 0 })),
+    ...LATER_EXPIRING,
+  ].sort((a, b) => a.days - b.days);
+  const RECENT_PAID = [
+    { supplier: 'Dược Hậu Giang', amount: 6850000, date: '20/11', method: 'chuyển khoản' },
+    { supplier: 'Dược Phúc Long', amount: 3200000, date: '20/11', method: 'chuyển khoản' },
+    { supplier: 'Zuellig Pharma', amount: 12400000, date: '20/11', method: 'chuyển khoản' },
+    { supplier: 'Dược Tâm Đức', amount: 1980000, date: '20/11', method: 'chuyển khoản' },
+  ];
+  const PAYMENT_DATE = '25/11';
+  const SHIFT_REVENUE = [
+    { title: 'Ca sáng, đã xong', amount: 9860000, detail: '58 hóa đơn, Ngọc Hân và Minh Tuấn' },
+    { title: 'Ca chiều, đang chạy', amount: 2620000, detail: '28 hóa đơn, Thu Trang' },
+  ];
+  const BEST_SELLERS = [
+    { name: 'Panadol Extra', sold: 18, left: 3, unit: 'hộp', revenue: 1260000 },
+    { name: 'Oresol 245', sold: 16, left: 12, unit: 'gói', revenue: 64000 },
+    { name: 'Smecta', sold: 15, left: 14, unit: 'gói', revenue: 120000 },
+    { name: 'Decolgen Forte', sold: 12, left: 9, unit: 'vỉ', revenue: 168000 },
+    { name: 'Augmentin 625mg', sold: 10, left: 6, unit: 'hộp', revenue: 2450000 },
+  ];
   const initials = (name) => name.trim().split(/\s+/).slice(-2).map((w) => w[0]).join('').toUpperCase();
   let payablesState = null;
+  const paidToday = [];
   const getPayables = () => (payablesState || (payablesState = DATA.payables.map((x) => ({ ...x }))));
 
   function buildCatalog() {
     const map = new Map();
     DATA.lowStock.forEach((x) => map.set(x.name, { name: x.name, stock: `Còn ${x.left} ${x.unit}`, lot: '' }));
-    DATA.expiring.forEach((x) => {
+    EXPIRING.forEach((x) => {
       const cur = map.get(x.name);
       map.set(x.name, { name: x.name, stock: cur ? cur.stock : `Còn ${x.qty}`, lot: x.lot });
     });
@@ -175,26 +225,48 @@ App.css(`
 
   App.screen('expiring', {
     render: () => {
-      const sorted = [...DATA.expiring].sort((a, b) => a.days - b.days);
+      const soonCount = EXPIRING.filter((x) => x.days <= 30).length;
+      const total = EXPIRING.reduce((sum, x) => sum + x.value, 0);
+      const rows = EXPIRING.map((x, i) => {
+        const tone = x.days <= 7 ? ' bad' : x.days <= 30 ? ' warn' : '';
+        return `
+          <div class="row tap" data-exp-i="${i}">
+            <div class="tile${tone}">${App.icon('clock', 20)}</div>
+            <div class="row-main">
+              <div class="row-title">${App.esc(x.name)}</div>
+              <div class="row-sub">Lô ${App.esc(x.lot)}, ${App.esc(x.qty)}</div>
+            </div>
+            <div class="row-end"><span class="chip${tone}">${x.days} ngày</span></div>
+          </div>`;
+      });
       return `
         ${App.header({ title: 'Hàng cận hạn' })}
-        <div class="card" style="margin:8px 16px 24px">
-          ${sorted.map((x, i) => `
-            <div class="row tap" data-exp-i="${i}">
-              <div class="tile ${x.days <= 7 ? 'bad' : 'warn'}">${App.icon('clock', 20)}</div>
-              <div class="row-main">
-                <div class="row-title">${App.esc(x.name)}</div>
-                <div class="row-sub">Lô ${App.esc(x.lot)}, ${App.esc(x.qty)}</div>
-              </div>
-              <div class="row-end"><span class="chip ${x.days <= 7 ? 'bad' : 'warn'}">${x.days} ngày</span></div>
-            </div>`).join('')}
+        <div class="tl-exp-hero">
+          <div>Giá trị hàng cận hạn</div>
+          <div class="tl-exp-total num">${App.money(total)}</div>
+          <div>${soonCount} lô trong 30 ngày, ${EXPIRING.length - soonCount} lô từ 31 đến 90 ngày</div>
+        </div>
+        <div class="section">
+          <div class="section-head"><h2>Trong 30 ngày</h2></div>
+          <div class="card" style="margin:0 16px">${rows.slice(0, soonCount).join('')}</div>
+        </div>
+        <div class="section">
+          <div class="section-head"><h2>Từ 31 đến 90 ngày</h2></div>
+          <div class="card" style="margin:0 16px">${rows.slice(soonCount).join('')}</div>
+        </div>
+        <div class="tl-bottom" style="margin:20px 16px 0">
+          <button class="btn btn-secondary block tap" data-export-exp>Xuất danh sách cho nhà cung cấp</button>
         </div>`;
     },
     mount: (el) => {
-      const sorted = [...DATA.expiring].sort((a, b) => a.days - b.days);
+      const btn = el.querySelector('[data-export-exp]');
+      btn.addEventListener('click', () => {
+        const done = App.busy(btn, 'Đang tạo danh sách...');
+        setTimeout(() => { done(); App.toast('Đã tạo danh sách, mở trên web để in', 'check'); }, 800);
+      });
       el.querySelectorAll('[data-exp-i]').forEach((row) => {
         row.addEventListener('click', () => {
-          const x = sorted[+row.dataset.expI];
+          const x = EXPIRING[+row.dataset.expI];
           App.sheet(`
             <h3>${App.esc(x.name)}</h3>
             <div class="tl-sheet-meta">
@@ -236,7 +308,13 @@ App.css(`
   App.screen('payables', {
     render: () => `
       ${App.header({ title: 'Công nợ nhà cung cấp' })}
-      <div class="tl-pay-body">${renderPayablesBody(getPayables())}</div>`,
+      <div class="tl-pay-current">${renderPayablesBody(getPayables())}</div>
+      <div class="section tl-bottom">
+        <div class="section-head"><h2>Đã trả gần đây</h2></div>
+        <div class="card tl-paid-list" style="margin:0 16px">
+          ${[...paidToday, ...RECENT_PAID].map(renderPaidRow).join('')}
+        </div>
+      </div>`,
     mount: (el) => {
       const bindRows = () => {
         const list = getPayables();
@@ -269,10 +347,15 @@ App.css(`
                         const done = App.busy(cBtn, 'Đang ghi nhận...');
                         setTimeout(() => {
                           done();
-                          list.splice(idx, 1);
                           closeConfirm();
+                          const index = list.indexOf(item);
+                          if (list !== payablesState || index < 0) return;
+                          list.splice(index, 1);
+                          const paid = { ...item, date: PAYMENT_DATE };
+                          paidToday.unshift(paid);
                           App.toast('Đã ghi nhận thanh toán', 'check');
-                          el.querySelector('.tl-pay-body').innerHTML = renderPayablesBody(list);
+                          el.querySelector('.tl-pay-current').innerHTML = renderPayablesBody(list);
+                          el.querySelector('.tl-paid-list').insertAdjacentHTML('afterbegin', renderPaidRow(paid));
                           bindRows();
                         }, 700);
                       });
@@ -288,10 +371,25 @@ App.css(`
     },
   });
 
+  function renderPaidRow(x) {
+    return `<div class="row tl-text-row">
+      <div class="row-main">
+        <div class="row-title">${App.esc(x.supplier)}</div>
+        <div class="row-sub">Trả ngày ${App.esc(x.date)}${x.method ? `, ${App.esc(x.method)}` : ''}</div>
+      </div>
+      <div class="row-end num">${App.money(x.amount)}</div>
+    </div>`;
+  }
+
   App.screen('shifts', {
     render: () => `
       ${App.header({ title: 'Ca làm hôm nay' })}
-      <div class="card" style="margin:8px 16px 24px">
+      <div class="tl-shift-time">
+        <div class="tl-shift-bars" role="img" aria-label="Ca sáng 7:00 đến 14:00, đã xong. Ca chiều 14:00 đến 22:00, đang chạy"><span></span><span></span></div>
+        <div class="tl-shift-now num">Bây giờ 14:36</div>
+        <div class="tl-shift-axis num"><span>7h</span><span>12h</span><span>17h</span><span>22h</span></div>
+      </div>
+      <div class="card tl-shift-staff" style="margin:8px 16px 24px">
         ${DATA.shifts.map((s) => {
           const working = s.status === 'Đang làm';
           return `<div class="row" style="cursor:default">
@@ -303,6 +401,18 @@ App.css(`
             <div class="row-end ${working ? 'tl-status-ok' : 'tl-status-muted'}">${App.esc(s.status)}</div>
           </div>`;
         }).join('')}
+      </div>
+      <div class="section tl-bottom">
+        <div class="section-head"><h2>Doanh thu theo ca</h2></div>
+        <div class="card tl-shift-revenue" style="margin:0 16px">
+          ${SHIFT_REVENUE.map((x) => `<div class="row tl-text-row">
+            <div class="row-main">
+              <div class="row-title">${App.esc(x.title)}</div>
+              <div class="row-sub">${App.esc(x.detail)}</div>
+            </div>
+            <div class="row-end num">${App.money(x.amount)}</div>
+          </div>`).join('')}
+        </div>
       </div>`,
   });
 
@@ -316,7 +426,7 @@ App.css(`
         </div>
       </header>
       <div class="tl-search-results"></div>`,
-    mount: (el) => {
+    mount: (el, p) => {
       const catalog = buildCatalog();
       const input = el.querySelector('input');
       const box = el.querySelector('.tl-search-results');
@@ -333,6 +443,19 @@ App.css(`
                     <div class="row-main"><div class="row-title">${App.esc(name)}</div></div>
                     <div class="row-end">${App.icon('chev', 18)}</div>
                   </div>`).join('')}
+              </div>
+            </div>
+            <div class="section tl-bottom">
+              <div class="section-head"><h2>Bán chạy hôm nay</h2></div>
+              <div class="card tl-best-list" style="margin:0 16px">
+                ${BEST_SELLERS.map((x, i) => `<div class="row">
+                  <div class="tl-rank num">${i + 1}</div>
+                  <div class="row-main">
+                    <div class="row-title">${App.esc(x.name)}</div>
+                    <div class="row-sub">Đã bán ${x.sold} ${App.esc(x.unit)}, còn ${x.left}</div>
+                  </div>
+                  <div class="row-end num">${App.money(x.revenue)}</div>
+                </div>`).join('')}
               </div>
             </div>`;
           box.querySelectorAll('[data-pick]').forEach((r) => r.addEventListener('click', () => {
@@ -356,7 +479,8 @@ App.css(`
             <div class="row-end">${App.esc(x.stock)}</div>
           </div>`).join('')}</div>`;
       };
-      draw('');
+      input.value = typeof p.query === 'string' ? p.query : '';
+      draw(input.value);
       input.addEventListener('input', () => draw(input.value));
       setTimeout(() => input.focus(), 120);
     },
@@ -365,7 +489,20 @@ App.css(`
   App.state('Tiện ích', () => App.reset('tools'), 'Tiện ích');
   App.state('Sắp hết hàng', () => { App.reset('tools'); App.go('lowStock'); }, 'Tiện ích');
   App.state('Hàng cận hạn', () => { App.reset('tools'); App.go('expiring'); }, 'Tiện ích');
-  App.state('Công nợ', () => { payablesState = null; App.reset('tools'); App.go('payables'); }, 'Tiện ích');
+  App.state('Hàng cận hạn: chi tiết lô', () => {
+    App.reset('tools');
+    App.go('expiring');
+    App.current().el.querySelector('[data-exp-i]').click();
+  }, 'Tiện ích');
+  App.state('Công nợ', () => { payablesState = null; paidToday.length = 0; App.reset('tools'); App.go('payables'); }, 'Tiện ích');
+  App.state('Công nợ: đã trả hết', () => {
+    payablesState = [];
+    paidToday.splice(0, paidToday.length, ...DATA.payables.map((x) => ({ ...x, date: PAYMENT_DATE })));
+    App.reset('tools');
+    App.go('payables');
+  }, 'Tiện ích');
   App.state('Ca làm', () => { App.reset('tools'); App.go('shifts'); }, 'Tiện ích');
   App.state('Tìm thuốc', () => { App.reset('tools'); App.go('stockSearch'); }, 'Tiện ích');
+  App.state('Tìm thuốc: có kết quả', () => { App.reset('tools'); App.go('stockSearch', { query: 'SM118' }); }, 'Tiện ích');
+  App.state('Tìm thuốc: không có kết quả', () => { App.reset('tools'); App.go('stockSearch', { query: 'XYZ' }); }, 'Tiện ích');
 })();
