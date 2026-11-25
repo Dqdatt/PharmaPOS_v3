@@ -11,6 +11,12 @@ Rút gu UI/UX của người dùng từ Kavor, đưa dự án vào workflow (`/b
 - Logo + tên như web: MediPOS, icon notes-medical; `prototype/logo.html`, file SVG/PNG ở `prototype/assets/` — 91036aa.
 - Kiểm: `node prototype/tools/check.mjs` đạt (24 màn, 48 state); bấm trọn luồng trên preview, console sạch.
 
+## PWA (phiên 25/11 tối)
+- `pwa/` chạy nguyên file prototype (copy byte): giao 017 (vỏ PWA: manifest portrait, SW cache theo hash, màn che khi xoay ngang, status bar iOS black-translucent), giao 018 (`npm run verify:pwa`: so ảnh 48 state prototype vs PWA, 0 pixel, + ngang/offline/manifest) — đạt 4/5 lần chạy (lần đầu lệch, chưa rõ state nào).
+- Sửa lỗi prototype: `App.appIcon()` trùng id gradient (60e0b77).
+- Deploy: đẩy `pwa/dist` lên nhánh `gh-pages` (orphan, làm trong scratchpad), Pages đã bật → https://dqdatt.github.io/PharmaPOS_v3/. Hai lượt deploy bị GitHub trả 500 — chưa lên. Đẩy lại: build, copy dist ra thư mục tạm, commit, `git push -f origin gh-pages`.
+- Cập nhật app trên máy: SW cache-first → bản mới hiện ở lần mở thứ 2.
+
 ## Đang dở
 Không có. Prototype chờ người dùng góp ý tiếp. Chưa commit: `HANDOFF.md`, `supabase/.gitignore`, `supabase/config.toml` (2 file supabase có từ trước phiên, không đụng).
 
