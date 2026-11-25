@@ -64,9 +64,9 @@ function normalizeErrorKey(kind, text, locUrl = '') {
   return `${kind}|${normText}|${normLoc}`;
 }
 
-function attachErrorCollector(page, side, scope, target, isEnabled = () => true) {
+function attachErrorCollector(page, side, getScope, target) {
   page.on('pageerror', (err) => {
-    if (!isEnabled()) return;
+    const scope = typeof getScope === 'function' ? getScope() : getScope;
     const msg = err.message || String(err);
     target.errors.push({
       scope,
@@ -75,7 +75,8 @@ function attachErrorCollector(page, side, scope, target, isEnabled = () => true)
     });
   });
   page.on('console', (msg) => {
-    if (!isEnabled() || msg.type() !== 'error') return;
+    if (msg.type() !== 'error') return;
+    const scope = typeof getScope === 'function' ? getScope() : getScope;
     const text = msg.text();
     const locUrl = msg.location()?.url || '';
     if (isGoogleFontNetworkError(text, locUrl)) {
@@ -145,13 +146,7 @@ async function captureState(context, baseUrl, stateIndex, side, logBucket) {
     await page.evaluate(() => document.fonts.ready);
     await page.clock.runFor(2500);
     await page.evaluate((i) => App.states[i].run(), stateIndex);
-    for (let k = 0; k < 8; k++) {
-      await page.waitForTimeout(150);
-      await page.evaluate(() => document.getAnimations().forEach((a) => {
-        try { a.finish(); } catch { a.pause(); a.currentTime = 0; }
-      }));
-      await page.clock.runFor(1000);
-    }
+    await page.clock.runFor(3000);
     await page.evaluate(() => document.getAnimations().forEach((a) => {
       try { a.finish(); } catch { a.pause(); a.currentTime = 0; }
     }));
@@ -185,15 +180,17 @@ async function main() {
   };
 
   try {
+    const logsA = { errors: [], fontNotes: [] };
+    const logsB = { errors: [], fontNotes: [] };
+
     const ctx = await browser.newContext(contextOpts);
     const probePage = await ctx.newPage();
+    attachErrorCollector(probePage, 'A', 'probe', logsA);
     await probePage.goto(srvA.url, { waitUntil: 'load' });
     const states = await probePage.evaluate(() => App.states.map((s) => `${s.group} / ${s.label}`));
     await probePage.close();
 
     const stateResults = [];
-    const logsA = { errors: [], fontNotes: [] };
-    const logsB = { errors: [], fontNotes: [] };
 
     for (let i = 0; i < states.length; i++) {
       const bufA = await captureState(ctx, srvA.url, i, 'A', logsA);
@@ -265,8 +262,8 @@ async function main() {
     {
       const swCtx = await browser.newContext({ ...contextOpts, serviceWorkers: 'allow' });
       const p = await swCtx.newPage();
-      let collectOfflineErrors = false;
-      attachErrorCollector(p, 'B', 'offline', offlineLogs, () => collectOfflineErrors);
+      let offlinePhase = 'offline-init';
+      attachErrorCollector(p, 'B', () => offlinePhase, offlineLogs);
       try {
         await p.goto(srvB.url, { waitUntil: 'load' });
         await withTimeout(
@@ -288,12 +285,13 @@ async function main() {
           throw new Error('Không có navigator.serviceWorker.controller');
         }
         await swCtx.setOffline(true);
-        collectOfflineErrors = true;
+        offlinePhase = 'offline-reload';
         await p.reload({ waitUntil: 'load' });
         const viewCount = await p.locator('.phone .view').count();
-        offlineOk = viewCount > 0 && offlineLogs.errors.length === 0;
+        const reloadErrors = offlineLogs.errors.filter((e) => e.scope === 'offline-reload');
+        offlineOk = viewCount > 0 && reloadErrors.length === 0;
         if (!offlineOk) {
-          offlineNote = `.phone .view=${viewCount}, errors=${offlineLogs.errors.length}`;
+          offlineNote = `.phone .view=${viewCount}, reloadErrors=${reloadErrors.length}`;
         }
       } catch (e) {
         offlineNote = e.message;
