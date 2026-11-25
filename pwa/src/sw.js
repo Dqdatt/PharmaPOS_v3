@@ -6,7 +6,7 @@ const FONT_CACHE = 'medipos-fonts';
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => cache.addAll(FILES))
+      .then((cache) => cache.addAll(FILES.map((f) => new Request(f, { cache: 'reload' }))))
       .then(() => self.skipWaiting())
   );
 });
@@ -39,20 +39,16 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
-    const updatePromise = caches.open(FONT_CACHE).then((cache) =>
-      fetch(request).then((res) => {
-        if (res && (res.ok || res.type === 'opaque')) {
-          return cache.put(request, res.clone()).then(() => res);
-        }
-        return res;
-      })
-    );
-    event.waitUntil(updatePromise.catch(() => undefined));
-    event.respondWith(
-      caches.open(FONT_CACHE)
-        .then((cache) => cache.match(request))
-        .then((cached) => cached || updatePromise)
-    );
+    let putPromise;
+    const network = fetch(request).then((res) => {
+      if (res && (res.ok || res.type === 'opaque')) {
+        const copy = res.clone();
+        putPromise = caches.open(FONT_CACHE).then((c) => c.put(request, copy)).catch(() => {});
+      }
+      return res;
+    });
+    event.respondWith(caches.match(request, { cacheName: FONT_CACHE }).then((cached) => cached || network));
+    event.waitUntil(network.then(() => putPromise, () => {}));
     return;
   }
 

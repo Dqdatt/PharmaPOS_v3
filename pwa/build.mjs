@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { copyFileSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -64,8 +64,4 @@ const swOut = swTemplate
 writeFileSync(join(distDir, 'sw.js'), swOut, 'utf8');
 writeFileSync(join(distDir, '.nojekyll'), '', 'utf8');
 
-const totalFiles = distFiles.length + 2;
-if (!statSync(join(distDir, 'sw.js')).isFile()) {
-  throw new Error('Không tạo được sw.js');
-}
-console.log(`Built pwa/dist: ${totalFiles} files, VERSION=${version}`);
+console.log(`Built pwa/dist: ${distFiles.length + 2} files, VERSION=${version}`);

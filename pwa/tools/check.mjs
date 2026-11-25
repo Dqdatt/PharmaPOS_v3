@@ -152,12 +152,12 @@ if (!filesMatch) {
 } else {
   try {
     const swFiles = JSON.parse(filesMatch[1]);
-    const distFileSet = new Set(listFiles(distDir));
-    for (const f of swFiles) {
-      const target = f === './' ? 'index.html' : f;
-      if (!distFileSet.has(target)) {
-        errs.push(`mục FILES trong sw.js không phải tệp hợp lệ trong dist: ${f}`);
-      }
+    const expectedFiles = ['./', ...listFiles(distDir).filter((f) => f !== 'sw.js' && f !== '.nojekyll')];
+    for (const req of ['./', 'index.html', 'manifest.webmanifest', 'js/core.js']) {
+      if (!swFiles.includes(req)) errs.push(`FILES trong sw.js thiếu mục bắt buộc: ${req}`);
+    }
+    if (JSON.stringify([...swFiles].sort()) !== JSON.stringify([...expectedFiles].sort())) {
+      errs.push('FILES trong sw.js không khớp danh sách file trong dist');
     }
   } catch (e) {
     errs.push(`FILES trong sw.js không parse được JSON: ${e.message}`);
