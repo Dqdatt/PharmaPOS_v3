@@ -4,7 +4,7 @@ App.css(`
 .rv-seg-wrap { padding: 0 16px; }
 .rv-hero { padding: 20px 20px 0; }
 .rv-label { font-size: 15px; color: var(--ink-2); }
-.rv-total { display: inline-flex; align-items: baseline; gap: 6px; margin-top: 6px; font-weight: 800; letter-spacing: -.02em; }
+.rv-total { display: flex; align-items: baseline; gap: 6px; margin-top: 6px; font-weight: 800; letter-spacing: -.02em; }
 .rv-v { font-size: 40px; line-height: 1.15; }
 .rv-cur { font-size: 22px; font-weight: 600; color: var(--ink-2); opacity: .7; }
 .rv-delta { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 14px; font-weight: 600; min-height: 20px; }
@@ -84,14 +84,15 @@ App.css(`
   function buildReceiptLines(iv) {
     const items = iv.items || [];
     const n = items.length;
-    if (!n) return [];
+    if (!n || iv.total <= 0) return [];
     if (n === 1) return [{ name: items[0], qty: 1, unit: iv.total }];
-    const base = Math.floor(iv.total / n / 1000) * 1000;
+    const unitStep = iv.total >= n * 1000 ? 1000 : 1;
+    const base = Math.max(unitStep, Math.floor(iv.total / n / unitStep) * unitStep);
     let rem = iv.total;
     return items.map((name, i) => {
       if (i === n - 1) return { name, qty: 1, unit: rem };
-      const qty = i === 0 && base >= 60000 && base % 2000 === 0 ? 2 : 1;
-      const lineTotal = base;
+      const lineTotal = Math.min(base, Math.max(unitStep, rem - (n - 1 - i) * unitStep));
+      const qty = i === 0 && lineTotal >= 60000 && lineTotal % 2000 === 0 ? 2 : 1;
       rem -= lineTotal;
       return { name, qty, unit: lineTotal / qty };
     });
@@ -171,7 +172,7 @@ App.css(`
 
         <div class="rv-hero">
           <div class="rv-label">${view.label}</div>
-          <div class="rv-total num" data-skel><span class="rv-v">${App.num(view.total)}</span><span class="rv-cur">₫</span></div><br>
+          <div class="rv-total num" data-skel><span class="rv-v">${App.num(view.total)}</span><span class="rv-cur">₫</span></div>
           <div class="rv-delta-slot">${view.deltaHtml}</div>
           <div class="rv-chart">${view.chartHtml}</div>
         </div>
@@ -218,9 +219,13 @@ App.css(`
       const btns = [...seg.querySelectorAll('button')];
       const placeThumb = () => {
         const on = seg.querySelector('button.on');
-        if (on) { thumb.style.left = on.offsetLeft + 'px'; thumb.style.width = on.offsetWidth + 'px'; }
+        if (on && on.offsetWidth) {
+          thumb.style.left = on.offsetLeft + 'px';
+          thumb.style.width = on.offsetWidth + 'px';
+        }
       };
       placeThumb();
+      requestAnimationFrame(placeThumb);
 
       const animateChart = (period, countUp) => {
         const valEl = el.querySelector('.rv-v');
@@ -232,14 +237,17 @@ App.css(`
         if (fill) requestAnimationFrame(() => { fill.style.width = fill.dataset.pct + '%'; });
       };
 
+      const clearTip = () => {
+        const wbars = el.querySelector('.rv-wbars');
+        if (!wbars) return;
+        wbars.classList.remove('has-pick');
+        wbars.querySelectorAll('.rv-wbar.picked').forEach((b) => b.classList.remove('picked'));
+        wbars.querySelectorAll('.rv-tip').forEach((t) => t.remove());
+      };
+
       const bindWeekTap = () => {
         const wbars = el.querySelector('.rv-wbars');
         if (!wbars) return;
-        const clearTip = () => {
-          wbars.classList.remove('has-pick');
-          wbars.querySelectorAll('.rv-wbar.picked').forEach((b) => b.classList.remove('picked'));
-          wbars.querySelectorAll('.rv-tip').forEach((t) => t.remove());
-        };
         wbars.addEventListener('click', (e) => {
           const col = e.target.closest('.rv-wcol');
           if (!col) return;
@@ -260,14 +268,7 @@ App.css(`
       };
 
       el.addEventListener('click', (e) => {
-        if (!e.target.closest('.rv-wcol')) {
-          const wbars = el.querySelector('.rv-wbars');
-          if (wbars) {
-            wbars.classList.remove('has-pick');
-            wbars.querySelectorAll('.rv-wbar.picked').forEach((b) => b.classList.remove('picked'));
-            wbars.querySelectorAll('.rv-tip').forEach((t) => t.remove());
-          }
-        }
+        if (!e.target.closest('.rv-wcol')) clearTip();
       });
 
       btns.forEach((b) => b.addEventListener('click', () => {
@@ -288,6 +289,7 @@ App.css(`
       bindWeekTap();
       const initPeriod = p.period || 'today';
       App.load(el, 'revenue').then((first) => {
+        placeThumb();
         animateChart(initPeriod, first);
       });
     },

@@ -14,8 +14,9 @@ App.css(`
 .tl-ls-track { height: 6px; border-radius: 3px; background: var(--soft); overflow: hidden; margin-top: 10px; }
 .tl-ls-fill { height: 100%; border-radius: 3px; background: var(--warn); }
 .tl-ls-fill.bad { background: var(--bad); }
-.tl-bottom-pad { padding-bottom: 104px; }
-.tl-float-bar { position: sticky; bottom: 8px; margin: 16px 8px 8px; padding: 10px; border-radius: 28px; z-index: 15; }
+.tl-ls-wrap { min-height: calc(100% - var(--sat) - 56px); display: flex; flex-direction: column; }
+.tl-ls-list { margin-bottom: auto; }
+.tl-float-bar { position: sticky; bottom: max(8px, calc(var(--sab) - 18px)); margin: 16px 8px 8px; padding: 10px; border-radius: 28px; z-index: 15; }
 
 .tl-pay-hero { padding: 12px 20px 20px; }
 .tl-pay-lbl { font-size: 14px; color: var(--ink-2); }
@@ -120,12 +121,12 @@ App.css(`
         <div class="section">
           <div class="section-head"><h2>Cửa hàng</h2></div>
           <div class="card" style="margin:0 16px">
-            <div class="row tap" data-web-toast="Dùng trên web, mục In tem">
+            <div class="row tap" data-web-toast="Dùng trên web, mục In tem" data-web-icon="printer">
               <div class="tile">${App.icon('printer', 20)}</div>
               <div class="row-main"><div class="row-title">In tem A6</div></div>
               <div class="row-end">${App.icon('chev', 18)}</div>
             </div>
-            <div class="row tap" data-web-toast="Dùng trên web, mục Thiết bị">
+            <div class="row tap" data-web-toast="Dùng trên web, mục Thiết bị" data-web-icon="sliders">
               <div class="tile">${App.icon('sliders', 20)}</div>
               <div class="row-main"><div class="row-title">Máy in và máy quét</div></div>
               <div class="row-end">${App.icon('chev', 18)}</div>
@@ -135,7 +136,7 @@ App.css(`
     },
     mount: (el) => {
       el.querySelectorAll('[data-web-toast]').forEach((row) => {
-        row.addEventListener('click', () => App.toast(row.dataset.webToast, 'info'));
+        row.addEventListener('click', () => App.toast(row.dataset.webToast, row.dataset.webIcon || 'info'));
       });
     },
   });
@@ -145,8 +146,8 @@ App.css(`
       const items = DATA.lowStock;
       return `
         ${App.header({ title: 'Sắp hết hàng' })}
-        <div class="tl-bottom-pad">
-          <div class="card" style="margin:8px 16px 0">
+        <div class="tl-ls-wrap">
+          <div class="card tl-ls-list" style="margin:8px 16px auto">
             ${items.map((x) => {
               const ratio = Math.min(1, x.left / x.min);
               const pct = Math.max(6, Math.round(ratio * 100));
@@ -208,32 +209,33 @@ App.css(`
     },
   });
 
-  App.screen('payables', {
-    render: () => {
-      const list = getPayables();
-      const total = list.reduce((s, x) => s + x.amount, 0);
-      return `
-        ${App.header({ title: 'Công nợ nhà cung cấp' })}
-        <div class="tl-pay-body">
-          ${list.length ? `
-            <div class="tl-pay-hero">
-              <div class="tl-pay-lbl">Tổng công nợ</div>
-              <div class="tl-pay-total num">${App.money(total)}</div>
+  function renderPayablesBody(list) {
+    const total = list.reduce((s, x) => s + x.amount, 0);
+    if (!list.length) {
+      return `<div class="empty"><div class="tile">${App.icon('wallet', 28)}</div>Không còn công nợ.</div>`;
+    }
+    return `
+      <div class="tl-pay-hero">
+        <div class="tl-pay-lbl">Tổng công nợ</div>
+        <div class="tl-pay-total num">${App.money(total)}</div>
+      </div>
+      <div class="card" style="margin:0 16px 24px">
+        ${list.map((x, i) => `
+          <div class="row tap" data-pay-i="${i}">
+            <div class="tile">${App.icon('wallet', 20)}</div>
+            <div class="row-main">
+              <div class="row-title ell">${App.esc(x.supplier)}</div>
+              <div class="row-sub">Hạn trả ${App.esc(x.due)}</div>
             </div>
-            <div class="card" style="margin:0 16px 24px">
-              ${list.map((x, i) => `
-                <div class="row tap" data-pay-i="${i}">
-                  <div class="tile">${App.icon('wallet', 20)}</div>
-                  <div class="row-main">
-                    <div class="row-title ell">${App.esc(x.supplier)}</div>
-                    <div class="row-sub">Hạn trả ${App.esc(x.due)}</div>
-                  </div>
-                  <div class="row-end num">${App.money(x.amount)}</div>
-                </div>`).join('')}
-            </div>`
-          : `<div class="empty"><div class="tile">${App.icon('wallet', 28)}</div>Không còn công nợ.</div>`}
-        </div>`;
-    },
+            <div class="row-end num">${App.money(x.amount)}</div>
+          </div>`).join('')}
+      </div>`;
+  }
+
+  App.screen('payables', {
+    render: () => `
+      ${App.header({ title: 'Công nợ nhà cung cấp' })}
+      <div class="tl-pay-body">${renderPayablesBody(getPayables())}</div>`,
     mount: (el) => {
       const bindRows = () => {
         const list = getPayables();
@@ -266,10 +268,11 @@ App.css(`
                         const done = App.busy(cBtn, 'Đang ghi nhận...');
                         setTimeout(() => {
                           done();
-                          payablesState.splice(idx, 1);
+                          list.splice(idx, 1);
                           closeConfirm();
                           App.toast('Đã ghi nhận thanh toán', 'check');
-                          el.querySelector('.tl-pay-body').innerHTML = `<div class="empty"><div class="tile">${App.icon('wallet', 28)}</div>Không còn công nợ.</div>`;
+                          el.querySelector('.tl-pay-body').innerHTML = renderPayablesBody(list);
+                          bindRows();
                         }, 700);
                       });
                     },
