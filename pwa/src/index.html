@@ -34,6 +34,12 @@
   <script src="screens/tools.js"></script>
   <script src="screens/account.js"></script>
   <script>
+    // iOS standalone: 100dvh co lại sau khi đóng bàn phím (lỗi WebKit), nên lấy chiều cao màn máy (app khóa dọc)
+    if (navigator.standalone) {
+      document.documentElement.classList.add('ios-standalone');
+      document.documentElement.style.setProperty('--app-h', Math.max(screen.width, screen.height) + 'px');
+      addEventListener('focusout', () => setTimeout(() => scrollTo(0, 0), 100));
+    }
     App.boot();
     if ('serviceWorker' in navigator) addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch((e) => console.warn('SW', e)));
   </script>

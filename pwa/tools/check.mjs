@@ -123,6 +123,9 @@ if (!links.some((a) => a.rel === 'apple-touch-icon' && a.href === 'assets/app-ic
 if (!/serviceWorker\.register\('sw\.js'\)/.test(distHtml)) {
   errs.push('index.html thiếu đăng ký sw.js');
 }
+if (!distHtml.includes('navigator.standalone') || !distHtml.includes('--app-h')) {
+  errs.push('index.html thiếu xử lý iOS standalone (--app-h)');
+}
 const appCssIdx = links.findIndex((a) => a.rel === 'stylesheet' && a.href === 'css/app.css');
 const pwaCssIdx = links.findIndex((a) => a.rel === 'stylesheet' && a.href === 'pwa.css');
 if (appCssIdx === -1 || pwaCssIdx === -1 || pwaCssIdx < appCssIdx) {
@@ -187,6 +190,9 @@ if (!filesMatch) {
 
 // 5. Kiểm tra không có mã màu hex trong pwa.css và index.html (trừ theme-color meta)
 const pwaCss = readFileSync(join(distDir, 'pwa.css'), 'utf8');
+if (!pwaCss.includes('html.ios-standalone .phone') || !pwaCss.includes('var(--app-h)')) {
+  errs.push('pwa.css thiếu rule html.ios-standalone .phone dùng var(--app-h)');
+}
 if (/#[0-9a-fA-F]{3,8}\b/.test(pwaCss)) {
   errs.push('pwa.css có mã màu hex cứng, chỉ được dùng var(--...)');
 }
