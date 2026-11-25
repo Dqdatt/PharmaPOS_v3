@@ -92,7 +92,7 @@ async function captureState(context, baseUrl, stateIndex, label, logBucket) {
     await page.evaluate(() => document.fonts.ready);
     await page.clock.runFor(2500);
     await page.evaluate((i) => App.states[i].run(), stateIndex);
-    await page.clock.runFor(3000);
+    await page.clock.runFor(4000);
     await page.evaluate(() => document.getAnimations().forEach((a) => {
       try { a.finish(); } catch { a.pause(); }
     }));
