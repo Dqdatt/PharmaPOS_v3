@@ -25,7 +25,7 @@ App.css(`
   height: 27px;
   border-radius: 50%;
   background: var(--card);
-  box-shadow: 0 2px 6px rgba(10, 40, 38, .2);
+  box-shadow: var(--gl-shadow);
   transition: transform .3s var(--spring);
 }
 .ac-switch.on .ac-knob { transform: translateX(20px); }
@@ -52,7 +52,6 @@ App.css(`
   let faceIdEnabled = true;
 
   const notifPrefs = {
-    webLogin: true,
     lowStock: true,
     expiring: true,
     dailySummary: true,
@@ -63,15 +62,13 @@ App.css(`
       <h3>Hỗ trợ kỹ thuật</h3>
       <p>Tổng đài dược sĩ và kỹ thuật PharmaPOS luôn sẵn sàng hỗ trợ nhà thuốc.</p>
       <div style="display:flex;flex-direction:column;gap:10px;margin-top:20px">
-        <button class="btn btn-primary block tap" id="acCallAction">${App.icon('phone', 20)}Gọi 1900 6868</button>
+        <a class="btn btn-primary block tap" id="acCallAction" href="tel:19006868" style="text-decoration:none">${App.icon('phone', 20)}Gọi 1900 6868</a>
         <button class="btn btn-secondary block tap" id="acZaloAction">Nhắn Zalo</button>
-        <button class="btn btn-ghost block tap" data-close>Đóng</button>
       </div>
     `, {
       onMount(sheetEl, close) {
         sheetEl.querySelector('#acCallAction')?.addEventListener('click', () => {
           close();
-          App.toast('Đang kết nối 1900 6868', 'phone');
         });
         sheetEl.querySelector('#acZaloAction')?.addEventListener('click', () => {
           close();
@@ -82,22 +79,31 @@ App.css(`
   }
 
   function showLogoutSheet() {
+    let logoutTimer = null;
     App.sheet(`
       <h3>Đăng xuất khỏi điện thoại này?</h3>
       <p>Các máy tính đang đăng nhập web vẫn mở. Muốn tắt hết thì đăng xuất chúng ở Phiên web trước.</p>
       <div style="display:flex;flex-direction:column;gap:10px;margin-top:20px">
         <button class="btn btn-danger block tap" id="acLogoutConfirm">Đăng xuất</button>
-        <button class="btn btn-secondary block tap" data-close>Ở lại</button>
+        <button class="btn btn-secondary block tap" id="acLogoutCancel" data-close>Ở lại</button>
       </div>
     `, {
       onMount(sheetEl, close) {
+        const cancelBtn = sheetEl.querySelector('#acLogoutCancel');
         sheetEl.querySelector('#acLogoutConfirm')?.addEventListener('click', (e) => {
           App.busy(e.currentTarget, 'Đang đăng xuất...');
-          setTimeout(() => {
+          if (cancelBtn) cancelBtn.style.pointerEvents = 'none';
+          logoutTimer = setTimeout(() => {
             close();
             App.reset('login');
           }, 800);
         });
+      },
+      onClose() {
+        if (logoutTimer) {
+          clearTimeout(logoutTimer);
+          logoutTimer = null;
+        }
       },
     });
   }
@@ -178,6 +184,9 @@ App.css(`
       `;
     },
     mount: (el) => {
+      if (el._mounted) return;
+      el._mounted = true;
+
       const fidBtn = el.querySelector('#acFaceIdBtn');
       const fidRow = el.querySelector('#acFaceIdRow');
       if (fidRow && fidBtn) {
@@ -274,6 +283,9 @@ App.css(`
       `;
     },
     mount: (el) => {
+      if (el._mounted) return;
+      el._mounted = true;
+
       el.querySelectorAll('.ac-notif-row').forEach((row) => {
         row.addEventListener('click', () => {
           const id = row.dataset.id;
@@ -353,6 +365,9 @@ App.css(`
       `;
     },
     mount: (el) => {
+      if (el._mounted) return;
+      el._mounted = true;
+
       el.querySelectorAll('.ac-toggle-row').forEach((row) => {
         row.addEventListener('click', () => {
           const key = row.dataset.key;
