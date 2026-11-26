@@ -1,10 +1,12 @@
 -- Seed data for PharmaPOS V3 (MediPOS) local development
 
--- USERS: Claude sẽ sửa ở bước auth, không thêm logic khác vào đây
-INSERT INTO public.users (id, name, role, pin) OVERRIDING SYSTEM VALUE VALUES
-  (1, 'Nguyễn Văn Quản', 'admin', '1234'),
-  (2, 'Trần Thị Lan', 'staff', '1234'),
-  (3, 'Lê Minh Tú', 'staff', '1234');
+-- USERS (Claude giữ): tài khoản auth.users tạo bằng `node scripts/seed-auth.mjs` sau `supabase db reset`.
+-- Đăng nhập bằng email (mã đọc ở Mailpit http://localhost:54324). pin chỉ còn cho POS cũ tới khi có đăng nhập QR. Chỉ 'invited' mới test được luồng OTP lần đầu.
+INSERT INTO public.users (id, name, role, pin, email, phone, status) OVERRIDING SYSTEM VALUE VALUES
+  (1, 'Nguyễn Văn Quản', 'manager', '1234', 'quanly@medipos.test', '84901000001', 'invited'),
+  (2, 'Trần Thị Lan', 'staff', '1234', 'nv.lan@medipos.test', '84901000002', 'invited'),
+  (3, 'Lê Minh Tú', 'staff', '1234', 'nv.tu@medipos.test', '84901000003', 'invited'),
+  (4, 'Admin MediPOS', 'admin', NULL, 'admin@medipos.test', '84901000004', 'active');
 SELECT setval(pg_get_serial_sequence('public.users', 'id'), (SELECT COALESCE(MAX(id), 1) FROM public.users));
 
 -- Nhà cung cấp (2 nhà cung cấp)

@@ -1,33 +1,40 @@
-# HANDOFF — MediPOS (repo PharmaPOS_V3), 26/11/2026 sáng
+# HANDOFF — MediPOS (repo PharmaPOS_V3), 26/11/2026 chiều
 
 ## Mục tiêu phiên vừa rồi
-Sửa lỗi PWA trên iPhone: đáy màn hở dải teal ~48pt khi mở app từ màn hình chính (Kavor cũng dính lỗi y hệt).
+Chốt PWA ổn; nhận yêu cầu mới: nâng cấp hệ thống đăng nhập + bảo mật (admin/QL/NV, OTP 6 số, Face ID, đăng nhập POS web bằng điện thoại). Đã chốt; xong bước 1 (Supabase local + vai trò + RLS + OTP email).
 
 ## Đã xong (nhánh `prototype-mobile`, chưa push, chưa gộp main)
-- Giao 019 (a28dfcf): khi `navigator.standalone`, `.phone` cao `screen.height` (`--app-h`) + `focusout` → `scrollTo(0,0)`. Đoán là lỗi bàn phím → KHÔNG ăn.
-- Đo bằng beacon trên iPhone thật (iOS 18.5): ngay từ lúc mở `innerHeight` 848 / `screen.height` 896 (thiếu status bar); `html, body { position: fixed }` cắt trang ở 848.
-- Giao 020 (03a5931): `html.ios-standalone, html.ios-standalone body { position: static; height: var(--app-h) }` + `.phone` absolute. Người dùng xác nhận hết hở trên máy thật; đo lại `innerHeight` = 896. `check:pwa` có kiểm tra giữ cách sửa này.
-- Bộ nhớ `ios-pwa-viewport-fix`: nguyên nhân + cách sửa + cách đo bằng beacon, để áp cho Kavor/PWA sau.
-- `docs/TASKS.md` đã cập nhật.
+- PWA iOS hết hở đáy (giao 019+020, 03a5931) — người dùng xác nhận "hoạt động ổn như tôi muốn".
+- `docs/AUTH_PLAN.md`: yêu cầu, phương án, quyết định đã chốt, thứ tự 6 bước.
+- Giao 021 (666b2a0): migration schema gốc + seed 40 hoá đơn/15 thuốc/3 phiếu nhập; `supabase db reset` dựng được.
+- Giao 022 (Claude, chưa commit): `supabase/migrations/20261126090000_auth_roles_rls.sql` (role admin/manager/staff, auth_id/email/phone/status, `my_role()`/`my_user_id()`/`my_profile()`, RLS, cấp quyền rõ vì Postgres mới không tự cấp), `scripts/seed-auth.mjs`, `supabase/tests/rls_check.sql`, mẫu mail `supabase/templates/otp.html`, config: tắt tự đăng ký, OTP 10 phút, mật khẩu ≥ 8. `npm run db:reset` + `npm run test:rls` → RLS OK; OTP email → Mailpit → verify thử thật đạt.
 
 ## Đang dở
-- Ô SĐT trong ảnh người dùng hiện "2884 0" kèm lỗi "cần đủ 10 số" — chưa rõ người dùng gõ thiếu hay `formatPhone` (`prototype/screens/auth.js:139`) làm mất số. Cần hỏi.
-- Test qua link local http://192.168.1.30:4174/ (preview `pwa`, http.server bind mọi IP). Http nên SW không chạy trên iPhone. Preview trên localhost CÓ SW → sửa tay `pwa/dist` phải xoá SW + cache mới thấy.
-- Chưa commit: `HANDOFF.md`, `docs/TASKS.md`; `supabase/.gitignore`, `supabase/config.toml` (có từ trước, không đụng).
+- Giao 023 (nhân viên, `cho_lam`): POS web đổi role 'admin' → 'manager', ẩn admin khỏi POS. Duyệt bằng `giao xem 023`.
+- Giao 022 chưa `giao xong` (việc --chi-claude, chờ commit rồi đóng).
+- Sau 022, POS web chạy local sẽ không đọc được dữ liệu bằng PIN nữa (RLS cần đăng nhập) cho tới bước 4 (QR). Prod không đổi.
+- Màn đăng nhập app (`prototype/screens/auth.js`) đang nhập SĐT → bước 2 đổi sang email (bỏ luôn lỗi ô SĐT "2884 0").
+- Chưa commit: toàn bộ việc 022 + `AGENTS.md`, `package.json`, `HANDOFF.md`, `docs/`. Sao lưu config.toml/.gitignore cũ ở scratchpad (bản trong nhánh thay thế).
 
 ## Quyết định đã chốt
-- Sửa giao diện ở `prototype/`; lớp vỏ PWA riêng ở `pwa/src/` (index.html, pwa.css). Không sửa `pwa/dist` (trừ debug tạm, build lại là mất).
-- Mọi việc sửa chia qua `giao`; Claude đặc tả, duyệt diff, chạy preview thật trước `giao xong`.
-- Lỗi chỉ thấy trên máy thật → gắn beacon `fetch('/__dbg?...')` vào `pwa/dist`, đọc `preview_logs` — đo, không đoán.
-- Status bar `black-translucent`; khóa dọc bằng `.rotate-lock`; cách sửa chiều cao dựa vào app khóa dọc.
+- **Mọi việc, mọi phiên trong dự án đều qua `giao`** (kể cả sửa nhỏ, góp ý qua lại). Vùng nhạy cảm (auth, quyền, RLS, migration, tiền) vẫn tạo việc `giao --chi-claude` và Claude tự làm.
+- Phân quyền ĐƠN GIẢN: 3 vai trò cố định, kiểm `users.role` + RLS vài dòng, không bảng quyền.
+- Chỉ 1 cơ sở. Admin cấp toàn bộ tài khoản (QL không cấp). NV xem doanh số cá nhân, QL xem toàn bộ.
+- POS web chỉ 1 cách đăng nhập: quét QR bằng app + Face ID (bỏ so số, bỏ mã 6 số dự phòng).
+- Admin mới = quản lý toàn hệ thống, chỉ dùng app, bị chặn ở POS. QL khác admin. App PWA KHÔNG bán hàng.
+- Đăng nhập chỉ bằng **email** (mã 6 số qua mail, miễn phí); SĐT chỉ để liên hệ, không SMS. Lần đầu OTP → tạo mật khẩu; sau đó Face ID/sinh trắc học HĐH.
+- Dev dùng dữ liệu local: Supabase local (`supabase start` → `npm run db:reset` → `npm run test:rls`; Mailpit :54324 đọc mã email; tài khoản test trong `supabase/seed.sql`, mật khẩu test trong `scripts/seed-auth.mjs`).
+- Sửa giao diện ở `prototype/`, rồi build lại `pwa/`; không sửa `pwa/dist`. Lỗi chỉ thấy trên máy thật → beacon đo, không đoán.
 
 ## Nợ Ponytail
-- Không có `shortcut:` mới. `verify:pwa` vẫn chập chờn ~1/5 lần. Trang iOS dài hơn viewport báo về 48pt — người dùng chưa báo bị trôi khi vuốt, theo dõi.
+- Không có `shortcut:` mới. `verify:pwa` vẫn chập chờn ~1/5 lần.
+- POS web local hiện không chạy được (anon hết quyền, `select('*')` users đụng cột pin) cho tới bước 4 (QR). Prod chưa nhận migration.
+- Gửi OTP cho email lạ trả 422 → lộ email nào có tài khoản; chấp nhận được với app nội bộ, xem lại khi lên thật.
+- WebAuthn (Face ID) cần HTTPS: test iPhone qua `http://192.168.x` sẽ không chạy → cần GitHub Pages/tunnel HTTPS khi tới bước 3.
 
 ## Việc tiếp theo
-1. Hỏi người dùng lỗi ô SĐT "2884 0"; nếu mất số → đặc tả sửa `formatPhone`/con trỏ trong `prototype/screens/auth.js`, giao — [sonnet]
-2. Nhận góp ý tiếp khi test PWA trên iPhone → đặc tả, giao, build, `verify:pwa` — [opus high]
-3. Thiết kế thật đăng nhập web bằng điện thoại + bỏ so PIN ở trình duyệt — [opus xhigh]
+1. Duyệt giao 023 (đọc diff, `npm run lint && npm test`) — [opus high]
+2. Bước 2: Edge Function `admin-create-user` + RPC kích hoạt sau đặt mật khẩu (Claude); `prototype/js/api.js` nối Supabase (Claude, file khung); UI `auth.js` đổi sang email + OTP + tạo mật khẩu (giao) — [opus xhigh]
 
 ## File cần đọc đầu tiên
-`AGENTS.md` · `pwa/src/index.html` · `pwa/src/pwa.css` · `prototype/screens/auth.js` · `docs/TASKS.md`
+`docs/AUTH_PLAN.md` · `AGENTS.md` · `supabase/migrations/20261126090000_auth_roles_rls.sql` · `prototype/screens/auth.js` · `prototype/js/core.js`

@@ -5,7 +5,7 @@
 - [x] Prototype: Đăng nhập web bằng điện thoại (QR + chọn số khớp + phiên web) (`screens/weblogin.js`) — [opus xhigh] đặc tả, giao dựng UI
 - [x] Prototype: Doanh thu + Tiện ích (`screens/revenue.js`, `screens/tools.js`) — [sonnet] giao
 - [x] Prototype: Thông báo + Tài khoản/Bảo mật (`screens/account.js`) — [sonnet] giao
-- [ ] Thiết kế thật luồng đăng nhập web bằng điện thoại (API, token, hết hạn QR, thu hồi phiên) — [opus xhigh]
+- [x] Đề xuất thiết kế đăng nhập/bảo mật mới (`docs/AUTH_PLAN.md`), đã chốt — [opus xhigh]
 - [ ] Bỏ so PIN ở trình duyệt trong `Login.tsx` (PIN đang đọc từ bảng users về client) — [opus xhigh]
 - [ ] Chọn nền tảng app thật (Expo/React Native như Kavor) và port prototype 1:1 — [opus high]
 - [x] Prototype: góp ý vòng 2 (nền, tab bar, đăng nhập, OTP, màn trống, logo MediPOS) — [opus high]
@@ -15,6 +15,14 @@
 - [x] PWA MediPOS từ prototype (giao 017 vỏ PWA, 018 kiểm chứng 0 pixel) — [opus high]
 - [ ] PWA: góp ý của người dùng khi test link local (sửa ở prototype/, build lại) — [opus high]
 - [x] PWA iOS: hở dải đáy 48pt khi mở từ màn hình chính (giao 019+020, 03a5931, đã thử iPhone thật) — [opus high]
-- [ ] PWA: hỏi người dùng ô SĐT "2884 0" có mất số khi gõ không — [sonnet]
+- [x] PWA: ô SĐT "2884 0" — bỏ, đăng nhập chuyển sang email (Auth 2)
 - [ ] Kavor: áp cách sửa hở đáy PWA iOS (bộ nhớ `ios-pwa-viewport-fix`), làm ở phiên dự án Kavor — [opus high]
 - [ ] PWA: deploy lại GitHub Pages khi cần HTTPS (lần trước GitHub lỗi 500) — [haiku]
+- [x] Auth: người dùng chốt 1 cơ sở, admin cấp mọi tài khoản, NV xem cá nhân/QL toàn bộ, POS chỉ QR + Face ID
+- [x] Auth 1: Supabase local (giao 021) + vai trò/RLS/OTP email (giao 022), `npm run test:rls` đạt
+- [ ] Auth 1b: POS web đổi role admin → manager (giao 023) — [sonnet]
+- [ ] Auth 2: tạo tài khoản (Edge Function) + OTP 6 số qua email + đặt mật khẩu lần đầu; UI `auth.js` đổi SĐT → email, giao — [opus xhigh]
+- [ ] Auth 3: Face ID = passkey WebAuthn (cần HTTPS) — [opus xhigh]
+- [ ] Auth 4: đăng nhập POS web chỉ bằng QR + Face ID (bỏ so số trong weblogin.js); chặn admin ở POS — [opus xhigh]
+- [ ] Auth 5: RLS dữ liệu bán hàng theo tài khoản; app xem NV/doanh số dữ liệu thật — [opus xhigh] + UI [sonnet]
+- [ ] Auth 6: màn app quản lý tài khoản (chỉ admin: cấp, khoá, đổi quyền) — UI [sonnet], quyền [opus xhigh]

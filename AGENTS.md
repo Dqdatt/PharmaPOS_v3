@@ -10,6 +10,7 @@ Tên hiển thị cho người dùng là **MediPOS** (web và app), logo là ico
 
 ## Lệnh
 - `npm run dev` → http://localhost:3000 (preview tên `dev` trong `.claude/launch.json`)
+- Supabase local: `supabase start` → `npm run db:reset` (schema + seed + tài khoản auth test, mật khẩu test trong `scripts/seed-auth.mjs`) → `npm run test:rls`. Mã OTP email đọc ở Mailpit http://localhost:54324. `.env.local` trỏ `http://127.0.0.1:54321` + ANON_KEY từ `supabase status`.
 - `npm run build` · `npm run lint` (= `tsc --noEmit`) · `npm test` (node:test, `src/__tests__/*.test.ts`)
 - Prototype app: `python3 -m http.server 4173 -d prototype` → http://localhost:4173 (preview tên `prototype`); kiểm tự động `node prototype/tools/check.mjs`
 - PWA (`pwa/`, chạy nguyên file prototype): `npm run build:pwa` → `pwa/dist/`; `npm run check:pwa`; `npm run verify:pwa` (so ảnh 0 pixel với prototype). Link test: GitHub Pages nhánh `gh-pages` (https://dqdatt.github.io/PharmaPOS_v3/)
@@ -31,7 +32,7 @@ Tên hiển thị cho người dùng là **MediPOS** (web và app), logo là ico
 
 ## Vùng nhạy cảm (chỉ Claude phiên chính làm, effort xhigh)
 - Tiền: doanh thu/báo cáo (`reportRevenue.ts`), thanh toán nhập hàng (`purchasePayment.ts`), VietQR/ngân hàng.
-- Đăng nhập + phân quyền: hiện `Login.tsx` so PIN ở trình duyệt (PIN đọc từ bảng `users`) — mọi việc đụng auth, đăng nhập web bằng điện thoại, MFA.
+- Đăng nhập + phân quyền (`docs/AUTH_PLAN.md`): Supabase Auth (OTP email), 3 vai trò `admin|manager|staff`, RLS ở `supabase/migrations/20261126090000_auth_roles_rls.sql`. `Login.tsx` còn so PIN (cũ, sẽ thay bằng QR). Mọi việc đụng auth, đăng nhập web bằng điện thoại, MFA.
 - Tồn kho/trigger DB, migration.
 
 ## Prototype app (`prototype/`) — quy tắc UI bắt buộc
