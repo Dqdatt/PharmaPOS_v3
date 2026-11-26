@@ -540,16 +540,15 @@
         const done = App.busy(enableBtn, 'Đang bật...');
         skipBtn.disabled = true;
         errEl.textContent = '';
-        const ok = await App.faceId();
+        const r = await API.bio.enable();
         if (!isActiveView(el)) return;
         done();
         skipBtn.disabled = false;
-        if (ok) {
-          API.bio.set(true);
+        if (r.ok) {
           App.toast('Đã bật Face ID');
           App.reset('home', {}, 'fade');
         } else {
-          errEl.textContent = 'Face ID không khớp. Thử lại hoặc để sau.';
+          errEl.textContent = r.error;
         }
       });
 
@@ -660,35 +659,23 @@
       passIn.addEventListener('input', () => setErr(''));
       bindEyeToggle(passIn, el.querySelector('[data-toggle-pass]'));
 
-      const runFaceId = async () => {
+      // auto: tự mở khi vào màn — iOS có thể chặn Face ID khi chưa chạm, lúc đó chỉ đứng yên chờ bấm nút
+      const runFaceId = async (auto) => {
         if (busy) return;
         const done = startBusy(faceIdBtn, 'Đang mở khóa...');
-        const ok = await App.faceId();
+        const r = await API.bio.unlock();
         if (!isActiveView(el)) return;
-        if (!ok) {
-          done();
-          showPassForm();
-          return;
-        }
-        if (window.API && API.live) {
-          const me = await API.profile();
-          if (!isActiveView(el)) return;
-          done();
-          if (!me) {
-            App.toast('Phiên đăng nhập đã hết, vui lòng đăng nhập lại', 'alert');
-            App.reset('login');
-            return;
-          }
-        } else {
-          done();
-        }
-        App.reset('home', {}, 'fade');
+        done();
+        if (r.ok) { App.reset('home', {}, 'fade'); return; }
+        if (auto === true && r.cancel) return;
+        if (!r.retry) App.toast(r.error, 'alert');
+        showPassForm();
       };
 
       if (!p.showPass && !p.qa) {
         autoFaceTimer = setTimeout(() => {
           autoFaceTimer = null;
-          if (isActiveView(el)) runFaceId();
+          if (isActiveView(el)) runFaceId(true);
         }, 400);
       }
 

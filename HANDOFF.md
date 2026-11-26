@@ -11,8 +11,13 @@ Nâng cấp đăng nhập + bảo mật (admin/QL/NV, OTP email, đăng nhập P
 - Test iPhone qua HTTPS: `pwa/tools/serve.mjs` + cloudflared (d4c608a). Kế hoạch A–F ghi trong `docs/AUTH_PLAN.md` (673a043).
 - Kiểm tự động đều đạt: `npm run test:rls`, `npm run test:web-login`, `npm test`, `npm run lint`, `npm run check:pwa`.
 
-## Đang dở
-- Chưa bắt đầu A–F. Không có việc `giao` nào đang mở. Cây làm việc sạch.
+## Bước A (passkey) — XONG, người dùng test iPhone qua tunnel đạt hết (giao 028)
+- Migration `20261126120000_passkeys.sql`: bảng `passkeys`, `passkey_challenges` (dùng 1 lần, 2 phút); `web_login_approve` (chỉ service role); `web_login_decide` chỉ còn từ chối (duyệt → `need_passkey`).
+- Edge Function `passkey` (`@simplewebauthn/server@13`): register / login (cấp phiên) / approve (duyệt POS) / delete. Origin: secret `PASSKEY_ORIGINS`; chưa đặt thì chỉ Supabase local nhận `http://localhost:*` + `https://*.trycloudflare.com`. `_shared/session.ts` cấp phiên dùng chung với `web-login`.
+- `api.js`: `API.bio.enable/unlock/disable`, `API.webLogin.approve`; localStorage `medipos.passkey` = {id, uid}, đăng xuất / đổi tài khoản thì quên. Mock + trang QA vẫn `App.faceId()`. Đã nối `auth.js` (bật Face ID, màn khoá), `account.js` (công tắc), `weblogin.js` (duyệt).
+- Người dùng chốt: duyệt POS BẮT BUỘC Face ID (chưa bật → báo bật trong Tài khoản).
+- Kiểm: `npm run test:passkey` (authenticator giả ES256) + web-login + rls + npm test + lint + check:pwa + verify:pwa đều đạt. `test:rls` phải chạy ngay sau `db:reset` (test khác kích hoạt NV 3).
+- Trình duyệt trong app không làm được WebAuthn (treo ở hộp thoại hệ thống) → Face ID thật chỉ thử được trên iPhone qua tunnel.
 - DB thật (Supabase cloud) và POS đang chạy thật vẫn là bản cũ dùng PIN; chưa áp migration nào.
 
 ## Quyết định đã chốt
@@ -25,15 +30,14 @@ Nâng cấp đăng nhập + bảo mật (admin/QL/NV, OTP email, đăng nhập P
 
 ## Nợ Ponytail
 - `api.js:11`: URL + anon key Supabase local viết cứng → bước F đọc từ cấu hình build.
-- `api.js:160`: Face ID chỉ là cờ trên máy → làm thật ở bước A.
+- Edge Function `passkey`: `login-options` không giới hạn tần suất (challenge hết hạn 2 phút, dọn mỗi lần gọi) → thêm giới hạn theo IP ở bước F nếu cần.
 - `pwa/tools/serve.mjs`: chỉ dùng cho dev.
 - `verify:pwa` chập chờn ~1/5 lần. Gửi OTP cho email lạ trả 422, lộ email nào có tài khoản → xem lại ở bước F.
 - Thêm Edge Function mới phải `supabase stop && supabase start`. Bảng mới phải tự GRANT quyền (Postgres mới không tự cấp).
 
 ## Việc tiếp theo
-1. A — Face ID thật = passkey WebAuthn (bảng `passkeys`, Edge Function `passkey`, `API.bio`/`App.faceId()` gọi thật), test qua tunnel — [opus xhigh]
-2. B — Push VAPID (`push_subscriptions`, SW `pwa/src/sw.js`, `push-send`, `pg_cron`); C — thêm `min_stock` + hạn dùng theo lô — [opus xhigh]
-3. D → E → F theo `docs/AUTH_PLAN.md` (F: chuyển DB thật, hỏi người dùng trước mỗi thao tác) — [opus xhigh]
+1. B — Push VAPID (`push_subscriptions`, SW `pwa/src/sw.js`, `push-send`, `pg_cron`); C — thêm `min_stock` + hạn dùng theo lô — [opus xhigh]
+2. D → E → F theo `docs/AUTH_PLAN.md` (F: chuyển DB thật, hỏi người dùng trước mỗi thao tác) — [opus xhigh]
 
 ## File cần đọc đầu tiên
 `docs/AUTH_PLAN.md` · `AGENTS.md` · `prototype/js/api.js` · `supabase/functions/web-login/index.ts` · `supabase/migrations/20261126090000_auth_roles_rls.sql`

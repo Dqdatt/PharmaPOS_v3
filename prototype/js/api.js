@@ -45,8 +45,51 @@
     const profile = await readProfile();
     if (!profile) { await sb.auth.signOut(); return fail('Email này chưa được cấp tài khoản'); }
     if (profile.status === 'locked') { await sb.auth.signOut(); return fail('Tài khoản đã bị khoá, vui lòng liên hệ admin'); }
+    const pk = pkLocal();
+    if (pk && pk.uid !== profile.id) localStorage.removeItem(PK_KEY); // passkey của tài khoản khác: không mở khoá nhầm người
     return { ok: true, profile };
   }
+
+  // ---------- Passkey WebAuthn (Face ID thật), xác minh ở Edge Function `passkey` ----------
+  const PK_KEY = 'medipos.passkey'; // { id: credential id, uid: users.id } passkey của máy này (live); mock dùng cờ medipos.bio
+  const pkLocal = () => { try { const v = JSON.parse(localStorage.getItem(PK_KEY)); return v && v.id ? v : null; } catch (e) { return null; } };
+  const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const unb64u = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
+  const pkSupported = () => !!(window.isSecureContext && window.PublicKeyCredential && navigator.credentials);
+  const ids = (list) => (list || []).map((x) => ({ ...x, id: unb64u(x.id) }));
+  const credJSON = (c, response) => ({ id: c.id, rawId: b64u(c.rawId), type: c.type, authenticatorAttachment: c.authenticatorAttachment || undefined,
+    clientExtensionResults: c.getClientExtensionResults(), response });
+
+  async function pkCreate(o) {
+    const c = await navigator.credentials.create({ publicKey: { ...o, challenge: unb64u(o.challenge), user: { ...o.user, id: unb64u(o.user.id) }, excludeCredentials: ids(o.excludeCredentials) } });
+    const r = c.response;
+    return credJSON(c, { clientDataJSON: b64u(r.clientDataJSON), attestationObject: b64u(r.attestationObject), transports: r.getTransports ? r.getTransports() : [] });
+  }
+  async function pkGet(o) {
+    const c = await navigator.credentials.get({ publicKey: { ...o, challenge: unb64u(o.challenge), allowCredentials: ids(o.allowCredentials) } });
+    const r = c.response;
+    return credJSON(c, { clientDataJSON: b64u(r.clientDataJSON), authenticatorData: b64u(r.authenticatorData), signature: b64u(r.signature),
+      userHandle: r.userHandle ? b64u(r.userHandle) : undefined });
+  }
+  // Gọi Edge Function; lỗi ném Error mang câu tiếng Việt + code của server
+  async function pkFn(body) {
+    const { data, error } = await sb.functions.invoke('passkey', { body });
+    if (!error) return data;
+    let j = null;
+    try { j = await error.context.json(); } catch (e) { /* lỗi mạng: không có body */ }
+    const err = new Error((j && j.error) || error.message);
+    if (j && j.error) { err.vi = true; err.code = j.code; }
+    throw err;
+  }
+  // retry = true: Face ID không khớp / người dùng huỷ → cho thử lại
+  function pkFail(e) {
+    const name = e && e.name;
+    if (name === 'NotAllowedError' || name === 'AbortError') return { ok: false, retry: true, cancel: true, error: 'Face ID không thành công, vui lòng thử lại' };
+    if (name === 'SecurityError' || name === 'NotSupportedError') return fail('Địa chỉ này không dùng được Face ID');
+    if (e && e.vi) return { ok: false, error: e.message, code: e.code, retry: e.code === 'bio_failed' };
+    return fail(e);
+  }
+  const mockFace = async (error) => ((await App.faceId()) ? { ok: true } : { ok: false, retry: true, error });
 
   const MOCK_PROFILE = () => ({ id: 0, name: DATA.owner.name, role: 'manager', status: 'active', email: 'demo@medipos.vn', phone: '84903128466' });
   let mockStatus = 'invited';
@@ -114,7 +157,8 @@
     },
 
     async signOut() {
-      API.bio.set(false);
+      await API.bio.disable();
+      localStorage.removeItem(PK_KEY); // xoá ở server lỗi (mất mạng) thì máy này vẫn phải quên passkey
       if (live) { try { await sb.auth.signOut(); } catch (e) { /* vẫn xoá phiên cục bộ */ } }
       return { ok: true };
     },
@@ -143,13 +187,23 @@
           return { ok: true, request: { browser, os, ip: r.ip || '', time: `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`, expiresAt: new Date(r.expires_at).getTime() } };
         } catch (e) { return fail(e); }
       },
-      /** Duyệt (approve=true, gọi SAU App.faceId() thành công) hoặc từ chối. */
+      /** Duyệt bằng Face ID: passkey xác minh ở server (bắt buộc đã bật Face ID trên máy này). */
+      async approve(id) {
+        if (!live) return mockFace('Face ID không khớp');
+        if (!pkLocal() || !pkSupported()) return fail('Bật Face ID trong Tài khoản để duyệt đăng nhập POS');
+        try {
+          const opts = await pkFn({ action: 'approve-options', id });
+          await pkFn({ action: 'approve', id, response: await pkGet(opts) });
+          return { ok: true };
+        } catch (e) { return pkFail(e); }
+      },
+      /** Từ chối (approve=false). Duyệt chỉ qua approve() ở trên — server trả need_passkey nếu gọi decide(id, true). */
       async decide(id, approve) {
         if (!live) { await wait(600); return { ok: true }; }
         try {
           const { data, error } = await sb.rpc('web_login_decide', { req_id: id, approve: !!approve });
           if (error) return fail(error);
-          if (data === 'approved' || data === 'rejected') return { ok: true };
+          if (data === 'rejected') return { ok: true };
           if (data === 'admin_blocked') return fail('Tài khoản quản trị chỉ dùng app, không đăng nhập POS');
           if (data === 'expired') return fail('Mã đã hết hạn, hãy tải lại mã trên máy tính');
           return fail('Tài khoản chưa có quyền đăng nhập POS');
@@ -157,10 +211,53 @@
       },
     },
 
-    // shortcut: Face ID hiện chỉ là cờ trên máy + App.faceId() mô phỏng; bước 3 thay bằng passkey WebAuthn xác minh ở server
+    /** Face ID = passkey WebAuthn (live); mock dùng App.faceId() mô phỏng. Mọi hàm trả { ok } | { ok: false, error, retry? }. */
     bio: {
-      enabled: () => localStorage.getItem('medipos.bio') === '1',
-      set: (on) => (on ? localStorage.setItem('medipos.bio', '1') : localStorage.removeItem('medipos.bio')),
+      enabled: () => (live ? !!pkLocal() : localStorage.getItem('medipos.bio') === '1'),
+      /** Bật Face ID: tạo passkey trên máy + lưu ở server (cần đang đăng nhập). */
+      async enable() {
+        if (!live) {
+          const r = await mockFace('Face ID không khớp. Thử lại hoặc để sau.');
+          if (r.ok) localStorage.setItem('medipos.bio', '1');
+          return r;
+        }
+        if (!pkSupported()) return fail('Máy này không dùng được Face ID');
+        try {
+          const opts = await pkFn({ action: 'register-options' });
+          const r = await pkFn({ action: 'register', response: await pkCreate(opts) });
+          localStorage.setItem(PK_KEY, JSON.stringify({ id: r.credential, uid: r.user_id }));
+          return { ok: true };
+        } catch (e) { return pkFail(e); }
+      },
+      /** Mở khoá app: server xác minh passkey rồi cấp phiên mới → { ok, profile }. */
+      async unlock() {
+        if (!live) return mockFace('Face ID không khớp');
+        const pk = pkLocal();
+        if (!pk || !pkSupported()) return fail('Face ID chưa bật trên máy này');
+        try {
+          const opts = await pkFn({ action: 'login-options', credential: pk.id });
+          const r = await pkFn({ action: 'login', response: await pkGet(opts) });
+          const { error } = await sb.auth.setSession(r.session);
+          return error ? fail(error) : await afterAuth();
+        } catch (e) {
+          if (e && e.code === 'unknown') localStorage.removeItem(PK_KEY);
+          return pkFail(e);
+        }
+      },
+      /** Tắt Face ID máy này: xoá passkey ở server (passkey trong Keychain còn nhưng hết hiệu lực). */
+      async disable() {
+        localStorage.removeItem('medipos.bio');
+        const pk = live && pkLocal();
+        if (!pk) return { ok: true };
+        try {
+          await pkFn({ action: 'delete', credential: pk.id });
+          localStorage.removeItem(PK_KEY);
+          return { ok: true };
+        } catch (e) {
+          if (e && e.vi) localStorage.removeItem(PK_KEY); // phiên hết hạn: server không xoá được, máy này vẫn tắt
+          return e && e.vi ? { ok: true } : pkFail(e);
+        }
+      },
     },
   });
 })();

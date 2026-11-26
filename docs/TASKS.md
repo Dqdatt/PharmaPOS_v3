@@ -24,7 +24,7 @@
 - [x] Auth 1b: POS web đổi role admin → manager (giao 023)
 - [x] Auth 2a: Edge Function cấp tài khoản + trigger kích hoạt + `prototype/js/api.js` (e415938)
 - [x] Auth 2b: UI app email + mã 6 số + tạo mật khẩu, bỏ PIN app (giao 024, 025), test trên PWA — [opus xhigh]
-- [ ] A: Face ID thật = passkey WebAuthn — [opus xhigh]
+- [x] A: Face ID thật = passkey WebAuthn (test iPhone đạt) — [opus xhigh]
 - [ ] B: Push thông báo 4 loại — [opus xhigh]
 - [ ] C: min_stock + hạn dùng theo lô (POS Nhập hàng) — [opus xhigh] + UI giao
 - [ ] D: app đọc dữ liệu thật — [opus xhigh] + UI giao

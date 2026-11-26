@@ -3,6 +3,7 @@
 //  { action: 'poll', id, secret }     → { status: 'pending'|'rejected'|'expired' } | { status: 'approved', session }
 // Phiên chỉ cấp 1 lần (approved → used), chỉ cho QL/NV đang active; admin không vào POS.
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { issueSession } from '../_shared/session.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -14,7 +15,6 @@ const reply = (status: number, body: unknown) =>
 
 const URL_ = Deno.env.get('SUPABASE_URL')!;
 const db = createClient(URL_, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
-const anon = () => createClient(URL_, Deno.env.get('SUPABASE_ANON_KEY')!, { auth: { persistSession: false } });
 
 const sha256 = async (s: string) =>
   Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s))))
@@ -65,12 +65,9 @@ Deno.serve(async (req) => {
     if (!u?.email || u.status !== 'active' || (u.role !== 'manager' && u.role !== 'staff')) {
       return reply(200, { status: 'rejected' });
     }
-    // Cấp phiên Supabase cho tài khoản đã duyệt: magic link (không gửi mail) → đổi token_hash lấy phiên
-    const { data: link, error: e1 } = await db.auth.admin.generateLink({ type: 'magiclink', email: u.email });
-    if (e1 || !link?.properties?.hashed_token) return reply(500, { error: 'Không cấp được phiên đăng nhập' });
-    const { data: s, error: e2 } = await anon().auth.verifyOtp({ token_hash: link.properties.hashed_token, type: 'magiclink' });
-    if (e2 || !s.session) return reply(500, { error: 'Không cấp được phiên đăng nhập' });
-    return reply(200, { status: 'approved', session: { access_token: s.session.access_token, refresh_token: s.session.refresh_token } });
+    const session = await issueSession(db, u.email);
+    if (!session) return reply(500, { error: 'Không cấp được phiên đăng nhập' });
+    return reply(200, { status: 'approved', session });
   }
 
   return reply(400, { error: 'Hành động không hỗ trợ' });

@@ -10,7 +10,7 @@ Tên hiển thị cho người dùng là **MediPOS** (web và app), logo là ico
 
 ## Lệnh
 - `npm run dev` → http://localhost:3000 (preview tên `dev` trong `.claude/launch.json`)
-- Supabase local: `supabase start` → `npm run db:reset` (schema + seed + tài khoản auth test, mật khẩu test trong `scripts/seed-auth.mjs`) → `npm run test:rls`. Mã OTP email đọc ở Mailpit http://localhost:54324. `.env.local` trỏ `http://127.0.0.1:54321` + ANON_KEY từ `supabase status`.
+- Supabase local: `supabase start` → `npm run db:reset` (schema + seed + tài khoản auth test, mật khẩu test trong `scripts/seed-auth.mjs`) → `npm run test:rls` (chạy ngay sau reset) → `npm run test:web-login` · `npm run test:passkey`. Mã OTP email đọc ở Mailpit http://localhost:54324. `.env.local` trỏ `http://127.0.0.1:54321` + ANON_KEY từ `supabase status`.
 - Test iPhone (camera/Face ID cần HTTPS): preview `pwa-tunnel` (`npm run serve:pwa`, cổng 4176, chuyển tiếp Supabase cùng origin) + `cloudflared tunnel --url http://localhost:4176` → link `https://*.trycloudflare.com` (đổi mỗi lần chạy).
 - `npm run build` · `npm run lint` (= `tsc --noEmit`) · `npm test` (node:test, `src/__tests__/*.test.ts`)
 - Prototype app: `python3 -m http.server 4173 -d prototype` → http://localhost:4173 (preview tên `prototype`); kiểm tự động `node prototype/tools/check.mjs`

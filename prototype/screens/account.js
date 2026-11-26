@@ -208,23 +208,19 @@ App.css(`
         fidRow.addEventListener('click', async (e) => {
           e.stopPropagation();
           if (checking) return;
-          if (API.bio.enabled()) {
-            API.bio.set(false);
-            fidBtn.classList.remove('on');
-            fidBtn.setAttribute('aria-checked', 'false');
-          } else {
-            checking = true;
-            try {
-              const ok = await App.faceId();
-              if (!el.isConnected || App.current()?.el !== el) return;
-              if (ok) {
-                API.bio.set(true);
-                fidBtn.classList.add('on');
-                fidBtn.setAttribute('aria-checked', 'true');
-              }
-            } finally {
-              checking = false;
+          const on = API.bio.enabled();
+          checking = true;
+          try {
+            const r = on ? await API.bio.disable() : await API.bio.enable();
+            if (!el.isConnected || App.current()?.el !== el) return;
+            if (r.ok) {
+              fidBtn.classList.toggle('on', !on);
+              fidBtn.setAttribute('aria-checked', String(!on));
+            } else if (!r.cancel) {
+              App.toast(r.error, 'alert');
             }
+          } finally {
+            checking = false;
           }
         });
       }

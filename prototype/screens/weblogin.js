@@ -382,25 +382,23 @@
         const unbusy = App.busy(approveBtn, 'Đang xác nhận...');
         refuseBtn.disabled = true;
         feedback.textContent = '';
-        const matched = await App.faceId();
-        if (!active(el) || phase !== 'faceId' || !tick()) return;
-        if (!matched) {
+        // Face ID (passkey) xác minh ở server rồi mới duyệt; QA chỉ mô phỏng
+        const dec = p.qa ? { ok: await App.faceId(), retry: true } : await API.webLogin.approve(p.id);
+        if (!active(el) || phase !== 'faceId') return;
+        if (!dec.ok && dec.retry && tick()) {
           unbusy();
           refuseBtn.disabled = false;
           phase = 'retry';
           feedback.innerHTML = failedFaceId;
           return;
         }
-        if (!p.qa) {
-          const dec = await API.webLogin.decide(p.id, true);
-          if (!active(el)) return;
-          if (!dec.ok) {
-            clearInterval(timer);
-            phase = 'error';
-            content.innerHTML = confirmError(dec.error, 'Về trang chủ', 'data-wl-home');
-            bindError();
-            return;
-          }
+        if (!dec.ok) {
+          if (!tick()) return;
+          clearInterval(timer);
+          phase = 'error';
+          content.innerHTML = confirmError(dec.error, 'Về trang chủ', 'data-wl-home');
+          bindError();
+          return;
         }
         clearInterval(timer);
         App.go('webDone', { id: p.id, request: req }, 'fade');
