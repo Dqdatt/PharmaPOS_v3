@@ -74,6 +74,14 @@ export default function MainApp() {
       return (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50">
           <CloseInventoryModal isForced={true} />
+          <button
+            onClick={logout}
+            disabled={isLoggingOut}
+            className="fixed top-4 right-4 z-50 px-4 py-2 bg-white hover:bg-gray-100 text-gray-700 font-bold rounded-lg shadow-sm transition disabled:opacity-50"
+          >
+            <i className="fa-solid fa-right-from-bracket mr-2"></i>
+            {isLoggingOut ? 'Đang đăng xuất…' : 'Đăng xuất'}
+          </button>
         </div>
       );
     } else {
