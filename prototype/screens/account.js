@@ -448,11 +448,25 @@ App.css(`
           row.addEventListener('click', () => {
             const id = row.dataset.id;
             const item = items.find((n) => String(n.id) === String(id));
+            const wasUnread = !!(item && item.unread);
             if (item) item.unread = false;
             row.classList.remove('unread');
             if (!items.some((n) => n.unread) && navEnd) navEnd.innerHTML = '';
 
-            API.notifications.read([id]);
+            API.notifications.read([id]).then((res) => {
+              if (res && res.ok) return;
+              if (wasUnread && item) item.unread = true;
+              if (el.isConnected && seq === loadSeq && wasUnread) {
+                row.classList.add('unread');
+                updateMarkAll(items);
+              }
+            }).catch(() => {
+              if (wasUnread && item) item.unread = true;
+              if (el.isConnected && seq === loadSeq && wasUnread) {
+                row.classList.add('unread');
+                updateMarkAll(items);
+              }
+            });
 
             const kind = row.dataset.kind;
             if (kind !== 'web') App.openNotif(kind);
@@ -749,7 +763,7 @@ App.css(`
           setSwitch(sw, prefs[key]);
           sw.disabled = false;
         });
-        if (p && p.openExpiry) openExpirySheet();
+        if (p && p.openExpiry && App.current()?.el === el) openExpirySheet();
       }).catch((err) => {
         if (!el.isConnected) return;
         App.toast((err && err.message) || 'Không tải được cài đặt', 'info');
