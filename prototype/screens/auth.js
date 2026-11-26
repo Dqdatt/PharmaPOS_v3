@@ -472,14 +472,14 @@
         if (submitBtn.disabled) return;
         const p1 = pass1In.value;
         const p2 = pass2In.value;
-        if (p1.length < API.MIN_PASS) {
-          setErr('pass1', `Mật khẩu cần ít nhất ${API.MIN_PASS} ký tự`);
-          pass1In.focus();
-          return;
-        }
         if (p1 !== p2) {
           setErr('pass2', 'Hai lần nhập không khớp. Kiểm tra lại.');
           pass2In.focus();
+          return;
+        }
+        if (p1.length < API.MIN_PASS) {
+          setErr('pass1', `Mật khẩu cần ít nhất ${API.MIN_PASS} ký tự`);
+          pass1In.focus();
           return;
         }
         const done = App.busy(submitBtn, 'Đang lưu...');
