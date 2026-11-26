@@ -6,6 +6,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { getRetailRevenueForDate } from '../_shared/reportRevenue.ts';
 import { money, notify, vapidPublicKey } from '../_shared/push.ts';
+import { all, vnToday } from '../_shared/db.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -17,18 +18,6 @@ const reply = (status: number, body: unknown) =>
 
 const db = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const vnToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date()); // YYYY-MM-DD
-
-// Đọc hết (PostgREST cắt ở max_rows: thiếu dòng = sai tiền)
-async function all<T>(query: () => any): Promise<T[]> {
-  const out: T[] = [];
-  for (let from = 0; ; from += 1000) {
-    const { data, error } = await query().range(from, from + 999);
-    if (error) throw error;
-    out.push(...data);
-    if (data.length < 1000) return out;
-  }
-}
 
 // QL + admin đang hoạt động, trừ người đã tắt loại này
 async function managers(pref: 'revenue' | 'debt'): Promise<number[]> {

@@ -40,6 +40,7 @@
   const badPass = (p) => (String(p || '').length >= MIN_PASS ? null : `Mật khẩu cần ít nhất ${MIN_PASS} ký tự`);
 
   let me = null; // hồ sơ người đang đăng nhập (live), đọc qua API.me()
+  let dash = null; // { at, r }: kết quả API.dashboard gần nhất (xoá khi đăng xuất)
   async function readProfile() {
     const { data, error } = await sb.rpc('my_profile');
     if (error) throw error;
@@ -52,6 +53,7 @@
     if (profile.status === 'locked') { await sb.auth.signOut({ scope: 'local' }); return fail('Tài khoản đã bị khoá, vui lòng liên hệ admin'); }
     const pk = pkLocal();
     if (pk && pk.uid !== profile.id) localStorage.removeItem(PK_KEY); // passkey của tài khoản khác: không mở khoá nhầm người
+    if (!me || me.id !== profile.id) dash = null; // số liệu của người trước
     me = profile;
     return { ok: true, profile };
   }
@@ -237,7 +239,7 @@
       await API.push.disable(); // máy dùng chung không nhận thông báo của người trước
       await API.bio.disable();
       localStorage.removeItem(PK_KEY); // xoá ở server lỗi (mất mạng) thì máy này vẫn phải quên passkey
-      me = null;
+      me = null; dash = null;
       if (live) { try { await sb.auth.signOut({ scope: 'local' }); } catch (e) { /* vẫn xoá phiên cục bộ */ } }
       return { ok: true };
     },
@@ -282,6 +284,71 @@
           return fail('Tài khoản chưa có quyền đăng nhập POS');
         } catch (e) { return fail(e); }
       },
+    },
+
+    /** Số liệu Trang chủ / Doanh thu / Tiện ích, cùng khuôn DATA: { ok, role, today, week, month, invoices (hôm nay),
+     *  shifts, lowStock, payables (NV: rỗng), expiring (chưa có, bước C) }. Doanh thu = net bán lẻ như ô POS.
+     *  Dùng lại kết quả trong 30 giây (chuyển tab không tải lại); fresh = true để tải mới. */
+    async dashboard(fresh) {
+      if (!fresh && dash && Date.now() - dash.at < 30000) return dash.r;
+      let r;
+      if (!live) {
+        await wait(500);
+        const { today, week, month, invoices, shifts, lowStock, payables, expiring } = DATA;
+        r = { ok: true, role: MOCK_PROFILE().role, today, week, month, invoices, shifts, lowStock, payables, expiring };
+      } else {
+        try { r = { ok: true, ...(await callFn('dashboard', {})) }; } catch (e) { r = fnFail(e); }
+      }
+      dash = r.ok ? { at: Date.now(), r } : null;
+      return r;
+    },
+
+    /** Chi tiết 1 hoá đơn: { ok, invoice: { id, time: 'HH:MM', date: 'DD/MM/YYYY', staff, pay, total, otherCosts, deleted,
+     *  note, customer: { name, phone: '0912 *** 208' } | null, items: [{ name, unit, price, qty }] } } */
+    async invoice(id) {
+      if (!live) {
+        await wait(400);
+        const iv = DATA.invoices.find((x) => x.id === id);
+        if (!iv) return fail('Không tìm thấy hoá đơn');
+        const price = Math.round(iv.total / iv.items.length);
+        return { ok: true, invoice: { id, time: iv.time, date: '', staff: iv.staff, pay: iv.pay, total: iv.total, otherCosts: 0, deleted: false,
+          note: '', customer: null, items: iv.items.map((name) => ({ name, unit: '', price, qty: 1 })) } };
+      }
+      try {
+        const { data: r, error } = await sb.from('invoices')
+          .select('id, time, employee_name, customer_name, customer_phone, method, other_costs, total, status, note, invoice_items(name, unit, price, qty)')
+          .eq('id', id).maybeSingle();
+        if (error) return fail(error);
+        if (!r) return fail('Không tìm thấy hoá đơn');
+        const m = /(\d{1,2}):(\d{2})(?::\d{2})?\s+(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(r.time || '');
+        const ph = String(r.customer_phone || '').replace(/\D/g, '').replace(/^84/, '0');
+        return { ok: true, invoice: {
+          id: r.id, time: m ? `${p2(m[1])}:${m[2]}` : '', date: m ? `${p2(m[3])}/${p2(m[4])}/${m[5]}` : '',
+          staff: r.employee_name || '', pay: { cash: 'Tiền mặt', transfer: 'Chuyển khoản', card: 'Thẻ' }[r.method] || 'Khác',
+          total: Number(r.total), otherCosts: Number(r.other_costs) || 0, deleted: r.status === 'deleted', note: r.note || '',
+          customer: r.customer_name || ph ? { name: r.customer_name || 'Khách lẻ', phone: ph.length >= 7 ? `${ph.slice(0, 4)} *** ${ph.slice(-3)}` : '' } : null,
+          items: (r.invoice_items || []).map((x) => ({ name: x.name, unit: x.unit || '', price: Number(x.price), qty: Number(x.qty) })),
+        } };
+      } catch (e) { return fail(e); }
+    },
+
+    /** Tra tồn kho theo tên: { ok, products: [{ id, name, unit, price, left }] } (tối đa 30). */
+    async searchProducts(q) {
+      q = String(q || '').replace(/[%_*,()\\]/g, ' ').trim();
+      if (!live) {
+        await wait(300);
+        const k = q.toLowerCase();
+        return { ok: true, products: DATA.lowStock.filter((x) => x.name.toLowerCase().includes(k))
+          .map((x, i) => ({ id: i + 1, name: x.name, unit: x.unit, price: 0, left: x.left })) };
+      }
+      if (!q) return { ok: true, products: [] };
+      try {
+        const { data, error } = await sb.from('products').select('id, name, unit, sell_price, initial_stock, total_in, total_out')
+          .ilike('name', `%${q}%`).order('name').limit(30);
+        if (error) return fail(error);
+        return { ok: true, products: data.map((x) => ({ id: x.id, name: x.name, unit: x.unit || '', price: Number(x.sell_price) || 0,
+          left: Number(x.initial_stock) + Number(x.total_in) - Number(x.total_out) })) };
+      } catch (e) { return fail(e); }
     },
 
     /** Phiên POS đang mở (của mình; admin: của mọi người). */
@@ -477,7 +544,7 @@
   if (sb) {
     sb.auth.onAuthStateChange((ev) => {
       if (ev !== 'SIGNED_OUT' || !me) return;
-      me = null;
+      me = null; dash = null;
       setTimeout(() => { // không gọi App/supabase ngay trong callback auth
         if (!window.App || !App.screens.login) return;
         App.reset('login', {}, 'fade');
