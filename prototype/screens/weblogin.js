@@ -43,6 +43,7 @@
 .wl-camera-help { z-index: 1; display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 24px; }
 .wl-camera-help p { font-size: 15px; line-height: 1.5; }
 .wl-torch { flex: none; width: 44px; height: 44px; border: 1px solid var(--on-dark-2); border-radius: 50%; display: grid; place-items: center; }
+.wl-torch[hidden] { display: none; }
 .wl-torch[aria-pressed="true"] { background: var(--mint); color: var(--teal-950); border-color: var(--mint); }
 .wl-camera-denied { color: var(--on-dark); max-width: 350px; }
 .wl-camera-denied .btn, .wl-session-empty .btn { margin-top: 20px; }
@@ -411,11 +412,19 @@
         App.busy(refuseBtn, 'Đang từ chối...');
         approveBtn.disabled = true;
         if (!p.qa) {
-          await API.webLogin.decide(p.id, false);
+          const dec = await API.webLogin.decide(p.id, false);
+          if (!active(el)) return;
+          if (!dec.ok) {
+            clearInterval(timer);
+            phase = 'error';
+            content.innerHTML = confirmError(dec.error, 'Về trang chủ', 'data-wl-home');
+            bindError();
+            return;
+          }
         } else {
           await new Promise((r) => setTimeout(r, 400));
+          if (!active(el)) return;
         }
-        if (!active(el)) return;
         clearInterval(timer);
         App.toast('Đã từ chối');
         App.reset('home');
