@@ -54,7 +54,7 @@ App.css(`
 .ac-expiry-options { margin-top: 20px; }
 .ac-expiry-options button { display: flex; align-items: center; justify-content: center; gap: 4px; white-space: nowrap; }
 .ac-expiry-options .spin { width: 12px; height: 12px; }
-.ac-push-row { min-height: 64px; cursor: default; }
+.ac-push-row { min-height: 84px; cursor: default; }
 .ac-push-btn { height: 34px; padding: 0 16px; font-size: 14px; border-radius: 17px; white-space: nowrap; flex: none; }
 .ac-push-off { font-size: 14px; font-weight: 600; color: var(--teal-700); padding: 6px 4px; background: none; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .ac-push-off:disabled { color: var(--ink-3); cursor: default; pointer-events: none; }
@@ -87,12 +87,36 @@ App.css(`
     else App.go('notifications');
   };
 
+  const NOTIF_TARGET = {
+    revenue: 'revenue',
+    stock: 'lowStock',
+    expiry: 'expiring',
+    debt: 'payables',
+  };
+
+  function isInApp() {
+    const cur = App.current();
+    const me = API.me && API.me();
+    if (!me || !cur) return false;
+    if (['splash', 'login', 'otp', 'bioSetup', 'lock'].includes(cur.name)) return false;
+    if (cur.name === 'password' && cur.p?.mode !== 'change') return false;
+    return true;
+  }
+
+  let pendingOpenTimer = null;
+  function openNotifWhenReady(kind, tries = 12) {
+    clearTimeout(pendingOpenTimer);
+    if (!isInApp()) return;
+    const target = NOTIF_TARGET[kind] || 'notifications';
+    App.openNotif(kind);
+    if (App.current()?.name !== target && tries > 0) {
+      pendingOpenTimer = setTimeout(() => openNotifWhenReady(kind, tries - 1), 80);
+    }
+  }
+
   if (API.push && API.push.onOpen) {
     API.push.onOpen((kind) => {
-      const cur = App.current()?.name;
-      const me = API.me && API.me();
-      if (!me || !cur || ['splash', 'login', 'otp', 'bioSetup', 'lock'].includes(cur)) return;
-      App.openNotif(kind);
+      openNotifWhenReady(kind);
     });
   }
 
@@ -337,17 +361,38 @@ App.css(`
           return;
         }
         navEnd.innerHTML = '<button class="ac-head-btn tap" id="acMarkAll">Đọc hết</button>';
-        navEnd.querySelector('#acMarkAll')?.addEventListener('click', (e) => {
+        navEnd.querySelector('#acMarkAll')?.addEventListener('click', async (e) => {
           e.stopPropagation();
+          const unreadIds = new Set(items.filter((n) => n.unread).map((n) => String(n.id)));
+          if (!unreadIds.size) return;
+
           items.forEach((n) => { n.unread = false; });
           el.querySelectorAll('.ac-notif-row.unread').forEach((r) => r.classList.remove('unread'));
           navEnd.innerHTML = '';
-          API.notifications.read();
-          App.toast('Đã đọc hết', 'check');
+
+          let r;
+          try {
+            r = await API.notifications.read();
+          } catch (err) {
+            r = { ok: false, error: (err && err.message) || 'Không đánh dấu được đã đọc' };
+          }
+          if (!el.isConnected) return;
+          if (r && r.ok) {
+            App.toast('Đã đọc hết', 'check');
+          } else {
+            items.forEach((n) => { if (unreadIds.has(String(n.id))) n.unread = true; });
+            body.querySelectorAll('.ac-notif-row').forEach((row) => {
+              if (unreadIds.has(String(row.dataset.id))) row.classList.add('unread');
+            });
+            updateMarkAll(items);
+            App.toast((r && r.error) || 'Không đánh dấu được đã đọc', 'info');
+          }
         });
       }
 
+      let loadSeq = 0;
       async function loadList() {
+        const seq = ++loadSeq;
         body.style.marginTop = '16px';
         body.style.padding = '0 16px';
         body.innerHTML = App.skeleton(5);
@@ -359,7 +404,7 @@ App.css(`
         } catch (err) {
           r = { ok: false, error: (err && err.message) || 'Không tải được thông báo.' };
         }
-        if (!el.isConnected) return;
+        if (!el.isConnected || seq !== loadSeq) return;
 
         if (!r || !r.ok) {
           body.style.marginTop = '';
@@ -420,10 +465,20 @@ App.css(`
       }
 
       loadList();
+
+      if (typeof MutationObserver !== 'undefined') {
+        let wasHidden = el.hidden;
+        const obs = new MutationObserver(() => {
+          if (!el.isConnected) { obs.disconnect(); return; }
+          if (wasHidden && !el.hidden) loadList();
+          wasHidden = el.hidden;
+        });
+        obs.observe(el, { attributes: true, attributeFilter: ['hidden'] });
+      }
     },
   });
 
-  function showExpiryOptions(valueEl, getDays, setDays) {
+  function showExpiryOptions(getDays, onPick) {
     const currentDays = getDays();
     const initIdx = EXPIRY_OPTIONS.includes(currentDays) ? EXPIRY_OPTIONS.indexOf(currentDays) : 1;
     App.sheet(`
@@ -451,23 +506,14 @@ App.css(`
             select(button);
             buttons.forEach((btn) => { btn.disabled = true; });
             const restore = App.busy(button, 'Đang lưu');
-            let r;
-            try {
-              r = await API.push.prefs({ expiryDays: nextDays });
-            } catch (err) {
-              r = { ok: false, error: (err && err.message) || 'Không lưu được cài đặt' };
-            }
+            const r = await onPick(nextDays);
             if (!sheetEl.isConnected) return;
             if (r && r.ok) {
-              setDays(nextDays);
-              if (valueEl) valueEl.textContent = `${nextDays} ngày`;
               close();
-              App.toast('Đã lưu', 'check');
             } else {
               restore();
               buttons.forEach((btn) => { btn.disabled = false; });
               select(buttons[initIdx]);
-              App.toast((r && r.error) || 'Không lưu được cài đặt', 'info');
             }
           });
         });
@@ -584,7 +630,7 @@ App.css(`
               <span class="row-main row-title">Báo hết hàng khi còn dưới</span>
               <span class="row-end">mức tối thiểu${App.icon('chev', 18)}</span>
             </button>
-            <button class="row ac-detail-row tap" type="button" id="acExpiryThreshold">
+            <button class="row ac-detail-row tap" type="button" id="acExpiryThreshold" disabled>
               <span class="row-main row-title">Báo cận hạn trước</span>
               <span class="row-end"><span class="num" id="acExpiryDays">30 ngày</span>${App.icon('chev', 18)}</span>
             </button>
@@ -597,7 +643,38 @@ App.css(`
       el._mounted = true;
 
       let expiryDays = 30;
+      let prefsLoaded = false;
+      let savingExpiry = false;
       const pushCard = el.querySelector('#acPushCard');
+      const expiryBtn = el.querySelector('#acExpiryThreshold');
+      const daysEl = el.querySelector('#acExpiryDays');
+
+      async function saveExpiryDays(nextDays) {
+        savingExpiry = true;
+        if (expiryBtn) expiryBtn.disabled = true;
+        let r;
+        try {
+          r = await API.push.prefs({ expiryDays: nextDays });
+        } catch (err) {
+          r = { ok: false, error: (err && err.message) || 'Không lưu được cài đặt' };
+        }
+        savingExpiry = false;
+        if (!el.isConnected) return r;
+        if (expiryBtn && prefsLoaded) expiryBtn.disabled = false;
+        if (r && r.ok) {
+          expiryDays = nextDays;
+          if (daysEl) daysEl.textContent = `${nextDays} ngày`;
+          App.toast('Đã lưu', 'check');
+        } else {
+          App.toast((r && r.error) || 'Không lưu được cài đặt', 'info');
+        }
+        return r;
+      }
+
+      function openExpirySheet() {
+        if (!prefsLoaded || savingExpiry) return;
+        showExpiryOptions(() => expiryDays, saveExpiryDays);
+      }
 
       function applyPushState(status) {
         if (!pushCard || !el.isConnected) return;
@@ -675,9 +752,10 @@ App.css(`
         const prefs = r.prefs;
         if (prefs.expiryDays) {
           expiryDays = prefs.expiryDays;
-          const daysEl = el.querySelector('#acExpiryDays');
           if (daysEl) daysEl.textContent = `${expiryDays} ngày`;
         }
+        prefsLoaded = true;
+        if (expiryBtn && !savingExpiry) expiryBtn.disabled = false;
         toggleRows.forEach((row) => {
           const key = row.dataset.key;
           const sw = row.querySelector('.ac-switch');
@@ -685,6 +763,7 @@ App.css(`
           setSwitch(sw, prefs[key]);
           sw.disabled = false;
         });
+        if (p && p.openExpiry) openExpirySheet();
       }).catch((err) => {
         if (!el.isConnected) return;
         App.toast((err && err.message) || 'Không tải được cài đặt', 'info');
@@ -721,9 +800,7 @@ App.css(`
       });
 
       el.querySelector('#acStockThreshold')?.addEventListener('click', () => App.toast('Chỉnh trên web, mục Kho', 'info'));
-      el.querySelector('#acExpiryThreshold')?.addEventListener('click', () => {
-        showExpiryOptions(el.querySelector('#acExpiryDays'), () => expiryDays, (v) => { expiryDays = v; });
-      });
+      expiryBtn?.addEventListener('click', openExpirySheet);
     },
   });
 
@@ -799,10 +876,14 @@ App.css(`
   App.state('Thông báo: rỗng', () => App.go('notifications', { empty: true }), 'Tài khoản');
   App.state('Thông báo: đang tải', () => App.go('notifications', { loading: true }), 'Tài khoản');
   App.state('Cài đặt thông báo', () => App.go('notifSettings'), 'Tài khoản');
+  App.state('Cài đặt thông báo: chưa bật', () => App.go('notifSettings', { pushState: 'off' }), 'Tài khoản');
+  App.state('Cài đặt thông báo: đã bật', () => App.go('notifSettings', { pushState: 'on' }), 'Tài khoản');
+  App.state('Cài đặt thông báo: bị chặn', () => App.go('notifSettings', { pushState: 'denied' }), 'Tài khoản');
+  App.state('Cài đặt thông báo: thêm vào MH chính', () => App.go('notifSettings', { pushState: 'install' }), 'Tài khoản');
+  App.state('Cài đặt thông báo: không hỗ trợ', () => App.go('notifSettings', { pushState: 'unsupported' }), 'Tài khoản');
   App.state('Cài đặt thông báo: chọn ngưỡng cận hạn', () => {
     App.reset('account');
-    App.go('notifSettings');
-    App.current().el.querySelector('#acExpiryThreshold').click();
+    App.go('notifSettings', { openExpiry: true });
   }, 'Tài khoản');
   App.state('Mở từ thông báo: doanh thu', () => {
     App.reset('home');
