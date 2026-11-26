@@ -12,8 +12,14 @@ Chốt: #2 Đoàn Quốc Đường → Quản lý (giữ id, 1673 hoá đơn cũ
 - [x] M8 Bỏ URL + key viết cứng `prototype/js/api.js:11` → cấu hình local/thật khi build PWA — [sonnet] giao
 - [ ] App: nút "In lại"/"Gửi Zalo" ở chi tiết hoá đơn còn giả lập; tra tồn kho có thể nháy kết quả cũ (seq) — [sonnet] giao
 - [ ] Hỏi người dùng tên + địa chỉ nhà thuốc thật (`DATA.store`) — [haiku]
-- [ ] M9 (=F) Lên thật ngoài giờ bán: sao lưu → migration → nối ĐQĐ + admin → functions/secrets/Vault → PWA lên Pages + POS lên Netlify cùng lúc (theo `docs/GO_LIVE.md`) — [opus xhigh] (hỏi trước từng thao tác)
-- [ ] M10 Test cuối trên iPhone với link Pages cố định (thông báo + Face ID cấp 1 lần là giữ) — [opus high]
+- [x] M9 (=F) Lên thật ngoài giờ bán: sao lưu → migration → nối ĐQĐ + admin → functions/secrets/Vault → PWA lên Pages + POS lên Netlify cùng lúc (theo `docs/GO_LIVE.md`) — [opus xhigh] ĐẠT 26/11 23:34: 13 bảng khớp từng dòng, POS ngừng ~7 phút; app lên Netlify `medipos-app` thay Pages
+- [ ] M10 Test cuối trên iPhone với link https://medipos-app.netlify.app (thông báo + Face ID cấp 1 lần là giữ) — [opus high]
+- [x] POS đọc đủ hoá đơn (chia trang, `selectAll`) — doanh thu POS thiếu do PostgREST cắt 1000 dòng (lỗi có từ POS cũ) — [opus xhigh] 7a7a6b5
+- [ ] Face ID nhớ theo từng tài khoản trên cùng máy (`api.js` PK_KEY) — [opus xhigh]
+- [ ] Admin sửa tên + email nhân viên từ app (Edge Function tự cập nhật Supabase Auth) — [opus xhigh] server + UI giao
+- [ ] Đổi "Nhà thuốc Tâm An" → "MediPOS" (`data.js`, `screens/account.js`) — [haiku]
+- [ ] Icon màn hình chính iPhone hiện chữ "M" (thử xoá dữ liệu Safari + thêm lại; không được thì thêm apple-touch-icon gốc) — [haiku]
+- [ ] (SAU) Bàn phím đè nội dung; đẩy ô nhập + nút lên sát bàn phím — sửa prototype trước rồi build PWA — [sonnet] giao
 
 - [x] Prototype app điện thoại (`prototype/`): khung, logo, splash, Trang chủ — [opus high]
 - [x] Prototype: Đăng nhập app + Face ID + tạo PIN (`screens/auth.js`) — [sonnet] giao
@@ -27,13 +33,14 @@ Chốt: #2 Đoàn Quốc Đường → Quản lý (giữ id, 1673 hoá đơn cũ
 - [ ] Prototype: góp ý vòng sau của người dùng — [opus high]
 - [x] Prototype: Enter form đăng nhập, hủy đăng xuất khi bấm Ở lại (giao 024)
 - [ ] Prototype: mã màu rgba viết cứng — [sonnet]
-- [ ] Gộp nhánh `prototype-mobile` vào main khi người dùng chốt — [haiku]
+- [x] Gộp nhánh `prototype-mobile` vào main (M9, ecd3c2f)
+- [ ] Tắt badge "Powered by Netlify" trên project `medipos-app` (đè nút Đăng nhập app) — [haiku]
 - [x] PWA MediPOS từ prototype (giao 017 vỏ PWA, 018 kiểm chứng 0 pixel) — [opus high]
 - [ ] PWA: góp ý của người dùng khi test link local (sửa ở prototype/, build lại) — [opus high]
 - [x] PWA iOS: hở dải đáy 48pt khi mở từ màn hình chính (giao 019+020, 03a5931, đã thử iPhone thật) — [opus high]
 - [x] PWA: ô SĐT "2884 0" — bỏ, đăng nhập chuyển sang email (Auth 2)
 - [ ] Kavor: áp cách sửa hở đáy PWA iOS (bộ nhớ `ios-pwa-viewport-fix`), làm ở phiên dự án Kavor — [opus high]
-- [ ] PWA: deploy GitHub Pages bản thật (gộp vào bước F) — [haiku]
+- [x] PWA bản thật: Netlify `medipos-app` (thay GitHub Pages)
 - [x] Auth: người dùng chốt 1 cơ sở, admin cấp mọi tài khoản, NV xem cá nhân/QL toàn bộ, POS chỉ QR + Face ID
 - [x] Auth 1: Supabase local (giao 021) + vai trò/RLS/OTP email (giao 022), `npm run test:rls` đạt
 - [x] Auth 1b: POS web đổi role admin → manager (giao 023)
