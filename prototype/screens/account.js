@@ -57,6 +57,8 @@ App.css(`
 `);
 
 (function () {
+  if (typeof API === 'undefined') window.API = { bio: { enabled: () => false, set: () => {} } };
+
   const EARLIER_NOTIFS = [
     { id: 'ac1', kind: 'web', title: 'Đã từ chối đăng nhập web, Edge trên Windows', time: 'Thứ Hai', history: true },
     { id: 'ac2', kind: 'revenue', title: 'Tổng kết doanh thu thứ Hai', body: App.money(9870000), time: '23/11' },
@@ -126,7 +128,7 @@ App.css(`
       const owner = DATA.owner || { name: 'Trần Minh Khoa', role: 'Chủ nhà thuốc', initials: 'MK' };
       const store = DATA.store || { name: 'Nhà thuốc Tâm An' };
       const ws = DATA.webSessions || [];
-      const on = typeof API !== 'undefined' ? API.bio.enabled() : false;
+      const on = API.bio.enabled();
 
       return `
         <div class="ac-profile">
@@ -205,16 +207,16 @@ App.css(`
         let checking = false;
         fidRow.addEventListener('click', async (e) => {
           e.stopPropagation();
+          if (checking) return;
           if (API.bio.enabled()) {
             API.bio.set(false);
             fidBtn.classList.remove('on');
             fidBtn.setAttribute('aria-checked', 'false');
           } else {
-            if (checking) return;
             checking = true;
             try {
               const ok = await App.faceId();
-              if (!el.isConnected) return;
+              if (!el.isConnected || App.current()?.el !== el) return;
               if (ok) {
                 API.bio.set(true);
                 fidBtn.classList.add('on');
