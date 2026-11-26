@@ -15,6 +15,8 @@ App.css(`
 @keyframes spWord { to { opacity: 1; transform: none; letter-spacing: .01em; } }
 `);
 
+const authedNext = () => (API.bio.enabled() && localStorage.getItem('medipos.applock') === '1' && App.screens.lock ? 'lock' : 'home');
+
 App.screen('splash', {
   statusLight: true,
   render: () => `<div class="splash"><div class="sp-center">
@@ -27,7 +29,7 @@ App.screen('splash', {
     const route = (p.next || !API.live) ? Promise.resolve([p.next])
       : API.profile().then((me) => !me ? []
         : me.status === 'invited' ? ['password', { status: 'invited' }]
-        : [API.bio.enabled() && App.screens.lock ? 'lock' : 'home']);
+        : [authedNext()]);
     Promise.all([route, new Promise((r) => setTimeout(r, 1850))]).then(([[next, np]]) => {
       if (App.current().el !== el) return; // đã nhảy màn khác từ bảng QA
       App.reset(next || (App.screens.login ? 'login' : 'home'), np || {}, 'reveal');
@@ -36,4 +38,4 @@ App.screen('splash', {
 });
 
 App.state('Splash → Đăng nhập', () => App.reset('splash', {}, 'none'), 'Mở app');
-App.state('Splash → Trang chủ (đã đăng nhập)', () => App.reset('splash', { next: 'home' }, 'none'), 'Mở app');
+App.state('Splash → Trang chủ (đã đăng nhập)', () => App.reset('splash', { next: authedNext() }, 'none'), 'Mở app');

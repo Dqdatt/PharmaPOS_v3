@@ -19,6 +19,7 @@ App.css(`
 }
 .ac-switch.on { background: var(--teal-600); }
 .ac-switch:disabled { opacity: .45; cursor: not-allowed; pointer-events: none; }
+#acAppLockRow[aria-disabled="true"] { opacity: .45; cursor: not-allowed; pointer-events: none; }
 .ac-knob {
   display: block;
   width: 27px;
@@ -176,6 +177,7 @@ App.css(`
       const store = DATA.store || { name: 'Nhà thuốc Tâm An' };
       const ws = DATA.webSessions || [];
       const on = API.bio.enabled();
+      const lockOn = on && localStorage.getItem('medipos.applock') === '1';
 
       return `
         <div class="ac-profile">
@@ -192,6 +194,13 @@ App.css(`
               <div class="row-main"><div class="row-title">Face ID</div></div>
               <div class="row-end">
                 <button class="ac-switch${on ? ' on' : ''}" id="acFaceIdBtn" type="button" role="switch" aria-checked="${on}" aria-label="Face ID"><span class="ac-knob"></span></button>
+              </div>
+            </div>
+            <div class="row${on ? ' tap' : ''}" id="acAppLockRow"${on ? '' : ' aria-disabled="true"'}>
+              <div class="tile">${App.icon('shield', 20)}</div>
+              <div class="row-main"><div class="row-title">Khoá app khi mở</div></div>
+              <div class="row-end">
+                <button class="ac-switch${lockOn ? ' on' : ''}" id="acAppLockBtn" type="button" role="switch" aria-checked="${lockOn}" aria-label="Khoá app khi mở"${on ? '' : ' disabled aria-disabled="true"'}><span class="ac-knob"></span></button>
               </div>
             </div>
             <div class="row tap" data-go="password" data-p='{"mode":"change"}'>
@@ -250,6 +259,26 @@ App.css(`
 
       const fidBtn = el.querySelector('#acFaceIdBtn');
       const fidRow = el.querySelector('#acFaceIdRow');
+      const lockBtn = el.querySelector('#acAppLockBtn');
+      const lockRow = el.querySelector('#acAppLockRow');
+
+      const updateAppLockUI = (bioEnabled) => {
+        if (!lockRow || !lockBtn) return;
+        if (bioEnabled) {
+          lockRow.removeAttribute('aria-disabled');
+          lockRow.classList.add('tap');
+          lockBtn.removeAttribute('disabled');
+          lockBtn.removeAttribute('aria-disabled');
+        } else {
+          lockRow.setAttribute('aria-disabled', 'true');
+          lockRow.classList.remove('tap');
+          lockBtn.setAttribute('disabled', '');
+          lockBtn.setAttribute('aria-disabled', 'true');
+        }
+        lockBtn.classList.remove('on');
+        lockBtn.setAttribute('aria-checked', 'false');
+      };
+
       if (fidRow && fidBtn) {
         let checking = false;
         fidRow.addEventListener('click', async (e) => {
@@ -259,15 +288,41 @@ App.css(`
           checking = true;
           try {
             const r = on ? await API.bio.disable() : await API.bio.enable();
+            if (r.ok) localStorage.removeItem('medipos.applock');
             if (!el.isConnected || App.current()?.el !== el) return;
             if (r.ok) {
-              fidBtn.classList.toggle('on', !on);
-              fidBtn.setAttribute('aria-checked', String(!on));
+              const nowOn = !on;
+              fidBtn.classList.toggle('on', nowOn);
+              fidBtn.setAttribute('aria-checked', String(nowOn));
+              updateAppLockUI(nowOn);
             } else if (!r.cancel) {
               App.toast(r.error, 'alert');
             }
           } finally {
             checking = false;
+          }
+        });
+      }
+
+      if (lockRow && lockBtn) {
+        let lockBusy = false;
+        lockRow.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (lockBusy) return;
+          if (!API.bio.enabled()) return;
+          lockBusy = true;
+          try {
+            const curOn = localStorage.getItem('medipos.applock') === '1';
+            const nextOn = !curOn;
+            if (nextOn) {
+              localStorage.setItem('medipos.applock', '1');
+            } else {
+              localStorage.removeItem('medipos.applock');
+            }
+            lockBtn.classList.toggle('on', nextOn);
+            lockBtn.setAttribute('aria-checked', String(nextOn));
+          } finally {
+            setTimeout(() => { lockBusy = false; }, 200);
           }
         });
       }
@@ -868,6 +923,11 @@ App.css(`
 
   // State QA (nhóm 'Tài khoản')
   App.state('Tài khoản', () => App.reset('account'), 'Tài khoản');
+  App.state('Tài khoản: đã bật khoá app', () => {
+    localStorage.setItem('medipos.bio', '1');
+    localStorage.setItem('medipos.applock', '1');
+    App.reset('account');
+  }, 'Tài khoản');
   App.state('Tài khoản: xác nhận đăng xuất', () => {
     App.reset('account');
     setTimeout(showLogoutSheet, 320);
