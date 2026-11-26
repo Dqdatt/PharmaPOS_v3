@@ -442,6 +442,7 @@
       /** Tắt Face ID máy này: xoá passkey ở server (passkey trong Keychain còn nhưng hết hiệu lực). */
       async disable() {
         localStorage.removeItem('medipos.bio');
+        localStorage.removeItem('medipos.applock'); // không còn Face ID thì không khoá app (kể cả khi đăng xuất)
         const pk = live && pkLocal();
         if (!pk) return { ok: true };
         try {

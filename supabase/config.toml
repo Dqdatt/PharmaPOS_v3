@@ -423,3 +423,11 @@ enabled = true
 # Thông báo đẩy: pg_cron gọi không kèm JWT, function tự kiểm từng action (supabase/functions/push/index.ts)
 [functions.push]
 verify_jwt = false
+
+# Gọi khi CHƯA đăng nhập (POS tạo/đợi mã QR; app mở khoá bằng Face ID). DB thật dùng key mới sb_publishable_
+# (không phải JWT) nên cổng verify_jwt sẽ chặn → tắt; 2 function tự kiểm (secret của yêu cầu / auth.getUser).
+[functions.web-login]
+verify_jwt = false
+
+[functions.passkey]
+verify_jwt = false
