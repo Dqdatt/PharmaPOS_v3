@@ -6,18 +6,19 @@
 - [x] Prototype: Doanh thu + Tiện ích (`screens/revenue.js`, `screens/tools.js`) — [sonnet] giao
 - [x] Prototype: Thông báo + Tài khoản/Bảo mật (`screens/account.js`) — [sonnet] giao
 - [x] Đề xuất thiết kế đăng nhập/bảo mật mới (`docs/AUTH_PLAN.md`), đã chốt — [opus xhigh]
-- [ ] Bỏ so PIN ở trình duyệt trong `Login.tsx` (PIN đang đọc từ bảng users về client) — [opus xhigh]
+- [x] Bỏ so PIN ở trình duyệt trong `Login.tsx` → POS đăng nhập bằng QR (giao 027)
 - [ ] Chọn nền tảng app thật (Expo/React Native như Kavor) và port prototype 1:1 — [opus high]
 - [x] Prototype: góp ý vòng 2 (nền, tab bar, đăng nhập, OTP, màn trống, logo MediPOS) — [opus high]
 - [ ] Prototype: góp ý vòng sau của người dùng — [opus high]
-- [ ] Prototype: lỗi vặt (Enter form đăng nhập, hủy đăng xuất khi bấm Ở lại, rgba cứng) — [sonnet]
+- [x] Prototype: Enter form đăng nhập, hủy đăng xuất khi bấm Ở lại (giao 024)
+- [ ] Prototype: mã màu rgba viết cứng — [sonnet]
 - [ ] Gộp nhánh `prototype-mobile` vào main khi người dùng chốt — [haiku]
 - [x] PWA MediPOS từ prototype (giao 017 vỏ PWA, 018 kiểm chứng 0 pixel) — [opus high]
 - [ ] PWA: góp ý của người dùng khi test link local (sửa ở prototype/, build lại) — [opus high]
 - [x] PWA iOS: hở dải đáy 48pt khi mở từ màn hình chính (giao 019+020, 03a5931, đã thử iPhone thật) — [opus high]
 - [x] PWA: ô SĐT "2884 0" — bỏ, đăng nhập chuyển sang email (Auth 2)
 - [ ] Kavor: áp cách sửa hở đáy PWA iOS (bộ nhớ `ios-pwa-viewport-fix`), làm ở phiên dự án Kavor — [opus high]
-- [ ] PWA: deploy lại GitHub Pages khi cần HTTPS (lần trước GitHub lỗi 500) — [haiku]
+- [ ] PWA: deploy GitHub Pages bản thật (gộp vào bước F) — [haiku]
 - [x] Auth: người dùng chốt 1 cơ sở, admin cấp mọi tài khoản, NV xem cá nhân/QL toàn bộ, POS chỉ QR + Face ID
 - [x] Auth 1: Supabase local (giao 021) + vai trò/RLS/OTP email (giao 022), `npm run test:rls` đạt
 - [x] Auth 1b: POS web đổi role admin → manager (giao 023)
@@ -27,8 +28,7 @@
 - [ ] B: Push thông báo 4 loại — [opus xhigh]
 - [ ] C: min_stock + hạn dùng theo lô (POS Nhập hàng) — [opus xhigh] + UI giao
 - [ ] D: app đọc dữ liệu thật — [opus xhigh] + UI giao
+- [ ] E: admin cấp/khoá/đổi quyền trong app + xem/thu hồi phiên POS — [opus xhigh] + UI giao
 - [ ] F: chuyển DB thật (hỏi trước mỗi thao tác) — [opus xhigh]
 - [x] Auth 4: đăng nhập POS web bằng QR + Face ID (giao 026, 027), chặn admin ở POS
 - [x] Test iPhone thật qua tunnel (người dùng xác nhận chạy ổn) — [opus xhigh]
-- [ ] Auth 5: RLS dữ liệu bán hàng theo tài khoản; app xem NV/doanh số dữ liệu thật — [opus xhigh] + UI [sonnet]
-- [ ] Auth 6: màn app quản lý tài khoản (chỉ admin: cấp, khoá, đổi quyền) — UI [sonnet], quyền [opus xhigh]
