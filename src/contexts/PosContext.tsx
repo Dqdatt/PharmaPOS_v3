@@ -4,6 +4,7 @@ import { dropRevokedSession, getMyProfile } from '../lib/webLogin';
 import { showNotification } from '../utils/toast';
 import { LegacyFallbackTarget, normalizeDbTimestamp, writeWithLegacyFallback } from '../utils/dbFallback';
 import { Dosage, fromDbDosage, toDbDosage } from '../utils/dosage';
+import { selectAll } from '../utils/selectAll';
 
 // --- Types matching pos.html exactly ---
 export interface Product {
@@ -307,7 +308,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setIsLoadingData(true);
     try {
       // Users
-      const { data: dbUsers } = await supabase.from('users').select('id, name, role, email, phone, status').order('id', { ascending: true }).abortSignal(signal);
+      const dbUsers = await selectAll(() => supabase.from('users').select('id, name, role, email, phone, status').order('id', { ascending: true }).abortSignal(signal));
       if (signal.aborted) return;
       if (dbUsers) {
         const mappedUsers: User[] = dbUsers.map(u => ({ id: u.id, name: u.name, role: u.role, status: u.status, pin: '' }));
@@ -315,7 +316,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
 
       // Products
-      const { data: dbProducts } = await supabase.from('products').select('*').order('id', { ascending: true }).abortSignal(signal);
+      const dbProducts = await selectAll(() => supabase.from('products').select('*').order('id', { ascending: true }).abortSignal(signal));
       if (signal.aborted) return;
       if (dbProducts) {
         setProducts(dbProducts.map(p => ({
@@ -326,7 +327,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
 
       // Staff Logs
-      const { data: dbLogs } = await supabase.from('staff_logs').select('*').order('id', { ascending: true }).abortSignal(signal);
+      const dbLogs = await selectAll(() => supabase.from('staff_logs').select('*').order('id', { ascending: true }).abortSignal(signal));
       if (signal.aborted) return;
       if (dbLogs) {
         setStaffLogs(dbLogs.map(l => ({
@@ -336,7 +337,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
 
       // Invoices
-      const { data: dbInvoices } = await supabase.from('invoices').select('*, invoice_items(*)').order('created_at', { ascending: false }).abortSignal(signal);
+      const dbInvoices = await selectAll(() => supabase.from('invoices').select('*, invoice_items(*)').order('created_at', { ascending: false }).order('id').abortSignal(signal));
       if (signal.aborted) return;
       if (dbInvoices) {
         setInvoices(dbInvoices.map(inv => ({
@@ -358,7 +359,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
 
       // Purchases
-      const { data: dbPurchases } = await supabase.from('purchases').select('*, purchase_items(*)').order('created_at', { ascending: false }).abortSignal(signal);
+      const dbPurchases = await selectAll(() => supabase.from('purchases').select('*, purchase_items(*)').order('created_at', { ascending: false }).order('id').abortSignal(signal));
       if (signal.aborted) return;
       if (dbPurchases) {
         setPurchases(dbPurchases.map(pur => ({
@@ -372,7 +373,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
 
       // Suppliers
-      const { data: dbSuppliers } = await supabase.from('suppliers').select('*').order('id', { ascending: true }).abortSignal(signal);
+      const dbSuppliers = await selectAll(() => supabase.from('suppliers').select('*').order('id', { ascending: true }).abortSignal(signal));
       if (signal.aborted) return;
       if (dbSuppliers) {
         setSuppliers(dbSuppliers.map(s => ({
@@ -381,7 +382,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
 
       // Payment Orders
-      const { data: dbPaymentOrders } = await supabase.from('payment_orders').select('*').order('created_at', { ascending: false }).abortSignal(signal);
+      const dbPaymentOrders = await selectAll(() => supabase.from('payment_orders').select('*').order('created_at', { ascending: false }).order('id').abortSignal(signal));
       if (signal.aborted) return;
       if (dbPaymentOrders) {
         setPaymentOrders(dbPaymentOrders.map(p => ({
@@ -391,7 +392,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
 
       // Export Orders
-      const { data: dbExportOrders } = await supabase.from('export_orders').select('*, export_order_items(*)').order('created_at', { ascending: false }).abortSignal(signal);
+      const dbExportOrders = await selectAll(() => supabase.from('export_orders').select('*, export_order_items(*)').order('created_at', { ascending: false }).order('id').abortSignal(signal));
       if (signal.aborted) return;
       if (dbExportOrders) {
         setExportOrders(dbExportOrders.map(ord => ({
@@ -939,13 +940,13 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const fetchInventoryHistory = async (monthYear: string): Promise<InventoryHistory[]> => {
     try {
-      const { data, error } = await supabase
+      const data = await selectAll(() => supabase
         .from('inventory_history')
         .select('*')
-        .eq('month_year', monthYear);
-      
-      if (error) throw error;
-      return (data || []).map(d => ({
+        .eq('month_year', monthYear)
+        .order('id'));
+
+      return data.map(d => ({
         id: d.id,
         productId: d.product_id,
         monthYear: d.month_year,
