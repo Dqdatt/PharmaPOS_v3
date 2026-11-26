@@ -30,7 +30,7 @@ export interface CartItem {
 export interface User {
   id: number;
   name: string;
-  role: 'admin' | 'staff';
+  role: 'admin' | 'manager' | 'staff';
   pin: string;
 }
 

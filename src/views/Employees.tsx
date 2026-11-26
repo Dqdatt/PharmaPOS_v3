@@ -79,13 +79,13 @@ export default function Employees() {
             <>
               {paginatedLogs.map((log, i) => (
                 <div key={i} className="flex items-center gap-4 p-3 border-b last:border-0 hover:bg-gray-50">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${log.role === 'admin' ? 'bg-red-500' : 'bg-teal-500'}`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${log.role === 'manager' ? 'bg-red-500' : 'bg-teal-500'}`}>
                     {log.name.charAt(0)}
                   </div>
                   <div className="flex-1">
                     <div className="font-bold text-sm">
                       {log.name}{' '}
-                      <span className="text-xs font-normal text-gray-500 ml-1 bg-gray-100 px-1 rounded">{log.role}</span>
+                      <span className="text-xs font-normal text-gray-500 ml-1 bg-gray-100 px-1 rounded">{log.role === 'manager' ? 'Quản lý' : log.role === 'admin' ? 'Quản trị' : 'Nhân viên'}</span>
                     </div>
                     <div className="text-xs text-gray-500 mt-1">
                       Vào: {log.loginTime}{' '}
@@ -141,12 +141,12 @@ export default function Employees() {
           {users.map(u => (
             <div key={u.id} className="bg-white p-5 rounded-xl shadow-sm border flex flex-col">
               <div className="flex items-center gap-3 mb-4">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${u.role === 'admin' ? 'bg-red-500' : 'bg-teal-500'}`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${u.role === 'manager' ? 'bg-red-500' : 'bg-teal-500'}`}>
                   {u.name.charAt(0)}
                 </div>
                 <div>
                   <div className="font-bold text-gray-800">{u.name}</div>
-                  <div className="text-xs text-gray-500">{u.role === 'admin' ? 'Quản lý' : 'Nhân viên'}</div>
+                  <div className="text-xs text-gray-500">{u.role === 'manager' ? 'Quản lý' : u.role === 'admin' ? 'Quản trị' : 'Nhân viên'}</div>
                 </div>
               </div>
               <div className="mt-auto pt-4 border-t border-gray-100 flex justify-between items-end">
@@ -185,14 +185,14 @@ export default function Employees() {
                 {users.map(u => (
                   <tr key={u.id} className="border-b hover:bg-gray-50">
                     <td className="p-3 font-bold flex items-center gap-2">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] text-white ${u.role === 'admin' ? 'bg-red-500' : 'bg-teal-500'}`}>
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] text-white ${u.role === 'manager' ? 'bg-red-500' : 'bg-teal-500'}`}>
                         {u.name.charAt(0)}
                       </div>
                       {u.name}
                     </td>
                     <td className="p-3">
-                      <span className={`px-2 py-1 text-xs rounded font-bold border ${u.role === 'admin' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-teal-50 text-teal-600 border-teal-200'}`}>
-                        {u.role.toUpperCase()}
+                      <span className={`px-2 py-1 text-xs rounded font-bold border ${u.role === 'manager' ? 'bg-red-50 text-red-600 border-red-200' : u.role === 'admin' ? 'bg-purple-50 text-purple-600 border-purple-200' : 'bg-teal-50 text-teal-600 border-teal-200'}`}>
+                        {u.role === 'manager' ? 'Quản lý' : u.role === 'admin' ? 'Quản trị' : 'Nhân viên'}
                       </span>
                     </td>
                     <td className="p-3 font-mono font-bold text-gray-700 tracking-widest">{u.pin || 'Chưa cài'}</td>

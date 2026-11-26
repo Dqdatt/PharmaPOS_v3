@@ -59,7 +59,7 @@ export default function MainApp() {
   if (!currentUser) return null;
 
   if (isPreviousMonthClosed === false) {
-    if (currentUser.role === 'admin') {
+    if (currentUser.role === 'manager') {
       return (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50">
           <CloseInventoryModal isForced={true} />
@@ -74,8 +74,8 @@ export default function MainApp() {
             </div>
             <h3 className="font-bold text-2xl text-gray-800 mb-3">Hệ thống đang tạm khóa</h3>
             <p className="text-gray-500 text-sm mb-6 leading-relaxed">
-              Hệ thống đang chờ Quản trị viên (Admin) thực hiện chốt tồn kho đầu tháng mới. 
-              Vui lòng liên hệ Admin để hoàn thành quá trình này trước khi bắt đầu bán hàng.
+              Hệ thống đang chờ Quản lý thực hiện chốt tồn kho đầu tháng mới. 
+              Vui lòng liên hệ Quản lý để hoàn thành quá trình này trước khi bắt đầu bán hàng.
             </p>
             <div className="space-y-3">
               <button
@@ -141,7 +141,7 @@ export default function MainApp() {
           >
             <i className="fa-solid fa-chart-line"></i><span className="hidden sm:inline">Báo Cáo</span>
           </button>
-          {currentUser.role === 'admin' && (
+          {currentUser.role === 'manager' && (
             <button
               onClick={() => setCurrentTab('employees')}
               className={`px-4 py-2 rounded-lg font-bold transition flex items-center gap-2 ${currentTab === 'employees' ? 'bg-teal-900' : 'hover:bg-teal-600'}`}
@@ -158,7 +158,7 @@ export default function MainApp() {
             </div>
             <div className="text-sm">
               <div className="font-bold leading-none">{currentUser.name}</div>
-              <div className="text-xs opacity-75">{currentUser.role === 'admin' ? 'Quản lý' : 'Nhân viên'}</div>
+              <div className="text-xs opacity-75">{currentUser.role === 'manager' ? 'Quản lý' : currentUser.role === 'admin' ? 'Quản trị' : 'Nhân viên'}</div>
             </div>
           </div>
           <button
@@ -179,7 +179,7 @@ export default function MainApp() {
         {currentTab === 'exports' && <Exports />}
         {currentTab === 'label-maker' && <LabelMaker />}
         {currentTab === 'reports' && <Reports />}
-        {currentTab === 'employees' && currentUser.role === 'admin' && <Employees />}
+        {currentTab === 'employees' && currentUser.role === 'manager' && <Employees />}
       </main>
 
       {showLogoutConfirm && (

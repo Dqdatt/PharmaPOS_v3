@@ -15,7 +15,7 @@ export default function StaffModal({
 
   const [form, setForm] = useState({
     name: user?.name || '',
-    role: user?.role || 'staff' as 'admin' | 'staff',
+    role: (user?.role === 'manager' ? 'manager' : 'staff') as 'manager' | 'staff',
     pin: user?.pin || '',
   });
 
@@ -31,13 +31,13 @@ export default function StaffModal({
         await updateUserInDB({
           ...user,
           name: form.name,
-          role: form.role as 'admin' | 'staff',
+          role: form.role as 'manager' | 'staff',
           pin: form.pin,
         });
       } else {
         await addUserToDB({
           name: form.name,
-          role: form.role as 'admin' | 'staff',
+          role: form.role as 'manager' | 'staff',
           pin: form.pin,
         });
       }
@@ -79,7 +79,7 @@ export default function StaffModal({
               className="w-full p-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:outline-none text-sm bg-white"
             >
               <option value="staff">Nhân viên</option>
-              <option value="admin">Quản lý (Admin)</option>
+              <option value="manager">Quản lý</option>
             </select>
           </div>
           <div>

@@ -21,6 +21,10 @@ export default function Login() {
 
   const login = async () => {
     if (!selectedUser) return;
+    if (selectedUser.role === 'admin') {
+      setLoginError('Tài khoản quản trị không được đăng nhập trên POS!');
+      return;
+    }
     if (pinInput === selectedUser.pin || !selectedUser.pin) {
       setCurrentUser(selectedUser);
       try {
@@ -70,7 +74,7 @@ export default function Login() {
           <p className="text-teal-100 mb-6">Chọn nhân viên và nhập PIN để bắt đầu</p>
 
           <div className="grid grid-cols-2 gap-3 mt-4">
-            {users.map(u => (
+            {users.filter(u => u.role !== 'admin').map(u => (
               <div
                 key={u.id}
                 onClick={() => setSelectedUser(u)}
@@ -82,7 +86,7 @@ export default function Login() {
                 ].join(' ')}
               >
                 <div className="font-bold">{u.name}</div>
-                <div className="text-xs opacity-75">{u.role === 'admin' ? 'Quản lý' : 'Nhân viên'}</div>
+                <div className="text-xs opacity-75">{u.role === 'manager' ? 'Quản lý' : u.role === 'admin' ? 'Quản trị' : 'Nhân viên'}</div>
               </div>
             ))}
           </div>
