@@ -13,12 +13,6 @@ export default function StaffModal({
   const user = userId ? users.find(u => u.id === userId) : null;
   const isEditing = !!user;
 
-  // Không cho phép chỉnh sửa tài khoản admin trên POS
-  if (user?.role === 'admin') {
-    onClose();
-    return null;
-  }
-
   const [form, setForm] = useState({
     name: user?.name || '',
     role: (user?.role === 'manager' ? 'manager' : 'staff') as 'manager' | 'staff',
