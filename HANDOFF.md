@@ -24,7 +24,7 @@ Bước B (`docs/AUTH_PLAN.md`): thông báo đẩy Web Push VAPID cho app — X
 - Bước F: khoá VAPID MỚI làm secret, Vault `functions_url` URL project, deploy `push`; OTP email lạ trả 422; `passkey login-options` chưa giới hạn theo IP.
 
 ## Việc tiếp theo (người dùng đổi thứ tự 26/11: hoãn C tồn kho, làm MVP lên DB thật trước)
-Theo "MVP lên DB thật" trong `docs/TASKS.md`. Xong: M1, M2, M3 (030), M4 (031 + api.js), M7 local, M8; server M5 (v3.7.0), M6 (v3.7.1). Đang giao: 032 (UI admin M5), 033 (UI số liệu M6) → duyệt, chạy thật UI, gộp. Sau đó M9 theo `docs/GO_LIVE.md` (hỏi người dùng trước từng thao tác DB thật).
+Theo "MVP lên DB thật" trong `docs/TASKS.md`. Xong: M1, M2, M3 (030), M4 (031 + api.js), M7 local, M8; server M5 (v3.7.0), M6 (v3.7.1). 032 + 033 đã duyệt, chạy thật live (admin: khoá/mở/cấp; số liệu thật), đã gộp. Tiếp: M9 theo `docs/GO_LIVE.md` (hỏi người dùng trước từng thao tác DB thật).
 - Vai trò CHỐT: #1 Quốc Đạt → admin (chỉ app), #2 Đoàn Quốc Đường → manager (POS, 1673 hoá đơn). Người dùng tự điền email khi chạy `scripts/link-account.mjs`.
 - DB thật chưa có supabase_migrations → `db push` chạy cả 12 file; diễn tập sạch (scratchpad `load_prod.sh` nạp bản sao vào local).
 - POS thật = Netlify tự deploy từ `main` → KHÔNG gộp main trước M9. `api.js`: host `dqdatt.github.io` = DB thật → KHÔNG deploy gh-pages trước M9.
