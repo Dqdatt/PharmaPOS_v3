@@ -23,7 +23,7 @@ const URL_ = Deno.env.get('SUPABASE_URL')!;
 const db = createClient(URL_, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, { auth: { persistSession: false } });
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Origin được dùng passkey (RP ID = host của origin). Thật: secret PASSKEY_ORIGINS="https://dqdatt.github.io".
+// Origin được dùng passkey (RP ID = host của origin). Thật: secret PASSKEY_ORIGINS="https://medipos-app.netlify.app".
 // Chưa đặt secret thì chỉ Supabase local mới nhận localhost + tunnel test.
 const ORIGINS = (Deno.env.get('PASSKEY_ORIGINS') ?? '').split(',').map((s) => s.trim()).filter(Boolean);
 const LOCAL = /^http:\/\/(kong|127\.0\.0\.1|localhost)[:/]/.test(URL_);

@@ -4,7 +4,7 @@ import webpush from 'npm:web-push@3.6.7';
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2';
 
 const VAPID = {
-  subject: Deno.env.get('VAPID_SUBJECT') ?? 'https://dqdatt.github.io/PharmaPOS_v3/',
+  subject: Deno.env.get('VAPID_SUBJECT') ?? 'https://medipos-app.netlify.app/',
   publicKey: Deno.env.get('VAPID_PUBLIC_KEY') ?? '',
   privateKey: Deno.env.get('VAPID_PRIVATE_KEY') ?? '',
 };

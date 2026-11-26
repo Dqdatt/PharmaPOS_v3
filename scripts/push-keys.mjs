@@ -9,5 +9,5 @@ if (/^VAPID_PRIVATE_KEY=/m.test(cur)) { console.log('Đã có khoá VAPID trong 
 
 const jwk = generateKeyPairSync('ec', { namedCurve: 'P-256' }).privateKey.export({ format: 'jwk' });
 const pub = Buffer.concat([Buffer.from([4]), Buffer.from(jwk.x, 'base64url'), Buffer.from(jwk.y, 'base64url')]).toString('base64url');
-writeFileSync(file, `${cur}${cur && !cur.endsWith('\n') ? '\n' : ''}VAPID_SUBJECT=https://dqdatt.github.io/PharmaPOS_v3/\nVAPID_PUBLIC_KEY=${pub}\nVAPID_PRIVATE_KEY=${jwk.d}\n`);
+writeFileSync(file, `${cur}${cur && !cur.endsWith('\n') ? '\n' : ''}VAPID_SUBJECT=https://medipos-app.netlify.app/\nVAPID_PUBLIC_KEY=${pub}\nVAPID_PRIVATE_KEY=${jwk.d}\n`);
 console.log('Đã tạo khoá VAPID → supabase/functions/.env. Chạy: supabase stop && supabase start');

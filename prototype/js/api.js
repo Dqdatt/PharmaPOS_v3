@@ -1,6 +1,6 @@
 /* API: lớp duy nhất các màn gọi để đăng nhập / đọc dữ liệu thật. Claude giữ — nhân viên KHÔNG sửa.
    - Live local: chạy từ localhost / IP LAN → Supabase local cùng máy (http://<host>:54321); tunnel → cùng origin.
-   - Live thật: GitHub Pages (dqdatt.github.io) → Supabase thật. CHỈ deploy Pages khi DB thật đã có migration mới (bước M9).
+   - Live thật: Netlify (medipos-app.netlify.app, tự deploy từ main) → Supabase thật. CHỈ gộp main khi DB thật đã có migration mới (bước M9).
    - Mock: chỗ khác → dữ liệu giả, mã OTP đúng là 123456.
    Mọi hàm trả Promise<{ ok: true, ...data } | { ok: false, error: 'câu tiếng Việt' }>, không throw. */
 (function () {
@@ -9,7 +9,7 @@
   // Test iPhone qua HTTPS tunnel (pwa/tools/serve.mjs chuyển tiếp Supabase cùng origin)
   const tunnel = /\.trycloudflare\.com$/.test(host);
   // DB thật: URL + publishable key công khai được (RLS chặn dữ liệu), giống VITE_SUPABASE_* của POS trên Netlify
-  const prod = host === 'dqdatt.github.io';
+  const prod = host === 'medipos-app.netlify.app';
   const live = !!window.supabase && ((isLocal && location.protocol === 'http:') || tunnel || prod);
   const sb = live ? window.supabase.createClient(
     prod ? 'https://fbppvryvfdeohocsgwtl.supabase.co' : tunnel ? location.origin : `http://${host}:54321`,
