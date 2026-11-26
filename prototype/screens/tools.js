@@ -93,7 +93,7 @@ App.css(`
   let payablesState = null;
   const paidToday = [];
   const getPayables = (base) => (payablesState || (payablesState = (base || DATA.payables).map((x) => ({ ...x }))));
-  const paySubText = (x) => (x.since ? `Từ ${x.since}, ${x.count} phiếu` : `Hạn trả ${x.due}`);
+  const paySubText = (x) => (x.since ? `Từ ${x.since}${x.count ? `, ${x.count} phiếu` : ''}` : (x.due ? `Hạn trả ${x.due}` : ''));
   const errBox = (icon, msg) => `<div class="empty"><div class="tile">${App.icon(icon, 28)}</div>${App.esc(msg)}<br><br><button class="btn btn-secondary tap" data-retry>Thử lại</button></div>`;
 
   App.screen('tools', {
@@ -262,12 +262,12 @@ App.css(`
           <div class="tl-ls-wrap">
             <div class="card tl-ls-list" style="margin:8px 16px auto">
               ${items.map((x) => {
-                const min = x.min > 0 ? x.min : 1;
-                const ratio = Math.min(1, x.left / min);
+                const hasMin = x.min > 0;
+                const ratio = hasMin ? Math.min(1, x.left / x.min) : 0.2;
                 const pct = Math.max(6, Math.round(ratio * 100));
                 return `<div class="row tl-ls-row">
                   <div class="row-title">${App.esc(x.name)}</div>
-                  <div class="row-sub">Còn ${x.left} ${App.esc(x.unit)}, tối thiểu ${x.min}</div>
+                  <div class="row-sub">Còn ${x.left} ${App.esc(x.unit)}${hasMin ? `, tối thiểu ${x.min}` : ''}</div>
                   <div class="tl-ls-track"><div class="tl-ls-fill${ratio <= 0.25 ? ' bad' : ''}" style="width:${pct}%"></div></div>
                 </div>`;
               }).join('')}
@@ -642,7 +642,7 @@ App.css(`
         }
         const hits = r.products || [];
         if (!hits.length) {
-          box.innerHTML = `<div class="empty"><div class="tile">${App.icon('search', 26)}</div>Không thấy thuốc.</div>`.replace('Không thấy thuốc.', 'Không tìm thấy thuốc.');
+          box.innerHTML = `<div class="empty"><div class="tile">${App.icon('search', 26)}</div>Không tìm thấy thuốc.</div>`;
           return;
         }
         box.innerHTML = `<div class="card" style="margin:8px 16px 24px">${hits.map((x) => `

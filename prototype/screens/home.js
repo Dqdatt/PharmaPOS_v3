@@ -161,6 +161,7 @@ App.css(`
         }
 
         const bars = el.querySelector('.hm-bars');
+        bars.classList.remove('grow');
         bars.innerHTML = barHtml(t.hourly, t.hourStart, t.nowHour);
         void bars.offsetWidth;
         bars.classList.add('grow');
@@ -174,8 +175,11 @@ App.css(`
         const ws = wsRes.ok ? wsRes.sessions : [];
         if (ws.length) {
           webEl.hidden = false;
+          const browser = ws[0].browser || 'Trình duyệt';
+          const dev = ws[0].device || ws[0].os || 'Máy tính';
+          const since = ws[0].since ? `, từ ${ws[0].since}` : '';
           webEl.querySelector('.row-title').textContent = `Web quản lý đang mở ${ws.length} phiên`;
-          webEl.querySelector('.row-sub').textContent = `${ws[0].browser} trên ${ws[0].device || ws[0].os}, từ ${ws[0].since}`;
+          webEl.querySelector('.row-sub').textContent = `${browser} trên ${dev}${since}`;
         } else {
           webEl.hidden = true;
         }
@@ -197,9 +201,9 @@ App.css(`
         }
         if (payables.length) {
           const pay = payables[0];
-          const paySub = pay.since ? `Từ ${pay.since}, ${pay.count} phiếu` : `Hạn ${pay.due}`;
+          const paySub = pay.since ? `Từ ${pay.since}${pay.count ? `, ${pay.count} phiếu` : ''}` : (pay.due ? `Hạn ${pay.due}` : '');
           todoRows.push(`<div class="row tap" data-go="payables"><div class="tile">${App.icon('wallet', 20)}</div>
-            <div class="row-main"><div class="row-title">Công nợ nhà cung cấp</div><div class="row-sub ell">${App.esc(pay.supplier)}, ${App.esc(paySub)}</div></div>
+            <div class="row-main"><div class="row-title">Công nợ nhà cung cấp</div><div class="row-sub ell">${App.esc(pay.supplier)}${paySub ? `, ${App.esc(paySub)}` : ''}</div></div>
             <div class="row-end num">${App.money(pay.amount)}</div></div>`);
         }
         const todoSec = el.querySelector('.hm-todo-sec');
@@ -222,9 +226,9 @@ App.css(`
       };
 
       load(false);
-      const k = window.API && API.push && API.push.takeOpened();
+      const k = window.API && API.push ? API.push.takeOpened() : null;
       // Chờ hiệu ứng vào Trang chủ xong (dài nhất 720ms) rồi mới chuyển màn; người dùng đã rời Trang chủ thì thôi
-      if (k !== null) setTimeout(() => { if (App.current().el === el) App.openNotif(k); }, 800);
+      if (k != null) setTimeout(() => { if (App.current().el === el) App.openNotif(k); }, 800);
     },
   });
 
