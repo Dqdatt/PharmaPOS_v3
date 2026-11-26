@@ -486,6 +486,7 @@
     exp: { cls: '', icon: 'clock' },
   };
   function historySection() {
+    if (API.live) return '';
     return `
       <div class="section wl-history">
         <div class="section-head"><h2>Lịch sử đăng nhập web</h2></div>
