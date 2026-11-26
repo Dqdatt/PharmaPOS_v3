@@ -144,7 +144,7 @@
       </div>
       <div class="au-wrap">
         <h1 class="au-h1">Đăng nhập</h1>
-        <p class="au-sub">Dùng tài khoản chủ nhà thuốc, giống trên web.</p>
+        <p class="au-sub">Dùng email được quản trị cấp cho bạn.</p>
         <form class="au-form" novalidate>
           <div class="au-field">
             <label for="auEmail">Email</label>
@@ -294,6 +294,7 @@
       const errBox = el.querySelector('.au-err');
       const resendEl = el.querySelector('.au-resend');
       const kbEl = el.querySelector('.au-kb');
+      const backBtn = el.querySelector('[data-back]');
       let busy = false;
       let sec = 60;
 
@@ -301,6 +302,10 @@
         busy = on;
         inp.disabled = on;
         kbEl.classList.toggle('locked', on);
+        if (backBtn) {
+          backBtn.disabled = on;
+          backBtn.style.pointerEvents = on ? 'none' : '';
+        }
       };
 
       const drawBoxes = (val, isErr = false) => {
@@ -331,10 +336,12 @@
             if (!isActiveView(el)) return;
             setBusy(false);
             if (r.ok) {
+              inp.value = '';
+              errBox.hidden = true;
               App.toast('Đã gửi mã mới');
               sec = 60;
               renderResend();
-              drawBoxes(inp.value);
+              drawBoxes('');
               focusInput();
             } else {
               done();
@@ -555,7 +562,7 @@
           <h1 class="au-lock-hi">Chào ${App.esc(firstName)}</h1>
           <p class="au-lock-store">${App.esc(DATA.store.name)}</p>
         </div>
-        <form class="au-lock-pass${p.showPass ? ' show' : ''}" novalidate>
+        <form class="au-lock-pass${p.showPass ? ' show' : ''}"${p.showPass ? '' : ' inert'} novalidate>
           <div class="au-field">
             <div class="au-input-wrap" data-wrap="lockPass">
               <input id="auLockPass" class="au-input has-btn" type="password" autocomplete="current-password" placeholder="Nhập mật khẩu để mở khóa">
@@ -599,6 +606,8 @@
       }
 
       const showPassForm = () => {
+        passArea.inert = false;
+        passArea.removeAttribute('inert');
         passArea.classList.add('show');
         usePassBtn.hidden = true;
         setTimeout(() => { if (el.isConnected && !busy) passIn.focus(); }, 120);
