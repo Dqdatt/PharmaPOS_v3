@@ -112,6 +112,10 @@ App.screen('home', {
       bars.classList.add('grow');
       if (first) App.countUp(el.querySelector('.hm-v'), DATA.today.revenue, 900);
     });
+    if (typeof API !== 'undefined' && API.push && API.push.takeOpened && App.openNotif) {
+      const k = API.push.takeOpened();
+      if (k !== null) App.openNotif(k);
+    }
   },
 });
 
