@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { usePos } from '../contexts/PosContext';
+import { signOutPos } from '../lib/webLogin';
 import POS from './POS';
 import Inventory from './Inventory';
 import Imports from './Imports';
@@ -14,10 +15,11 @@ import CloseInventoryModal from '../components/modals/CloseInventoryModal';
 type Tab = 'pos' | 'inventory' | 'import' | 'exports' | 'label-maker' | 'reports' | 'employees';
 
 export default function MainApp() {
-  const { currentUser, setCurrentUser, updateStaffLogLogoutInDB, cart, setCart, getNow, isPreviousMonthClosed, checkPreviousMonthStatus } = usePos();
+  const { currentUser, setCurrentUser, updateStaffLogLogoutInDB, cart, getNow, isPreviousMonthClosed, checkPreviousMonthStatus } = usePos();
   const [currentTab, setCurrentTab] = useState<Tab>('pos');
   const [currentTime, setCurrentTime] = useState(getNow(true));
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(getNow(true)), 1000);
@@ -25,18 +27,27 @@ export default function MainApp() {
   }, []);
 
   const logout = async () => {
-    if (currentUser) {
+    if (!currentUser || isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
       try {
         await updateStaffLogLogoutInDB(currentUser.id, getNow(true));
-        showNotification(`Kết thúc ca ${currentUser.name}`, 'success');
+        const name = currentUser.name.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+        showNotification(`Kết thúc ca ${name}`, 'success');
       } catch (e) {
-        const errMsg = e instanceof Error ? e.message : String(e);
-        showNotification(`Lỗi khi ghi nhận đăng xuất! Chi tiết: ${errMsg}`, 'error');
+        showNotification('Lỗi khi ghi nhận đăng xuất!', 'error');
         console.error('Failed to log logout:', e);
       }
+
+      const { error } = await signOutPos();
+      if (error) throw error;
+      setCurrentUser(null);
+    } catch (e) {
+      showNotification('Không thể đăng xuất. Vui lòng thử lại.', 'error');
+      console.error('Failed to sign out:', e);
+    } finally {
+      setIsLoggingOut(false);
     }
-    setCurrentUser(null);
-    setCart([]);
   };
 
   const openCustomerScreen = () => {
@@ -86,9 +97,10 @@ export default function MainApp() {
               </button>
               <button
                 onClick={logout}
-                className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-lg transition"
+                disabled={isLoggingOut}
+                className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-lg transition disabled:opacity-50"
               >
-                Đăng xuất
+                {isLoggingOut ? 'Đang đăng xuất…' : 'Đăng xuất'}
               </button>
             </div>
           </div>
@@ -163,7 +175,8 @@ export default function MainApp() {
           </div>
           <button
             onClick={() => setShowLogoutConfirm(true)}
-            className="bg-red-500 hover:bg-red-600 w-9 h-9 rounded-lg flex items-center justify-center font-bold transition"
+            disabled={isLoggingOut}
+            className="bg-red-500 hover:bg-red-600 w-9 h-9 rounded-lg flex items-center justify-center font-bold transition disabled:opacity-50"
             title="Kết thúc ca"
           >
             <i className="fa-solid fa-power-off"></i>
