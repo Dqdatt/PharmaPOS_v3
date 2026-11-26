@@ -10,16 +10,17 @@ Chốt: #2 Đoàn Quốc Đường → Quản lý (giữ id, 1673 hoá đơn cũ
 - [x] M6 (=D) App đọc dữ liệu thật: Trang chủ, Doanh thu, Hoá đơn, Nhân viên, Tiện ích theo RLS — [opus xhigh] + UI giao
 - [x] (local; SMTP Gmail làm ở M9) M7 Email thật: mẫu mail tiếng Việt (mã đăng nhập, quên mật khẩu), sửa lỗi 422 email lạ, Gmail SMTP trên Supabase thật (người dùng tự nhập mật khẩu ứng dụng) — [opus xhigh]
 - [x] M8 Bỏ URL + key viết cứng `prototype/js/api.js:11` → cấu hình local/thật khi build PWA — [sonnet] giao
-- [ ] App: nút "In lại"/"Gửi Zalo" ở chi tiết hoá đơn còn giả lập; tra tồn kho có thể nháy kết quả cũ (seq) — [sonnet] giao
-- [ ] Hỏi người dùng tên + địa chỉ nhà thuốc thật (`DATA.store`) — [haiku]
+- [ ] (HOÃN, người dùng chưa cần) App: nút "In lại"/"Gửi Zalo" ở chi tiết hoá đơn còn giả lập (tra tồn kho đã có seq) — [sonnet] giao
+- [ ] Hỏi người dùng địa chỉ nhà thuốc thật (`DATA.store`, tên đã là MediPOS; địa chỉ còn mẫu Lê Văn Sỹ) — [haiku]
 - [x] M9 (=F) Lên thật ngoài giờ bán: sao lưu → migration → nối ĐQĐ + admin → functions/secrets/Vault → PWA lên Pages + POS lên Netlify cùng lúc (theo `docs/GO_LIVE.md`) — [opus xhigh] ĐẠT 26/11 23:34: 13 bảng khớp từng dòng, POS ngừng ~7 phút; app lên Netlify `medipos-app` thay Pages
 - [ ] M10 Test cuối trên iPhone với link https://medipos-app.netlify.app (thông báo + Face ID cấp 1 lần là giữ) — [opus high]
 - [x] POS đọc đủ hoá đơn (chia trang, `selectAll`) — doanh thu POS thiếu do PostgREST cắt 1000 dòng (lỗi có từ POS cũ) — [opus xhigh] 7a7a6b5
-- [ ] Face ID nhớ theo từng tài khoản trên cùng máy (`api.js` PK_KEY) — [opus xhigh]
+- [x] Face ID nhớ theo từng tài khoản trên cùng máy (`api.js` PK_KEY = map theo users.id; đăng xuất giữ passkey) — thử local đạt, CHƯA thử iPhone
 - [ ] App quét QR: tự mở lại camera khi khung đen (Safari/màn hình chính) — d9294f3 đã commit, CHƯA push main — [opus high]
-- [ ] Admin sửa tên + email nhân viên từ app (Edge Function tự cập nhật Supabase Auth) — [opus xhigh] server + UI giao
-- [ ] Đổi "Nhà thuốc Tâm An" → "MediPOS" (`data.js`, `screens/account.js`) — [haiku]
-- [ ] Icon màn hình chính hiện chữ "M" CHỈ khi thêm từ Safari (Chrome đúng logo → manifest ổn; Safari dùng apple-touch-icon, nghi Safari nhớ lúc site 404) — thử thêm `apple-touch-icon.png` ở gốc pwa — [haiku]
+- [x] Admin sửa tên + email nhân viên từ app (`admin-create-user` action `edit`, `npm run test:admin-edit`; UI giao 035) — CHƯA deploy function lên DB thật
+- [x] Thông báo tự đăng ký lại khi mở app / đăng nhập lại (`API.push.keep`, chỉ khi máy đã cho phép và không tự tắt) — CHƯA thử iPhone
+- [x] Đổi "Nhà thuốc Tâm An" → "MediPOS" (`data.js`, `screens/account.js`)
+- [ ] Icon màn hình chính hiện chữ "M" CHỈ khi thêm từ Safari (Chrome đúng logo → manifest ổn; Safari dùng apple-touch-icon, nghi Safari nhớ lúc site 404) — đã thêm `apple-touch-icon.png` ở gốc pwa (`build.mjs`), CHƯA thử iPhone — [haiku]
 - [ ] (SAU) Bàn phím đè nội dung; đẩy ô nhập + nút lên sát bàn phím — sửa prototype trước rồi build PWA — [sonnet] giao
 
 - [x] Prototype app điện thoại (`prototype/`): khung, logo, splash, Trang chủ — [opus high]
@@ -35,7 +36,7 @@ Chốt: #2 Đoàn Quốc Đường → Quản lý (giữ id, 1673 hoá đơn cũ
 - [x] Prototype: Enter form đăng nhập, hủy đăng xuất khi bấm Ở lại (giao 024)
 - [ ] Prototype: mã màu rgba viết cứng — [sonnet]
 - [x] Gộp nhánh `prototype-mobile` vào main (M9, ecd3c2f)
-- [ ] Tắt badge "Powered by Netlify" trên project `medipos-app` (đè nút Đăng nhập app) — [haiku]
+- [x] Tắt badge "Powered by Netlify" trên project `medipos-app` (đè nút Đăng nhập app) — [haiku]
 - [x] PWA MediPOS từ prototype (giao 017 vỏ PWA, 018 kiểm chứng 0 pixel) — [opus high]
 - [ ] PWA: góp ý của người dùng khi test link local (sửa ở prototype/, build lại) — [opus high]
 - [x] PWA iOS: hở dải đáy 48pt khi mở từ màn hình chính (giao 019+020, 03a5931, đã thử iPhone thật) — [opus high]

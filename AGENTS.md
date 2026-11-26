@@ -10,7 +10,7 @@ Tiến độ: M1–M9 xong (đã lên DB thật 26/11/2026, `docs/GO_LIVE.md`), 
 
 ## Lệnh
 - `npm run dev` → http://localhost:3000 (preview `dev`). `.env.local`: `VITE_SUPABASE_URL=http://127.0.0.1:54321` + `VITE_SUPABASE_ANON_KEY` lấy từ `supabase status`.
-- Supabase local: `supabase start` → `npm run db:reset` (schema + seed + tài khoản test, mật khẩu trong `scripts/seed-auth.mjs`) → `npm run test:rls` (ngay sau reset) → `test:web-login` · `test:passkey` · `test:push`. Mã OTP đọc ở Mailpit http://localhost:54324. Thêm function mới → `supabase stop && supabase start` mới được phục vụ.
+- Supabase local: `supabase start` → `npm run db:reset` (schema + seed + tài khoản test, mật khẩu trong `scripts/seed-auth.mjs`) → `npm run test:rls` (ngay sau reset) → `test:web-login` · `test:passkey` · `test:push` · `test:admin-edit`. Mã OTP đọc ở Mailpit http://localhost:54324. Thêm function mới → `supabase stop && supabase start` mới được phục vụ.
 - `npm run build` · `npm run lint` (= `tsc --noEmit`) · `npm test` (node:test, `src/__tests__/*.test.ts`)
 - Prototype: `python3 -m http.server 4173 -d prototype` → http://localhost:4173 (preview `prototype`); kiểm tự động `node prototype/tools/check.mjs`
 - PWA: `npm run build:pwa` → `pwa/dist/`; `npm run check:pwa`; `npm run verify:pwa` (so ảnh 0 pixel với prototype).

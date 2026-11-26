@@ -19,7 +19,8 @@
     "test:passkey": "node scripts/test-passkey.mjs",
     "serve:pwa": "node pwa/build.mjs && node pwa/tools/serve.mjs",
     "push:keys": "node scripts/push-keys.mjs",
-    "test:push": "node --import tsx scripts/test-push.mjs"
+    "test:push": "node --import tsx scripts/test-push.mjs",
+    "test:admin-edit": "node scripts/test-admin-edit.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",

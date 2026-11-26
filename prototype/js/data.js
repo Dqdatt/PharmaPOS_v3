@@ -2,7 +2,7 @@
 (function () {
   const hourly = [640, 1320, 1880, 2240, 2060, 1150, 2070, 1120, 0, 0, 0, 0, 0, 0, 0, 0].map((k) => k * 1000); // 7h → 22h
   window.DATA = {
-    store: { name: 'Nhà thuốc Tâm An', branch: 'Chi nhánh Lê Văn Sỹ', address: '214 Lê Văn Sỹ, Phường 1, Quận 3, TP.HCM' },
+    store: { name: 'MediPOS', branch: 'Chi nhánh Lê Văn Sỹ', address: '214 Lê Văn Sỹ, Phường 1, Quận 3, TP.HCM' },
     owner: { name: 'Trần Minh Khoa', role: 'Chủ nhà thuốc', phone: '0903 128 466', initials: 'MK' },
     today: {
       dateLabel: 'Thứ Tư, 25 tháng 11', hourStart: 7, nowHour: 14, hourly,

@@ -51,16 +51,20 @@
     const profile = await readProfile();
     if (!profile) { await sb.auth.signOut({ scope: 'local' }); return fail('Email này chưa được cấp tài khoản'); }
     if (profile.status === 'locked') { await sb.auth.signOut({ scope: 'local' }); return fail('Tài khoản đã bị khoá, vui lòng liên hệ admin'); }
-    const pk = pkLocal();
-    if (pk && pk.uid !== profile.id) localStorage.removeItem(PK_KEY); // passkey của tài khoản khác: không mở khoá nhầm người
     if (!me || me.id !== profile.id) dash = null; // số liệu của người trước
     me = profile;
+    API.push.keep();
     return { ok: true, profile };
   }
 
   // ---------- Passkey WebAuthn (Face ID thật), xác minh ở Edge Function `passkey` ----------
-  const PK_KEY = 'medipos.passkey'; // { id: credential id, uid: users.id } passkey của máy này (live); mock dùng cờ medipos.bio
-  const pkLocal = () => { try { const v = JSON.parse(localStorage.getItem(PK_KEY)); return v && v.id ? v : null; } catch (e) { return null; } };
+  // { [users.id]: credential id }: passkey của từng tài khoản trên máy này (live) → đổi tài khoản không phải bật lại Face ID; mock dùng cờ medipos.bio
+  const PK_KEY = 'medipos.passkeys';
+  const pkAll = () => { try { const v = JSON.parse(localStorage.getItem(PK_KEY)); return v && typeof v === 'object' ? v : {}; } catch (e) { return {}; } };
+  const pkSet = (uid, id) => { const m = pkAll(); if (id) m[uid] = id; else delete m[uid]; localStorage.setItem(PK_KEY, JSON.stringify(m)); };
+  const pkLocal = () => { const id = me && pkAll()[me.id]; return id ? { id, uid: me.id } : null; }; // của tài khoản đang đăng nhập
+  try { const o = JSON.parse(localStorage.getItem('medipos.passkey')); if (o && o.id && o.uid) pkSet(o.uid, o.id); } catch (e) { /* bỏ */ }
+  localStorage.removeItem('medipos.passkey'); // bản cũ chỉ nhớ 1 passkey/máy
   const b64u = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
   const unb64u = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((s.length + 3) % 4)), (c) => c.charCodeAt(0));
   const pkSupported = () => !!(window.isSecureContext && window.PublicKeyCredential && navigator.credentials);
@@ -107,6 +111,7 @@
   const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
   const pushReg = async () => { try { return pushSupported() ? await navigator.serviceWorker.getRegistration() : null; } catch (e) { return null; } };
+  const PUSH_OFF = 'medipos.pushOff'; // '1' = người dùng tự tắt thông báo trên máy này
   let pushKey = null; // tải trước khoá VAPID (lúc đọc trạng thái) để sau khi bấm Bật không phải chờ mạng
   const loadKey = () => pushKey || (pushKey = sb.functions.invoke('push', { body: { action: 'key' } })
     .then(({ data }) => (data && data.key ? unb64u(data.key) : null), () => null)
@@ -231,14 +236,15 @@
         const p = await readProfile();
         if (!p || p.status === 'locked') { await sb.auth.signOut({ scope: 'local' }); return null; }
         me = p;
+        API.push.keep();
         return p;
       } catch (e) { return null; }
     },
 
     async signOut() {
-      await API.push.disable(); // máy dùng chung không nhận thông báo của người trước
-      await API.bio.disable();
-      localStorage.removeItem(PK_KEY); // xoá ở server lỗi (mất mạng) thì máy này vẫn phải quên passkey
+      await API.push.disable(false); // máy dùng chung không nhận thông báo của người trước
+      // Face ID (passkey) của tài khoản vẫn nhớ trên máy: đăng nhập lại vẫn cần mật khẩu / mã, xong là có Face ID ngay
+      localStorage.removeItem('medipos.applock');
       me = null; dash = null;
       if (live) { try { await sb.auth.signOut({ scope: 'local' }); } catch (e) { /* vẫn xoá phiên cục bộ */ } }
       return { ok: true };
@@ -270,7 +276,10 @@
           const opts = await pkFn({ action: 'approve-options', id });
           await pkFn({ action: 'approve', id, response: await pkGet(opts) });
           return { ok: true };
-        } catch (e) { return pkFail(e); }
+        } catch (e) {
+          if (e && e.code === 'need_bio' && me) pkSet(me.id); // server đã xoá passkey (bị khoá rồi mở lại) → màn Tài khoản hiện Face ID tắt
+          return pkFail(e);
+        }
       },
       /** Từ chối (approve=false). Duyệt chỉ qua approve() ở trên — server trả need_passkey nếu gọi decide(id, true). */
       async decide(id, approve) {
@@ -432,7 +441,7 @@
         try {
           const opts = await pkFn({ action: 'register-options' });
           const r = await pkFn({ action: 'register', response: await pkCreate(opts) });
-          localStorage.setItem(PK_KEY, JSON.stringify({ id: r.credential, uid: r.user_id }));
+          pkSet(r.user_id, r.credential);
           return { ok: true };
         } catch (e) { return pkFail(e); }
       },
@@ -447,7 +456,7 @@
           const { error } = await sb.auth.setSession(r.session);
           return error ? fail(error) : await afterAuth();
         } catch (e) {
-          if (e && e.code === 'unknown') localStorage.removeItem(PK_KEY);
+          if (e && e.code === 'unknown') pkSet(pk.uid);
           return pkFail(e);
         }
       },
@@ -459,10 +468,10 @@
         if (!pk) return { ok: true };
         try {
           await pkFn({ action: 'delete', credential: pk.id });
-          localStorage.removeItem(PK_KEY);
+          pkSet(pk.uid);
           return { ok: true };
         } catch (e) {
-          if (e && e.vi) localStorage.removeItem(PK_KEY); // phiên hết hạn: server không xoá được, máy này vẫn tắt
+          if (e && e.vi) pkSet(pk.uid); // phiên hết hạn: server không xoá được, máy này vẫn tắt
           return e && e.vi ? { ok: true } : pkFail(e);
         }
       },
@@ -500,12 +509,14 @@
           const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
           const { data, error } = await sb.rpc('push_subscribe', { sub: sub.toJSON(), ua: UA });
           if (error || data !== true) { await sub.unsubscribe(); return error ? fail(error) : fail('Không bật được thông báo trên máy này'); }
+          localStorage.removeItem(PUSH_OFF);
           return { ok: true };
         } catch (e) { return fail(e); }
       },
-      /** Tắt trên máy này (đăng xuất cũng gọi). */
-      async disable() {
+      /** Tắt trên máy này. byUser = false khi đăng xuất: đăng nhập lại thì keep() tự bật lại. */
+      async disable(byUser = true) {
         localStorage.removeItem('medipos.push');
+        if (byUser) localStorage.setItem(PUSH_OFF, '1');
         if (!live) return { ok: true };
         try {
           const reg = await pushReg();
@@ -515,6 +526,22 @@
           await sub.unsubscribe();
           return { ok: true };
         } catch (e) { return fail(e); }
+      },
+      /** Máy đã cho phép thông báo → tự đăng ký lại cho tài khoản đang đăng nhập (mở app, đăng nhập lại), không cần bấm Bật lại.
+       *  Người dùng tự tắt trong app (PUSH_OFF) hoặc chặn trong Cài đặt iPhone thì thôi. Không chờ, không báo lỗi. */
+      async keep() {
+        if (!live || !pushSupported() || Notification.permission !== 'granted' || localStorage.getItem(PUSH_OFF) === '1') return;
+        try {
+          const reg = await pushReg();
+          if (!reg) return;
+          let sub = await reg.pushManager.getSubscription();
+          if (!sub) {
+            const key = await loadKey();
+            if (!key) return;
+            sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+          }
+          await sb.rpc('push_subscribe', { sub: sub.toJSON(), ua: UA });
+        } catch (e) { /* iOS có thể đòi bấm mới đăng ký được → màn Thông báo vẫn hiện nút Bật */ }
       },
       /** Đọc (không truyền gì) hoặc lưu cài đặt của tài khoản. prefs = { revenue, debt, lowStock, expiring, expiryDays: 15|30|60|90 } */
       async prefs(changes) {

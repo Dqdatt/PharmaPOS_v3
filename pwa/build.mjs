@@ -45,6 +45,8 @@ for (const file of ['index.html', 'pwa.css', 'manifest.webmanifest']) {
   copyFileSync(join(srcDir, file), join(distDir, file));
 }
 copyDir(join(srcDir, 'icons'), join(distDir, 'icons'));
+// Safari (Thêm vào MH chính) có lúc bỏ qua <link apple-touch-icon> và tự tìm file ở gốc site
+for (const f of ['apple-touch-icon.png', 'apple-touch-icon-precomposed.png']) copyFileSync(join(protoDir, 'assets', 'app-icon-180.png'), join(distDir, f));
 
 const distFiles = listFiles(distDir).sort();
 const hash = createHash('sha256');

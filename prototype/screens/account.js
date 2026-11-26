@@ -884,7 +884,7 @@ App.css(`
   App.screen('storeInfo', {
     render: () => {
       const header = App.header({ title: 'Thông tin nhà thuốc' });
-      const store = DATA.store || { name: 'Nhà thuốc Tâm An', branch: 'Chi nhánh Lê Văn Sỹ', address: '214 Lê Văn Sỹ, Phường 1, Quận 3, TP.HCM' };
+      const store = DATA.store || { name: 'MediPOS', branch: 'Chi nhánh Lê Văn Sỹ', address: '214 Lê Văn Sỹ, Phường 1, Quận 3, TP.HCM' };
       const owner = DATA.owner || { name: 'Trần Minh Khoa', phone: '0903 128 466' };
 
       return `

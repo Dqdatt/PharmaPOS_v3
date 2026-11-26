@@ -29,8 +29,53 @@ Deno.serve(async (req) => {
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return reply(400, { error: 'Dữ liệu không hợp lệ' }); }
 
-  const email = String(body.email ?? '').trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) return reply(400, { error: 'Email không hợp lệ' });
+  const cols = 'id, name, email, phone, role, status';
+  const toEmail = (v: unknown) => String(v ?? '').trim().toLowerCase();
+  const badEmail = (e: string) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e) || e.length > 254;
+  const dupAuth = (m: string) => /already|exists|registered/i.test(m);
+
+  // { action: 'edit', id, name?, email? }: sửa họ tên / email QL, NV. Email đổi ở cả auth.users (email đăng nhập) lẫn users.
+  if (body.action === 'edit') {
+    const id = Number(body.id);
+    if (!Number.isInteger(id) || id <= 0) return reply(400, { error: 'Dữ liệu không hợp lệ' });
+    const { data: old } = await db.from('users').select(`${cols}, auth_id`).eq('id', id).maybeSingle();
+    if (!old) return reply(404, { error: 'Không tìm thấy tài khoản' });
+    if (old.role === 'admin') return reply(403, { error: 'Không sửa được tài khoản admin' });
+    const patch: Record<string, string> = {};
+    if (body.name !== undefined) {
+      const name = String(body.name).trim();
+      if (name.length < 2 || name.length > 80) return reply(400, { error: 'Tên cần 2–80 ký tự' });
+      if (name !== old.name) patch.name = name;
+    }
+    if (body.email !== undefined) {
+      const email = toEmail(body.email);
+      if (badEmail(email)) return reply(400, { error: 'Email không hợp lệ' });
+      if (email !== old.email) {
+        if (!old.auth_id) return reply(409, { error: 'Gắn email cho tài khoản này trước' });
+        // GoTrue báo trùng email chỉ bằng lỗi 500 chung chung → tự kiểm trước
+        const { data: taken } = await db.from('users').select('id').eq('email', email).neq('id', id).limit(1);
+        if (taken?.length) return reply(409, { error: 'Email này đã có tài khoản' });
+        const { error: ea } = await db.auth.admin.updateUserById(old.auth_id, { email, email_confirm: true });
+        if (ea) return reply(dupAuth(ea.message) ? 409 : 500, { error: dupAuth(ea.message) ? 'Email này đã có tài khoản' : 'Không đổi được email' });
+        patch.email = email;
+      }
+    }
+    const { auth_id, ...current } = old;
+    if (!Object.keys(patch).length) return reply(200, { user: current });
+    const { data: row, error: eu } = await db.from('users').update(patch).eq('id', id).select(cols).maybeSingle();
+    if (eu || !row) {
+      if (patch.email) { // trả email đăng nhập về như cũ, không để auth.users lệch users
+        const { error: er } = await db.auth.admin.updateUserById(auth_id, { email: old.email, email_confirm: true });
+        if (er) console.error('admin-create-user: không trả lại được email auth', id, er.message);
+      }
+      const dup = eu?.code === '23505';
+      return reply(dup ? 409 : 500, { error: dup ? 'Email này đã được dùng' : 'Không lưu được thay đổi' });
+    }
+    return reply(200, { user: row });
+  }
+
+  const email = toEmail(body.email);
+  if (badEmail(email)) return reply(400, { error: 'Email không hợp lệ' });
 
   // Gắn email cho tài khoản cũ (dòng PIN trước khi có đăng nhập email): giữ id → hoá đơn cũ vẫn gắn đúng người
   if (body.id !== undefined) {
