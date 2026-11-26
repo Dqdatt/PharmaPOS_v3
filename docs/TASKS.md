@@ -4,11 +4,11 @@
 Chốt: #2 Đoàn Quốc Đường → Quản lý (giữ id, 1673 hoá đơn cũ còn đủ); #1 Quốc Đạt → admin (chỉ app). Người dùng tự điền email. Quét QR giữ quét trực tiếp (iOS hỏi camera tối đa 1 lần/lần mở app). POS thật chạy Vercel/Netlify.
 - [x] M1 Diễn tập: sao bản DB thật (chỉ đọc) về local → chạy migration mới → đối chiếu số dòng, thử POS/app trên bản sao — [opus xhigh] ĐẠT 26/11: 12 bảng giống từng byte, chỉ `users` đổi role; QL đọc đủ 1673 hoá đơn
 - [x] M2 Script nối tài khoản cũ + tạo admin đầu tiên (gán email/vai trò cho hàng `users` có sẵn, giữ id) — `scripts/link-account.mjs`, chạy thật ở M9
-- [ ] (giao 030) M3 Quyền 1 lần: bỏ tự Face ID khi mở app (công tắc "Khoá app bằng Face ID", mặc định tắt); camera không xin lại khi mở lại màn quét — [sonnet] giao
-- [ ] (app xong; POS nút đăng xuất = giao 031) M4 Đăng nhập/đăng xuất trọn vẹn: quên mật khẩu (mã email), đổi mật khẩu, bị khoá/thu hồi phiên → về màn đăng nhập; nút Đăng xuất màn chốt tồn POS — [opus xhigh] + UI giao
-- [ ] M5 (=E) Admin trong app: cấp email cho NV cũ, cấp/khoá/đổi vai trò, gửi lại mã, xem + thu hồi phiên POS (`admin-update-user`) — [opus xhigh] + UI giao
-- [ ] M6 (=D) App đọc dữ liệu thật: Trang chủ, Doanh thu, Hoá đơn, Nhân viên, Tiện ích theo RLS — [opus xhigh] + UI giao
-- [ ] M7 Email thật: mẫu mail tiếng Việt (mã đăng nhập, quên mật khẩu), sửa lỗi 422 email lạ, Gmail SMTP trên Supabase thật (người dùng tự nhập mật khẩu ứng dụng) — [opus xhigh]
+- [x] M3 Quyền 1 lần: bỏ tự Face ID khi mở app (công tắc "Khoá app bằng Face ID", mặc định tắt); camera không xin lại khi mở lại màn quét — [sonnet] giao
+- [x] M4 Đăng nhập/đăng xuất trọn vẹn: quên mật khẩu (mã email), đổi mật khẩu, bị khoá/thu hồi phiên → về màn đăng nhập; nút Đăng xuất màn chốt tồn POS — [opus xhigh] + UI giao
+- [ ] (server xong v3.7.0; UI = giao 032) M5 (=E) Admin trong app: cấp email cho NV cũ, cấp/khoá/đổi vai trò, gửi lại mã, xem + thu hồi phiên POS (`admin-update-user`) — [opus xhigh] + UI giao
+- [ ] (server xong v3.7.1; UI = giao 033) M6 (=D) App đọc dữ liệu thật: Trang chủ, Doanh thu, Hoá đơn, Nhân viên, Tiện ích theo RLS — [opus xhigh] + UI giao
+- [x] (local; SMTP Gmail làm ở M9) M7 Email thật: mẫu mail tiếng Việt (mã đăng nhập, quên mật khẩu), sửa lỗi 422 email lạ, Gmail SMTP trên Supabase thật (người dùng tự nhập mật khẩu ứng dụng) — [opus xhigh]
 - [x] M8 Bỏ URL + key viết cứng `prototype/js/api.js:11` → cấu hình local/thật khi build PWA — [sonnet] giao
 - [ ] M9 (=F) Lên thật ngoài giờ bán: sao lưu → migration → nối ĐQĐ + admin → functions/secrets/Vault → PWA lên Pages + POS lên Vercel/Netlify cùng lúc — [opus xhigh] (hỏi trước từng thao tác)
 - [ ] M10 Test cuối trên iPhone với link Pages cố định (thông báo + Face ID cấp 1 lần là giữ) — [opus high]

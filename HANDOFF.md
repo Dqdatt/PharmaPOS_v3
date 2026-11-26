@@ -24,15 +24,14 @@ Bước B (`docs/AUTH_PLAN.md`): thông báo đẩy Web Push VAPID cho app — X
 - Bước F: khoá VAPID MỚI làm secret, Vault `functions_url` URL project, deploy `push`; OTP email lạ trả 422; `passkey login-options` chưa giới hạn theo IP.
 
 ## Việc tiếp theo (người dùng đổi thứ tự 26/11: hoãn C tồn kho, làm MVP lên DB thật trước)
-Theo mục "MVP lên DB thật" trong `docs/TASKS.md` (M1→M10). Đã xong M1, M2, M8 (chưa commit); giao 030 = M3, giao 031 = M4 POS nút Đăng xuất màn chốt tồn QL. Tiếp: duyệt 030, 031 → M5 → M6 → M7 → M9 → M10.
-- M4 app: quên mật khẩu (mã email → đặt mật khẩu mới) + đổi mật khẩu đã có sẵn. Đã thêm ở cuối `api.js`: SIGNED_OUT khi đang đăng nhập → về Đăng nhập + toast; mở lại app (visibilitychange) → `API.profile()` (bị khoá → đăng xuất). Đã chạy thật trên bản sao (khoá ĐQĐ → về Đăng nhập; đăng nhập lại báo bị khoá; đăng xuất thường không toast).
-- M5 cần: khoá tài khoản phải xoá phiên (auth.sessions) + push_subscriptions + passkeys của người đó; kiểm `passkey` login từ chối tài khoản locked.
-- DB thật (đọc 26/11): CHƯA có bảng supabase_migrations → `db push` sẽ chạy cả 11 file; diễn tập trên bản sao chạy sạch. users: #1 Quốc Đạt, #2 Đoàn Quốc Đường (cả 2 role admin cũ, có PIN); 1673 hoá đơn đều của #2. Chưa có auth.users.
-- Vai trò CHỐT 26/11: #1 Quốc Đạt → admin (chỉ app), #2 Đoàn Quốc Đường → manager (bán POS, giữ 1673 hoá đơn). Người dùng tự điền email khi chạy `scripts/link-account.mjs` ở M9.
-- POS thật = Netlify (pharmapos-v3.netlify.app, tự deploy từ `main`) → KHÔNG gộp main trước M9.
-- `.env` thật dùng key mới `sb_publishable_…` (không phải JWT): function verify_jwt mặc định sẽ từ chối khi chưa đăng nhập (web-login tạo QR, passkey login) → M9 đặt `verify_jwt=false` cho các function đó (chúng tự kiểm Authorization) hoặc dùng anon JWT cũ.
-- DB LOCAL đang chứa BẢN SAO DỮ LIỆU THẬT (+2 tài khoản test @example.com) → `npm run db:reset` để về dữ liệu seed trước khi chạy test:rls/web-login/passkey. File dump ở scratchpad phiên (không nằm trong repo).
-- `api.js`: host `dqdatt.github.io` = live DB thật → KHÔNG deploy gh-pages trước M9.
+Theo "MVP lên DB thật" trong `docs/TASKS.md`. Xong: M1, M2, M3 (030), M4 (031 + api.js), M7 local, M8; server M5 (v3.7.0), M6 (v3.7.1). Đang giao: 032 (UI admin M5), 033 (UI số liệu M6) → duyệt, chạy thật UI, gộp. Sau đó M9 theo `docs/GO_LIVE.md` (hỏi người dùng trước từng thao tác DB thật).
+- Vai trò CHỐT: #1 Quốc Đạt → admin (chỉ app), #2 Đoàn Quốc Đường → manager (POS, 1673 hoá đơn). Người dùng tự điền email khi chạy `scripts/link-account.mjs`.
+- DB thật chưa có supabase_migrations → `db push` chạy cả 12 file; diễn tập sạch (scratchpad `load_prod.sh` nạp bản sao vào local).
+- POS thật = Netlify tự deploy từ `main` → KHÔNG gộp main trước M9. `api.js`: host `dqdatt.github.io` = DB thật → KHÔNG deploy gh-pages trước M9.
+- Bảo mật mới (v3.7.0): `my_role()/my_user_id()` đòi phiên còn sống trong auth.sessions (thu hồi/khoá có hiệu lực ngay); signOut mọi nơi `scope: 'local'` (trước đây đăng xuất POS đá cả app); POS tự kiểm phiên 30s/khi focus (`dropRevokedSession`).
+- `dashboard` function: doanh thu net bán lẻ = reportRevenue, đã khớp SQL độc lập trên dữ liệu thật. shortcut: sắp hết = tồn ≤ 5 (chờ min_stock bước C); expiring rỗng (bước C).
+- Tài khoản cũ không email: CHECK `users_contact_check` (NOT VALID) chặn UPDATE dòng đó → `admin_set_user` trả 'no_email', admin phải gắn email trước.
+- Còn hỏi người dùng: tên + địa chỉ nhà thuốc thật cho app (`DATA.store` đang là mẫu "Nhà thuốc Tâm An").
 
 ## File cần đọc đầu tiên
 `docs/AUTH_PLAN.md` · `AGENTS.md` · `supabase/functions/_shared/push.ts` · `supabase/functions/push/index.ts` · `prototype/js/api.js`
