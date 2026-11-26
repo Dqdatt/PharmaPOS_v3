@@ -177,7 +177,7 @@ App.css(`
       const store = DATA.store || { name: 'Nhà thuốc Tâm An' };
       const ws = DATA.webSessions || [];
       const on = API.bio.enabled();
-      const lockOn = on && (typeof localStorage !== 'undefined' ? localStorage.getItem('medipos.applock') : null) === '1';
+      const lockOn = on && localStorage.getItem('medipos.applock') === '1';
 
       return `
         <div class="ac-profile">
@@ -197,7 +197,7 @@ App.css(`
               </div>
             </div>
             <div class="row${on ? ' tap' : ''}" id="acAppLockRow"${on ? '' : ' aria-disabled="true"'}>
-              <div class="tile">${App.icon('lock', 20)}</div>
+              <div class="tile">${App.icon('shield', 20)}</div>
               <div class="row-main"><div class="row-title">Khoá app khi mở</div></div>
               <div class="row-end">
                 <button class="ac-switch${lockOn ? ' on' : ''}" id="acAppLockBtn" type="button" role="switch" aria-checked="${lockOn}" aria-label="Khoá app khi mở"${on ? '' : ' disabled aria-disabled="true"'}><span class="ac-knob"></span></button>
@@ -290,17 +290,13 @@ App.css(`
           checking = true;
           try {
             const r = on ? await API.bio.disable() : await API.bio.enable();
-            if (r.ok && typeof localStorage !== 'undefined') localStorage.removeItem('medipos.applock');
+            if (r.ok) localStorage.removeItem('medipos.applock');
             if (!el.isConnected || App.current()?.el !== el) return;
             if (r.ok) {
               const nowOn = !on;
               fidBtn.classList.toggle('on', nowOn);
               fidBtn.setAttribute('aria-checked', String(nowOn));
-              if (!nowOn) {
-                updateAppLockUI(false, false);
-              } else {
-                updateAppLockUI(true, false);
-              }
+              updateAppLockUI(nowOn, false);
             } else if (!r.cancel) {
               App.toast(r.error, 'alert');
             }
@@ -318,14 +314,12 @@ App.css(`
           if (!API.bio.enabled()) return;
           lockBusy = true;
           try {
-            const curOn = typeof localStorage !== 'undefined' && localStorage.getItem('medipos.applock') === '1';
+            const curOn = localStorage.getItem('medipos.applock') === '1';
             const nextOn = !curOn;
-            if (typeof localStorage !== 'undefined') {
-              if (nextOn) {
-                localStorage.setItem('medipos.applock', '1');
-              } else {
-                localStorage.removeItem('medipos.applock');
-              }
+            if (nextOn) {
+              localStorage.setItem('medipos.applock', '1');
+            } else {
+              localStorage.removeItem('medipos.applock');
             }
             lockBtn.classList.toggle('on', nextOn);
             lockBtn.setAttribute('aria-checked', String(nextOn));
@@ -932,10 +926,8 @@ App.css(`
   // State QA (nhóm 'Tài khoản')
   App.state('Tài khoản', () => App.reset('account'), 'Tài khoản');
   App.state('Tài khoản: đã bật khoá app', () => {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('medipos.bio', '1');
-      localStorage.setItem('medipos.applock', '1');
-    }
+    localStorage.setItem('medipos.bio', '1');
+    localStorage.setItem('medipos.applock', '1');
     App.reset('account');
   }, 'Tài khoản');
   App.state('Tài khoản: xác nhận đăng xuất', () => {
