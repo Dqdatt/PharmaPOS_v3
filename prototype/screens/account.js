@@ -97,7 +97,7 @@ App.css(`
   }
 
   function showLogoutSheet() {
-    let logoutTimer = null;
+    let cancelled = false;
     App.sheet(`
       <h3>Đăng xuất khỏi điện thoại này?</h3>
       <p>Các máy tính đang đăng nhập web vẫn mở. Muốn tắt hết thì đăng xuất chúng ở Phiên web trước.</p>
@@ -108,20 +108,17 @@ App.css(`
     `, {
       onMount(sheetEl, close) {
         const cancelBtn = sheetEl.querySelector('#acLogoutCancel');
-        sheetEl.querySelector('#acLogoutConfirm')?.addEventListener('click', (e) => {
+        sheetEl.querySelector('#acLogoutConfirm')?.addEventListener('click', async (e) => {
           App.busy(e.currentTarget, 'Đang đăng xuất...');
-          if (cancelBtn) cancelBtn.style.pointerEvents = 'none';
-          logoutTimer = setTimeout(() => {
-            close();
-            App.reset('login');
-          }, 800);
+          if (cancelBtn) cancelBtn.disabled = true;
+          await API.signOut();
+          if (cancelled) return;
+          close();
+          App.reset('login');
         });
       },
       onClose() {
-        if (logoutTimer) {
-          clearTimeout(logoutTimer);
-          logoutTimer = null;
-        }
+        cancelled = true;
       },
     });
   }
@@ -151,9 +148,9 @@ App.css(`
                 <button class="ac-switch${faceIdEnabled ? ' on' : ''}" id="acFaceIdBtn" type="button" role="switch" aria-checked="${faceIdEnabled}" aria-label="Face ID"><span class="ac-knob"></span></button>
               </div>
             </div>
-            <div class="row tap" data-go="pinSetup" data-p='{"mode":"change"}'>
+            <div class="row tap" data-go="password" data-p='{"mode":"change"}'>
               <div class="tile">${App.icon('lock', 20)}</div>
-              <div class="row-main"><div class="row-title">Đổi mã PIN</div></div>
+              <div class="row-main"><div class="row-title">Đổi mật khẩu</div></div>
               <div class="row-end">${App.icon('chev', 20)}</div>
             </div>
             <div class="row tap" data-go="webSessions">
