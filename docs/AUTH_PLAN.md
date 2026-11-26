@@ -42,7 +42,7 @@ Phần UI thuần (màn prototype/PWA, màn POS web không đụng token) thì �
 ## Giai đoạn hoàn thiện app → DB thật (người dùng chốt 26/11/2026, sau khi test iPhone đạt bước 1–4)
 Quyết định:
 - Push báo cả 4 việc: đăng nhập POS mới (cho chính tài khoản đó), doanh thu cuối ngày (QL + admin), thuốc sắp hết / sắp hết hạn (mỗi sáng), công nợ nhà cung cấp.
-- App chạy thật trên **Netlify** (`https://medipos-app.netlify.app/`) → passkey RP ID = `medipos-app.netlify.app`. Passkey tạo trên link tunnel chỉ để test, sẽ mất khi lên Pages.
+- App chạy thật trên **Netlify** (`https://medipos-app.netlify.app/`) → passkey RP ID = `medipos-app.netlify.app`. Passkey tạo trên link tunnel chỉ để test, sẽ mất khi lên Netlify.
 - Mail mã OTP khi lên thật: **Gmail SMTP** (người dùng tự nhập mật khẩu ứng dụng Gmail vào Supabase, Claude không nhập).
 
 Thứ tự (mỗi bước = việc `giao`; máy chủ/bảo mật `--chi-claude`):

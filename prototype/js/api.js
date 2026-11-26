@@ -399,6 +399,18 @@
         if (!live) { await wait(600); return { ok: true, user: { id, email, status: 'invited' } }; }
         try { return { ok: true, user: (await callFn('admin-create-user', { id, email })).user }; } catch (e) { return fnFail(e); }
       },
+      /** Sửa họ tên / email QL, NV (đổi luôn email đăng nhập). Chỉ gửi trường muốn đổi. → { ok, user } */
+      async update(id, { name, email } = {}) {
+        const body = { action: 'edit', id };
+        if (name !== undefined) body.name = String(name).trim();
+        if (email !== undefined) body.email = normEmail(email);
+        const bad = (body.name !== undefined && (body.name.length < 2 || body.name.length > 80) ? 'Tên cần 2–80 ký tự' : null)
+          || (body.email !== undefined ? badEmail(body.email) : null)
+          || (body.name === undefined && body.email === undefined ? 'Không có gì để sửa' : null);
+        if (bad) return fail(bad);
+        if (!live) { await wait(600); return { ok: true, user: { id, ...(body.name ? { name: body.name } : {}), ...(body.email ? { email: body.email } : {}) } }; }
+        try { return { ok: true, user: (await callFn('admin-create-user', body)).user }; } catch (e) { return fnFail(e); }
+      },
       /** Đổi vai trò (manager|staff). */
       setRole: (id, role) => adminSet(id, role, null),
       /** Khoá: đăng xuất mọi máy, tắt Face ID + thông báo của người đó. */

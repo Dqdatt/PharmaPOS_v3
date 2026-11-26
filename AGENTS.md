@@ -1,7 +1,7 @@
 # PharmaPOS V3 — quy tắc dự án (Claude, Codex, Antigravity cùng đọc)
 
 Phần mềm bán hàng + quản lý nhà thuốc trên web (bán lẻ, kho, nhập/xuất, báo cáo, nhân viên, in tem/hóa đơn), tên hiển thị **MediPOS**, logo icon notes-medical (`public/favicon.svg`). Kèm **app điện thoại cho chủ nhà thuốc** (đăng nhập POS bằng quét QR, doanh thu, hoá đơn, nhân viên, quản lý tài khoản): prototype HTML `prototype/` chạy dữ liệu thật, đóng gói PWA ở `pwa/`.
-Tiến độ: MVP M1–M8 xong, tiếp theo M9 lên DB thật (`docs/GO_LIVE.md`). Việc mở: `docs/TASKS.md` · bàn giao phiên: `HANDOFF.md`.
+Tiến độ: M1–M9 xong (đã lên DB thật 26/11/2026, `docs/GO_LIVE.md`), đang M10 góp ý trên iPhone. Việc mở: `docs/TASKS.md` · bàn giao phiên: `HANDOFF.md`.
 
 ## Stack
 - Web: React 19 + Vite 6 + TypeScript 5.8, Tailwind 4 (`@tailwindcss/vite`), `motion`, `lucide-react`, `recharts`, `react-router-dom` 7.
@@ -53,5 +53,5 @@ Nguồn chuẩn để sau này port 1:1 sang app native. Khung `index.html`, `cs
 ## Lưu ý
 - `.env`, `.env.local` không commit. `.env.example` chỉ chứa `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` (publishable, công khai được).
 - `dist/`, `pwa/dist/`, `node_modules/` sinh ra, không sửa tay.
-- DB thật (project `fbppvryvfdeohocsgwtl`) có dữ liệu bán hàng thật; mọi thao tác trên nó hỏi người dùng trước. POS thật = Netlify `pharmapos-v3.netlify.app`, tự deploy từ `main`; app = site Netlify riêng `medipos-app.netlify.app` (build `npm run build:pwa`, publish `pwa/dist`, cấu hình trong giao diện Netlify — không thêm `netlify.toml` vì đè cấu hình site POS), cũng tự deploy từ `main` và tự trỏ DB thật → KHÔNG gộp `prototype-mobile` vào `main` trước M9 (migration mới bật RLS là POS cũ ngừng).
+- DB thật (project `fbppvryvfdeohocsgwtl`) có dữ liệu bán hàng thật; mọi thao tác trên nó hỏi người dùng trước. POS thật = Netlify `pharmapos-v3.netlify.app`, tự deploy từ `main`; app = site Netlify riêng `medipos-app.netlify.app` (build `npm run build:pwa`, publish `pwa/dist`, cấu hình trong giao diện Netlify — không thêm `netlify.toml` vì đè cấu hình site POS), cũng tự deploy từ `main` và tự trỏ DB thật → mọi push lên `main` = deploy thật cả POS lẫn app, hỏi người dùng trước. Không dùng GitHub Pages.
 - iOS không nhớ quyền camera của PWA qua mỗi lần mở app (giới hạn WebKit) → quét QR xin quyền tối đa 1 lần/lần mở; không đổi `location.hash` khi chuyển màn (đổi hash làm iOS hỏi lại).
