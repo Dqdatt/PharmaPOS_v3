@@ -24,10 +24,12 @@ App.screen('splash', {
   mount: (el, p) => {
     // Live: phiên 'invited' (đã qua mã, chưa đặt mật khẩu) → Tạo mật khẩu; còn phiên → Face ID (nếu bật) hoặc Trang chủ;
     // không phiên → Đăng nhập. Chạy song song animation.
-    const route = (p.next || !API.live) ? Promise.resolve([p.next])
+    const lockTarget = (API.bio.enabled() && (typeof localStorage !== 'undefined' ? localStorage.getItem('medipos.applock') : null) === '1' && App.screens.lock) ? 'lock' : 'home';
+    const target = p.next === 'home' ? lockTarget : p.next;
+    const route = (target || !API.live) ? Promise.resolve([target])
       : API.profile().then((me) => !me ? []
         : me.status === 'invited' ? ['password', { status: 'invited' }]
-        : [API.bio.enabled() && App.screens.lock ? 'lock' : 'home']);
+        : [lockTarget]);
     Promise.all([route, new Promise((r) => setTimeout(r, 1850))]).then(([[next, np]]) => {
       if (App.current().el !== el) return; // đã nhảy màn khác từ bảng QA
       App.reset(next || (App.screens.login ? 'login' : 'home'), np || {}, 'reveal');
