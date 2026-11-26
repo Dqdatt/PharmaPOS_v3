@@ -57,8 +57,6 @@ App.css(`
 `);
 
 (function () {
-  let faceIdEnabled = true;
-
   const EARLIER_NOTIFS = [
     { id: 'ac1', kind: 'web', title: 'Đã từ chối đăng nhập web, Edge trên Windows', time: 'Thứ Hai', history: true },
     { id: 'ac2', kind: 'revenue', title: 'Tổng kết doanh thu thứ Hai', body: App.money(9870000), time: '23/11' },
@@ -128,6 +126,7 @@ App.css(`
       const owner = DATA.owner || { name: 'Trần Minh Khoa', role: 'Chủ nhà thuốc', initials: 'MK' };
       const store = DATA.store || { name: 'Nhà thuốc Tâm An' };
       const ws = DATA.webSessions || [];
+      const on = typeof API !== 'undefined' ? API.bio.enabled() : false;
 
       return `
         <div class="ac-profile">
@@ -143,7 +142,7 @@ App.css(`
               <div class="tile">${App.icon('faceid', 20)}</div>
               <div class="row-main"><div class="row-title">Face ID</div></div>
               <div class="row-end">
-                <button class="ac-switch${faceIdEnabled ? ' on' : ''}" id="acFaceIdBtn" type="button" role="switch" aria-checked="${faceIdEnabled}" aria-label="Face ID"><span class="ac-knob"></span></button>
+                <button class="ac-switch${on ? ' on' : ''}" id="acFaceIdBtn" type="button" role="switch" aria-checked="${on}" aria-label="Face ID"><span class="ac-knob"></span></button>
               </div>
             </div>
             <div class="row tap" data-go="password" data-p='{"mode":"change"}'>
@@ -203,18 +202,26 @@ App.css(`
       const fidBtn = el.querySelector('#acFaceIdBtn');
       const fidRow = el.querySelector('#acFaceIdRow');
       if (fidRow && fidBtn) {
+        let checking = false;
         fidRow.addEventListener('click', async (e) => {
           e.stopPropagation();
-          if (faceIdEnabled) {
-            faceIdEnabled = false;
+          if (API.bio.enabled()) {
+            API.bio.set(false);
             fidBtn.classList.remove('on');
             fidBtn.setAttribute('aria-checked', 'false');
           } else {
-            const ok = await App.faceId();
-            if (ok) {
-              faceIdEnabled = true;
-              fidBtn.classList.add('on');
-              fidBtn.setAttribute('aria-checked', 'true');
+            if (checking) return;
+            checking = true;
+            try {
+              const ok = await App.faceId();
+              if (!el.isConnected) return;
+              if (ok) {
+                API.bio.set(true);
+                fidBtn.classList.add('on');
+                fidBtn.setAttribute('aria-checked', 'true');
+              }
+            } finally {
+              checking = false;
             }
           }
         });
