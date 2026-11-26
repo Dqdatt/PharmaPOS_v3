@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
-import { getMyProfile } from '../lib/webLogin';
+import { dropRevokedSession, getMyProfile } from '../lib/webLogin';
 import { showNotification } from '../utils/toast';
 import { LegacyFallbackTarget, normalizeDbTimestamp, writeWithLegacyFallback } from '../utils/dbFallback';
 import { Dosage, fromDbDosage, toDbDosage } from '../utils/dosage';
@@ -274,9 +274,16 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (active) setAuthReady(true);
     });
 
+    // Phiên bị thu hồi từ app / tài khoản bị khoá → về màn đăng nhập (access token còn hạn nhưng server đã xoá phiên)
+    const checkSession = () => { void dropRevokedSession(); };
+    const timer = window.setInterval(checkSession, 30_000);
+    window.addEventListener('focus', checkSession);
+
     return () => {
       active = false;
       subscription.unsubscribe();
+      window.clearInterval(timer);
+      window.removeEventListener('focus', checkSession);
     };
   }, [isCustomerView]);
 

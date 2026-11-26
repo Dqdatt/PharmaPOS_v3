@@ -48,8 +48,8 @@
   // Sau khi có phiên: kiểm trạng thái, khoá thì đăng xuất luôn
   async function afterAuth() {
     const profile = await readProfile();
-    if (!profile) { await sb.auth.signOut(); return fail('Email này chưa được cấp tài khoản'); }
-    if (profile.status === 'locked') { await sb.auth.signOut(); return fail('Tài khoản đã bị khoá, vui lòng liên hệ admin'); }
+    if (!profile) { await sb.auth.signOut({ scope: 'local' }); return fail('Email này chưa được cấp tài khoản'); }
+    if (profile.status === 'locked') { await sb.auth.signOut({ scope: 'local' }); return fail('Tài khoản đã bị khoá, vui lòng liên hệ admin'); }
     const pk = pkLocal();
     if (pk && pk.uid !== profile.id) localStorage.removeItem(PK_KEY); // passkey của tài khoản khác: không mở khoá nhầm người
     me = profile;
@@ -78,8 +78,10 @@
       userHandle: r.userHandle ? b64u(r.userHandle) : undefined });
   }
   // Gọi Edge Function; lỗi ném Error mang câu tiếng Việt + code của server
-  async function pkFn(body) {
-    const { data, error } = await sb.functions.invoke('passkey', { body });
+  const pkFn = (body) => callFn('passkey', body);
+  // Gọi Edge Function; lỗi có câu tiếng Việt từ server → err.vi
+  async function callFn(name, body) {
+    const { data, error } = await sb.functions.invoke(name, { body });
     if (!error) return data;
     let j = null;
     try { j = await error.context.json(); } catch (e) { /* lỗi mạng: không có body */ }
@@ -131,7 +133,39 @@
     openFns.forEach((fn) => { try { fn(String(e.data.kind || '')); } catch (err) { console.error(err); } });
   });
 
-  const MOCK_PROFILE = () => ({ id: 0, name: DATA.owner.name, role: 'manager', status: 'active', email: 'demo@medipos.vn', phone: '84903128466' });
+  // User-Agent → { browser, os } (màn xác nhận đăng nhập POS, danh sách phiên POS)
+  function uaInfo(ua) {
+    ua = ua || '';
+    return {
+      browser: /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Firefox\//.test(ua) ? 'Firefox'
+        : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'Trình duyệt',
+      os: /Windows/.test(ua) ? 'Windows' : /Mac OS X|Macintosh/.test(ua) && !/Mobile/.test(ua) ? 'macOS'
+        : /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Linux/.test(ua) ? 'Linux' : 'Máy tính',
+    };
+  }
+  const p2 = (n) => String(n).padStart(2, '0');
+  const hhmm = (t) => `${p2(t.getHours())}:${p2(t.getMinutes())}`;
+  const whenText = (t) => `${hhmm(t)} ${t.toDateString() === new Date().toDateString() ? 'hôm nay' : `${p2(t.getDate())}/${p2(t.getMonth() + 1)}`}`;
+  function agoText(t) {
+    const m = Math.floor((Date.now() - t.getTime()) / 60000);
+    return m < 1 ? 'vừa xong' : m < 60 ? `${m} phút trước` : m < 1440 ? `${Math.floor(m / 60)} giờ trước` : `${Math.floor(m / 1440)} ngày trước`;
+  }
+  const ROLE_ERR = { not_allowed: 'Chỉ admin được làm việc này', self: 'Không thể tự khoá hoặc đổi quyền tài khoản của mình',
+    not_found: 'Không tìm thấy tài khoản', bad_role: 'Vai trò chỉ được là Quản lý hoặc Nhân viên',
+    no_email: 'Gắn email cho tài khoản này trước' };
+  const fnFail = (e) => fail(e && e.vi ? e.message : e);
+
+  async function adminSet(id, role, lock) {
+    if (!live) { await wait(600); return { ok: true }; }
+    try {
+      const { data, error } = await sb.rpc('admin_set_user', { target: id, new_role: role, lock });
+      if (error) return fail(error);
+      return data === 'ok' ? { ok: true } : fail(ROLE_ERR[data] || 'Có lỗi xảy ra, vui lòng thử lại');
+    } catch (e) { return fail(e); }
+  }
+
+  // mock: bảng QA đặt localStorage['medipos.mockRole'] = 'admin' | 'staff' để xem màn theo vai trò
+  const MOCK_PROFILE = () => ({ id: 0, name: DATA.owner.name, role: localStorage.getItem('medipos.mockRole') || 'manager', status: 'active', email: 'demo@medipos.vn', phone: '84903128466' });
   let mockStatus = 'invited';
 
   const API = (window.API = {
@@ -181,7 +215,7 @@
         const { error } = await sb.auth.signInWithPassword({ email, password });
         if (error) return fail(error);
         const r = await afterAuth();
-        if (r.ok && r.profile.status === 'invited') { await sb.auth.signOut(); return fail('Tài khoản chưa kích hoạt, chọn "Quên mật khẩu" để nhận mã'); }
+        if (r.ok && r.profile.status === 'invited') { await sb.auth.signOut({ scope: 'local' }); return fail('Tài khoản chưa kích hoạt, chọn "Quên mật khẩu" để nhận mã'); }
         return r;
       } catch (e) { return fail(e); }
     },
@@ -193,7 +227,7 @@
         const { data } = await sb.auth.getSession();
         if (!data.session) return null;
         const p = await readProfile();
-        if (!p || p.status === 'locked') { await sb.auth.signOut(); return null; }
+        if (!p || p.status === 'locked') { await sb.auth.signOut({ scope: 'local' }); return null; }
         me = p;
         return p;
       } catch (e) { return null; }
@@ -204,7 +238,7 @@
       await API.bio.disable();
       localStorage.removeItem(PK_KEY); // xoá ở server lỗi (mất mạng) thì máy này vẫn phải quên passkey
       me = null;
-      if (live) { try { await sb.auth.signOut(); } catch (e) { /* vẫn xoá phiên cục bộ */ } }
+      if (live) { try { await sb.auth.signOut({ scope: 'local' }); } catch (e) { /* vẫn xoá phiên cục bộ */ } }
       return { ok: true };
     },
 
@@ -223,13 +257,7 @@
           if (error) return fail(error);
           const r = data && data[0];
           if (!r) return fail('Mã đã hết hạn hoặc đã được dùng, hãy tải lại mã trên máy tính');
-          const ua = r.user_agent || '';
-          const browser = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Firefox\//.test(ua) ? 'Firefox'
-            : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'Trình duyệt';
-          const os = /Windows/.test(ua) ? 'Windows' : /Mac OS X|Macintosh/.test(ua) && !/Mobile/.test(ua) ? 'macOS'
-            : /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Linux/.test(ua) ? 'Linux' : 'Máy tính';
-          const t = new Date(r.created_at);
-          return { ok: true, request: { browser, os, ip: r.ip || '', time: `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`, expiresAt: new Date(r.expires_at).getTime() } };
+          return { ok: true, request: { ...uaInfo(r.user_agent), ip: r.ip || '', time: hhmm(new Date(r.created_at)), expiresAt: new Date(r.expires_at).getTime() } };
         } catch (e) { return fail(e); }
       },
       /** Duyệt bằng Face ID: passkey xác minh ở server (bắt buộc đã bật Face ID trên máy này). */
@@ -254,6 +282,61 @@
           return fail('Tài khoản chưa có quyền đăng nhập POS');
         } catch (e) { return fail(e); }
       },
+    },
+
+    /** Phiên POS đang mở (của mình; admin: của mọi người). */
+    webSessions: {
+      /** → { ok, sessions: [{ id, userName, browser, os, ip, since: '08:12 hôm nay', lastActive: '2 phút trước' }] } */
+      async list() {
+        if (!live) { await wait(500); return { ok: true, sessions: DATA.webSessions.map((w) => ({ ...w, userName: DATA.owner.name })) }; }
+        try {
+          const { data, error } = await sb.rpc('web_sessions');
+          if (error) return fail(error);
+          return { ok: true, sessions: data.map((r) => ({ id: r.id, userName: r.user_name, ...uaInfo(r.user_agent), ip: r.ip || '',
+            since: whenText(new Date(r.login_at)), lastActive: agoText(new Date(r.last_seen || r.login_at)) })) };
+        } catch (e) { return fail(e); }
+      },
+      /** Đăng xuất 1 máy POS (có hiệu lực ngay). */
+      async revoke(id) {
+        if (!live) { await wait(600); return { ok: true }; }
+        try {
+          const { data, error } = await sb.rpc('web_session_revoke', { req_id: id });
+          if (error) return fail(error);
+          return data ? { ok: true } : fail('Phiên này đã đăng xuất');
+        } catch (e) { return fail(e); }
+      },
+    },
+
+    /** Admin quản lý tài khoản (chỉ admin; server kiểm quyền). user = { id, name, role, status, email, phone, createdAt } */
+    admin: {
+      async list() {
+        if (!live) { await wait(500); return { ok: true, users: (DATA.accounts || []).map((u) => ({ ...u })) }; }
+        try {
+          const { data, error } = await sb.from('users').select('id, name, role, status, email, phone, created_at').order('id');
+          if (error) return fail(error);
+          return { ok: true, users: data.map(({ created_at, ...u }) => ({ ...u, createdAt: created_at })) };
+        } catch (e) { return fail(e); }
+      },
+      /** Cấp tài khoản mới (role: manager|staff). Người được cấp tự nhận mã qua email lần đầu đăng nhập. */
+      async create({ name, email, role, phone }) {
+        email = normEmail(email);
+        const bad = (String(name || '').trim().length < 2 ? 'Nhập họ tên' : null) || badEmail(email)
+          || (role === 'manager' || role === 'staff' ? null : 'Chọn vai trò'); if (bad) return fail(bad);
+        if (!live) { await wait(600); return { ok: true, user: { id: Date.now(), name, email, role, phone: phone || null, status: 'invited' } }; }
+        try { return { ok: true, user: (await callFn('admin-create-user', { name, email, role, phone })).user }; } catch (e) { return fnFail(e); }
+      },
+      /** Gắn email cho tài khoản cũ chưa có email (giữ nguyên lịch sử bán hàng). */
+      async linkEmail(id, email) {
+        email = normEmail(email);
+        const bad = badEmail(email); if (bad) return fail(bad);
+        if (!live) { await wait(600); return { ok: true, user: { id, email, status: 'invited' } }; }
+        try { return { ok: true, user: (await callFn('admin-create-user', { id, email })).user }; } catch (e) { return fnFail(e); }
+      },
+      /** Đổi vai trò (manager|staff). */
+      setRole: (id, role) => adminSet(id, role, null),
+      /** Khoá: đăng xuất mọi máy, tắt Face ID + thông báo của người đó. */
+      lock: (id) => adminSet(id, null, true),
+      unlock: (id) => adminSet(id, null, false),
     },
 
     /** Face ID = passkey WebAuthn (live); mock dùng App.faceId() mô phỏng. Mọi hàm trả { ok } | { ok: false, error, retry? }. */

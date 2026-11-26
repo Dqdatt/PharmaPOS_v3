@@ -1,6 +1,7 @@
 // Đăng nhập POS web bằng app MediPOS (quét QR + Face ID). Claude giữ — UI chỉ gọi 2 hàm dưới.
 // Luồng: createWebLogin() → hiện QR từ `qrText` → pollWebLogin() mỗi ~2s tới khi khác 'pending'.
 // 'approved' → phiên Supabase đã được đặt (supabase.auth), POS đọc hồ sơ bằng getMyProfile().
+import { isAuthRetryableFetchError } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 
 export interface WebLoginRequest { id: string; secret: string; expiresAt: number; qrText: string }
@@ -37,8 +38,17 @@ export async function getMyProfile(): Promise<MyProfile | null> {
   if (!s.session) return null;
   const { data, error } = await supabase.rpc('my_profile');
   const p = !error && data?.[0] as MyProfile | undefined;
-  if (!p || p.status !== 'active' || p.role === 'admin') { await supabase.auth.signOut(); return null; }
+  if (!p || p.status !== 'active' || p.role === 'admin') { await supabase.auth.signOut({ scope: 'local' }); return null; }
   return p;
 }
 
-export const signOutPos = () => supabase.auth.signOut();
+/** Server đã xoá phiên (thu hồi từ app / khoá tài khoản) → đăng xuất máy này (SIGNED_OUT → màn đăng nhập). Mất mạng thì giữ. */
+export async function dropRevokedSession() {
+  const { data: s } = await supabase.auth.getSession();
+  if (!s.session) return;
+  const { error } = await supabase.auth.getUser();
+  if (error && !isAuthRetryableFetchError(error)) await supabase.auth.signOut({ scope: 'local' });
+}
+
+// local: chỉ đăng xuất phiên POS này, không đá app điện thoại của cùng tài khoản (mặc định 'global')
+export const signOutPos = () => supabase.auth.signOut({ scope: 'local' });

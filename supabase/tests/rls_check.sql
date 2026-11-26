@@ -5,10 +5,13 @@ BEGIN;
 -- Kích hoạt tạm NV 2 và QL 1 để thử (seed để 'invited')
 UPDATE public.users SET status = 'active' WHERE id IN (1, 2);
 
+-- Giả lập đăng nhập: tạo 1 phiên thật trong auth.sessions (my_role() đòi phiên còn sống)
 CREATE FUNCTION pg_temp.as_user(uid bigint) RETURNS void LANGUAGE plpgsql AS $$
+DECLARE a uuid := (SELECT auth_id FROM public.users WHERE id = uid); sid uuid := gen_random_uuid();
 BEGIN
+  INSERT INTO auth.sessions (id, user_id, created_at, updated_at) VALUES (sid, a, now(), now());
   PERFORM set_config('request.jwt.claims',
-    json_build_object('sub', (SELECT auth_id FROM public.users WHERE id = uid), 'role', 'authenticated')::text, true);
+    json_build_object('sub', a, 'role', 'authenticated', 'session_id', sid)::text, true);
   SET LOCAL ROLE authenticated;
 END $$;
 
@@ -55,6 +58,52 @@ SELECT pg_temp.as_user(3);
 SELECT pg_temp.check((SELECT count(*) FROM public.invoices) = 0, 'tài khoản invited đọc được hoá đơn');
 SELECT pg_temp.check((SELECT status FROM public.my_profile()) = 'invited', 'my_profile không trả hồ sơ invited');
 RESET ROLE;
+
+-- Phiên bị thu hồi: access token còn hạn cũng mất quyền ngay
+SELECT pg_temp.as_user(1);
+RESET ROLE;
+DELETE FROM auth.sessions WHERE id = (current_setting('request.jwt.claims')::json ->> 'session_id')::uuid;
+SET LOCAL ROLE authenticated;
+SELECT pg_temp.check((SELECT count(*) FROM public.invoices) = 0, 'phiên đã thu hồi vẫn đọc được hoá đơn');
+SELECT pg_temp.check(public.my_role() IS NULL, 'phiên đã thu hồi vẫn có vai trò');
+RESET ROLE;
+
+-- Quản lý tài khoản: chỉ admin, không tự khoá, không đụng admin; khoá = đăng xuất mọi máy
+SELECT pg_temp.as_user(1);
+SELECT pg_temp.check(public.admin_set_user(2, NULL, true) = 'not_allowed', 'QL khoá được tài khoản');
+RESET ROLE;
+SELECT pg_temp.as_user(2); -- phiên của NV 2 (để thử khoá → xoá phiên)
+RESET ROLE;
+SELECT pg_temp.as_user(4);
+SELECT pg_temp.check(public.admin_set_user(4, NULL, true) = 'self', 'admin tự khoá được mình');
+SELECT pg_temp.check(public.admin_set_user(2, 'admin') = 'bad_role', 'admin cấp được vai trò admin');
+SELECT pg_temp.check(public.admin_set_user(2, 'manager') = 'ok', 'admin không đổi được vai trò');
+SELECT pg_temp.check(public.admin_set_user(2, NULL, true) = 'ok', 'admin không khoá được');
+RESET ROLE;
+SELECT pg_temp.check((SELECT role || status FROM public.users WHERE id = 2) = 'managerlocked', 'khoá / đổi vai trò không lưu');
+SELECT pg_temp.check(NOT EXISTS (SELECT 1 FROM auth.sessions s JOIN public.users u ON u.auth_id = s.user_id WHERE u.id = 2),
+  'khoá tài khoản không xoá phiên');
+SELECT pg_temp.as_user(4);
+SELECT pg_temp.check(public.admin_set_user(2, NULL, false) = 'ok', 'admin không mở khoá được');
+RESET ROLE;
+SELECT pg_temp.check((SELECT status FROM public.users WHERE id = 2) = 'invited', 'mở khoá tài khoản chưa đăng nhập lần nào phải về invited');
+
+-- Phiên POS: chỉ chủ phiên hoặc admin thấy / thu hồi
+INSERT INTO public.web_login_requests (id, secret_hash, status, user_id, decided_at, session_id)
+  SELECT '00000000-0000-0000-0000-0000000000a1', 'x', 'used', 1, now(), s.id
+  FROM auth.sessions s JOIN public.users u ON u.auth_id = s.user_id WHERE u.id = 1 LIMIT 1;
+UPDATE public.users SET status = 'active' WHERE id = 3;
+SELECT pg_temp.as_user(3);
+SELECT pg_temp.check((SELECT count(*) FROM public.web_sessions()) = 0, 'NV thấy phiên POS người khác');
+SELECT pg_temp.check(NOT public.web_session_revoke('00000000-0000-0000-0000-0000000000a1'), 'NV thu hồi được phiên người khác');
+RESET ROLE;
+SELECT pg_temp.as_user(4);
+SELECT pg_temp.check((SELECT count(*) FROM public.web_sessions()) = 1, 'admin không thấy phiên POS');
+SELECT pg_temp.check(public.web_session_revoke('00000000-0000-0000-0000-0000000000a1'), 'admin không thu hồi được phiên POS');
+SELECT pg_temp.check((SELECT count(*) FROM public.web_sessions()) = 0, 'phiên POS đã thu hồi vẫn hiện');
+RESET ROLE;
+SELECT pg_temp.check((SELECT session_id FROM public.web_login_requests WHERE id = '00000000-0000-0000-0000-0000000000a1') IS NULL,
+  'xoá phiên không gỡ session_id');
 
 ROLLBACK;
 \echo RLS OK

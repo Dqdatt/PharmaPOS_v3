@@ -1,4 +1,5 @@
 // Admin cấp tài khoản QL/NV: tạo auth.users (email, chưa mật khẩu) + dòng public.users 'invited'.
+// { id, email }: gắn email cho tài khoản cũ có sẵn (không tạo dòng mới).
 // Người được cấp tự đăng nhập lần đầu bằng mã OTP qua email rồi đặt mật khẩu (docs/AUTH_PLAN.md).
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
@@ -28,14 +29,37 @@ Deno.serve(async (req) => {
   let body: Record<string, unknown>;
   try { body = await req.json(); } catch { return reply(400, { error: 'Dữ liệu không hợp lệ' }); }
 
-  const name = String(body.name ?? '').trim();
   const email = String(body.email ?? '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) return reply(400, { error: 'Email không hợp lệ' });
+
+  // Gắn email cho tài khoản cũ (dòng PIN trước khi có đăng nhập email): giữ id → hoá đơn cũ vẫn gắn đúng người
+  if (body.id !== undefined) {
+    const id = Number(body.id);
+    if (!Number.isInteger(id) || id <= 0) return reply(400, { error: 'Dữ liệu không hợp lệ' });
+    const { data: old } = await db.from('users').select('role, auth_id').eq('id', id).maybeSingle();
+    if (!old) return reply(404, { error: 'Không tìm thấy tài khoản' });
+    if (old.auth_id || old.role === 'admin') return reply(409, { error: 'Tài khoản này đã có email đăng nhập' });
+    const { data: au, error: ea } = await db.auth.admin.createUser({ email, email_confirm: true });
+    if (ea) {
+      const dup = /already|exists|registered/i.test(ea.message);
+      return reply(dup ? 409 : 500, { error: dup ? 'Email này đã có tài khoản' : 'Không tạo được tài khoản' });
+    }
+    const { data: row, error: eu } = await db.from('users').update({ email, auth_id: au.user.id })
+      .eq('id', id).is('auth_id', null).select('id, name, email, phone, role, status').maybeSingle();
+    if (eu || !row) {
+      await db.auth.admin.deleteUser(au.user.id); // không để auth.users mồ côi
+      const dup = eu?.code === '23505';
+      return reply(dup ? 409 : 500, { error: dup ? 'Email này đã được dùng' : 'Không lưu được email' });
+    }
+    return reply(200, { user: row });
+  }
+
+  const name = String(body.name ?? '').trim();
   const role = String(body.role ?? '');
   const phoneRaw = String(body.phone ?? '').replace(/\D/g, '');
   const phone = phoneRaw ? phoneRaw.replace(/^0/, '84') : null; // 0903… → 84903…
 
   if (name.length < 2 || name.length > 80) return reply(400, { error: 'Tên cần 2–80 ký tự' });
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) return reply(400, { error: 'Email không hợp lệ' });
   if (role !== 'manager' && role !== 'staff') return reply(400, { error: 'Vai trò chỉ được là Quản lý hoặc Nhân viên' });
   if (phone && !/^84\d{9}$/.test(phone)) return reply(400, { error: 'Số điện thoại cần đủ 10 số' });
 

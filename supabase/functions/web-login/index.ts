@@ -34,7 +34,8 @@ Deno.serve(async (req) => {
   if (body.action === 'create') {
     const ip = (req.headers.get('x-forwarded-for') ?? '').split(',')[0].trim().slice(0, 64) || null;
     const ua = (req.headers.get('user-agent') ?? '').slice(0, 300) || null;
-    await db.from('web_login_requests').delete().lt('created_at', new Date(Date.now() - 864e5).toISOString());
+    // dọn yêu cầu cũ; giữ dòng còn gắn phiên POS sống (màn "Phiên POS đang mở" cần)
+    await db.from('web_login_requests').delete().lt('created_at', new Date(Date.now() - 864e5).toISOString()).is('session_id', null);
     if (ip) {
       const { count } = await db.from('web_login_requests').select('id', { count: 'exact', head: true })
         .eq('ip', ip).gt('created_at', new Date(Date.now() - 6e5).toISOString());
@@ -70,6 +71,9 @@ Deno.serve(async (req) => {
     }
     const session = await issueSession(db, u.email);
     if (!session) return reply(500, { error: 'Không cấp được phiên đăng nhập' });
+    // ghi phiên để xem / thu hồi từ app (session_id nằm trong access token do chính GoTrue vừa cấp)
+    const sid = JSON.parse(atob(session.access_token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).session_id;
+    await db.from('web_login_requests').update({ session_id: sid }).eq('id', id);
     // Báo cho chính tài khoản đó, không chờ (POS nhận phiên ngay)
     EdgeRuntime.waitUntil(notify(db, [claimed.user_id], { kind: 'web', title: 'Đăng nhập POS mới', body: deviceName(r.user_agent), ref: id }));
     return reply(200, { status: 'approved', session });

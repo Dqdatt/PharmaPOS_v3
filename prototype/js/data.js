@@ -42,6 +42,15 @@
       { name: 'Minh Tuấn', shift: 'Ca sáng 7:00 đến 14:00', status: 'Hết ca 14:00' },
       { name: 'Thu Trang', shift: 'Ca chiều 14:00 đến 22:00', status: 'Đang làm' },
     ],
+    // Tài khoản (mock của API.admin.list): đủ 4 kiểu — admin, đang dùng, chờ kích hoạt, đã khoá, tài khoản cũ chưa có email
+    accounts: [
+      { id: 1, name: 'Trần Minh Khoa', role: 'admin', status: 'active', email: 'khoa@nhathuoctaman.vn', phone: '84903128466', createdAt: '2026-05-19T02:08:47Z' },
+      { id: 2, name: 'Nguyễn Thu Trang', role: 'manager', status: 'active', email: 'trang@nhathuoctaman.vn', phone: '84908112233', createdAt: '2026-05-19T02:08:47Z' },
+      { id: 3, name: 'Lê Minh Tuấn', role: 'staff', status: 'active', email: 'tuan@nhathuoctaman.vn', phone: null, createdAt: '2026-08-02T03:00:00Z' },
+      { id: 4, name: 'Phạm Thị Hoa', role: 'staff', status: 'invited', email: 'hoa.pham@gmail.com', phone: null, createdAt: '2026-11-20T03:00:00Z' },
+      { id: 5, name: 'Võ Văn Bình', role: 'staff', status: 'locked', email: 'binh.vo@gmail.com', phone: null, createdAt: '2026-06-11T03:00:00Z' },
+      { id: 6, name: 'Đặng Thị Mai', role: 'staff', status: 'invited', email: null, phone: null, createdAt: '2026-05-19T02:08:47Z' },
+    ],
     webSessions: [
       { id: 'w1', browser: 'Chrome', os: 'macOS', device: 'MacBook Pro', place: 'Quận 3, TP.HCM', ip: '113.161.24.8', since: '08:12 hôm nay', lastActive: '2 phút trước' },
     ],
