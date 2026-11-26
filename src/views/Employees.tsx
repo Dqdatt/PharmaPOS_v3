@@ -1,51 +1,16 @@
 import { useState } from 'react';
 import { usePos } from '../contexts/PosContext';
-import StaffModal from '../components/modals/StaffModal';
-import ConfirmModal from '../components/modals/ConfirmModal';
-import { showNotification } from '../utils/toast';
+
+const statusLabels = {
+  invited: 'Đã mời',
+  active: 'Hoạt động',
+  locked: 'Đã khóa',
+};
 
 export default function Employees() {
-  const { users, deleteUserFromDB, staffLogs, invoices, currentUser } = usePos();
-  const [staffTab, setStaffTab] = useState<'logs' | 'revenue' | 'edit'>('logs');
-  const [showStaffModal, setShowStaffModal] = useState(false);
-  const [editingStaffId, setEditingStaffId] = useState<number | null>(null);
+  const { users, staffLogs, currentUser } = usePos();
+  const [staffTab, setStaffTab] = useState<'logs' | 'accounts'>('logs');
   const [currentPage, setCurrentPage] = useState(1);
-
-  const openStaffModal = (id: number | null) => {
-    if (id !== null) {
-      const target = users.find(u => u.id === id);
-      if (target?.role === 'admin') {
-        showNotification('Không thể sửa tài khoản quản trị hệ thống!', 'error');
-        return;
-      }
-    }
-    setEditingStaffId(id);
-    setShowStaffModal(true);
-  };
-
-  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
-
-  const confirmDelete = async () => {
-    if (confirmDeleteId === null) return;
-    const target = users.find(u => u.id === confirmDeleteId);
-    if (target?.role === 'admin') {
-      showNotification('Không thể xóa tài khoản quản trị hệ thống!', 'error');
-      setConfirmDeleteId(null);
-      return;
-    }
-    try {
-      await deleteUserFromDB(confirmDeleteId);
-      showNotification('Xóa nhân viên thành công!', 'success');
-    } catch (e) {
-      const errMsg = e instanceof Error ? e.message : String(e);
-      showNotification(`Lỗi khi xóa nhân viên! Chi tiết: ${errMsg}`, 'error');
-      console.error(e);
-    }
-    setConfirmDeleteId(null);
-  };
-
-  const getRevenueByEmployee = (name: string) =>
-    invoices.filter(i => i.employeeName === name).reduce((sum, i) => sum + i.total, 0);
 
   const reversedLogs = [...staffLogs].reverse();
   const logsPerPage = 10;
@@ -58,7 +23,7 @@ export default function Employees() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h2 className="text-2xl font-bold text-gray-800">Quản lý Nhân Sự</h2>
-          <p className="text-gray-500 text-sm">Theo dõi hoạt động và phân quyền nhân viên</p>
+          <p className="text-gray-500 text-sm">Theo dõi tài khoản và ca làm việc</p>
         </div>
       </div>
 
@@ -70,14 +35,8 @@ export default function Employees() {
           Lịch sử In/Out
         </button>
         <button
-          onClick={() => setStaffTab('revenue')}
-          className={`px-4 py-2 rounded-md font-bold text-sm transition ${staffTab === 'revenue' ? 'bg-teal-50 text-teal-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
-        >
-          Doanh thu NV
-        </button>
-        <button
-          onClick={() => setStaffTab('edit')}
-          className={`px-4 py-2 rounded-md font-bold text-sm transition ${staffTab === 'edit' ? 'bg-teal-50 text-teal-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
+          onClick={() => setStaffTab('accounts')}
+          className={`px-4 py-2 rounded-md font-bold text-sm transition ${staffTab === 'accounts' ? 'bg-teal-50 text-teal-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
         >
           Tài khoản
         </button>
@@ -148,50 +107,16 @@ export default function Employees() {
         </div>
       )}
 
-      {/* Revenue tab */}
-      {staffTab === 'revenue' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {users.map(u => (
-            <div key={u.id} className="bg-white p-5 rounded-xl shadow-sm border flex flex-col">
-              <div className="flex items-center gap-3 mb-4">
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-sm ${u.role === 'manager' ? 'bg-red-500' : 'bg-teal-500'}`}>
-                  {u.name.charAt(0)}
-                </div>
-                <div>
-                  <div className="font-bold text-gray-800">{u.name}</div>
-                  <div className="text-xs text-gray-500">{u.role === 'manager' ? 'Quản lý' : u.role === 'admin' ? 'Quản trị' : 'Nhân viên'}</div>
-                </div>
-              </div>
-              <div className="mt-auto pt-4 border-t border-gray-100 flex justify-between items-end">
-                <div>
-                  <div className="text-xs text-gray-500 uppercase font-bold mb-1">Doanh thu tạo ra</div>
-                  <div className="font-mono font-bold text-xl text-teal-700">
-                    {new Intl.NumberFormat('vi-VN').format(getRevenueByEmployee(u.name))} ₫
-                  </div>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Edit tab */}
-      {staffTab === 'edit' && (
+      {staffTab === 'accounts' && (
         <div className="bg-white rounded-xl shadow-sm border p-4">
-          <button
-            onClick={() => openStaffModal(null)}
-            className="mb-4 bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 px-4 py-2 rounded-lg text-sm font-bold transition"
-          >
-            <i className="fa-solid fa-user-plus mr-1"></i> Thêm tài khoản
-          </button>
+          <p className="mb-4 text-sm text-gray-500">Cấp và sửa tài khoản trong app MediPOS (tài khoản quản trị).</p>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-gray-50 text-gray-600 text-xs uppercase">
                 <tr>
                   <th className="p-3">Họ tên</th>
                   <th className="p-3">Quyền hạn</th>
-                  <th className="p-3">Mã PIN</th>
-                  <th className="p-3 text-center">Thao tác</th>
+                  <th className="p-3">Trạng thái</th>
                 </tr>
               </thead>
               <tbody>
@@ -208,49 +133,13 @@ export default function Employees() {
                         {u.role === 'manager' ? 'Quản lý' : u.role === 'admin' ? 'Quản trị' : 'Nhân viên'}
                       </span>
                     </td>
-                    <td className="p-3 font-mono font-bold text-gray-700 tracking-widest">{u.pin || 'Chưa cài'}</td>
-                    <td className="p-3 text-center">
-                      {u.role !== 'admin' && (
-                        <>
-                          <button
-                            onClick={() => openStaffModal(u.id)}
-                            className="text-blue-500 hover:text-blue-700 px-2"
-                          >
-                            <i className="fa-solid fa-pen"></i>
-                          </button>
-                          {u.id !== currentUser?.id && (
-                            <button
-                              onClick={() => setConfirmDeleteId(u.id)}
-                              className="text-red-500 hover:text-red-700 px-2"
-                            >
-                              <i className="fa-solid fa-trash"></i>
-                            </button>
-                          )}
-                        </>
-                      )}
-                    </td>
+                    <td className="p-3 text-gray-700">{u.status ? statusLabels[u.status] : '—'}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         </div>
-      )}
-
-      {showStaffModal && (
-        <StaffModal
-          userId={editingStaffId}
-          onClose={() => { setShowStaffModal(false); setEditingStaffId(null); }}
-        />
-      )}
-
-      {confirmDeleteId !== null && (
-        <ConfirmModal
-          title="Xác nhận xóa"
-          message="Bạn có chắc chắn muốn xóa nhân viên này khỏi hệ thống? Hành động này không thể hoàn tác."
-          onConfirm={confirmDelete}
-          onCancel={() => setConfirmDeleteId(null)}
-        />
       )}
     </div>
   );

@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
+import { getMyProfile } from '../lib/webLogin';
 import { showNotification } from '../utils/toast';
 import { LegacyFallbackTarget, normalizeDbTimestamp, writeWithLegacyFallback } from '../utils/dbFallback';
 import { Dosage, fromDbDosage, toDbDosage } from '../utils/dosage';
@@ -32,6 +33,7 @@ export interface User {
   name: string;
   role: 'admin' | 'manager' | 'staff';
   pin: string;
+  status?: 'invited' | 'active' | 'locked';
 }
 
 export interface StaffLog {
@@ -144,6 +146,7 @@ interface PosContextType {
   isLoadingData: boolean;
 
   // Auth
+  authReady: boolean;
   currentUser: User | null;
   setCurrentUser: React.Dispatch<React.SetStateAction<User | null>>;
   users: User[];
@@ -212,9 +215,6 @@ interface PosContextType {
   deleteExportOrderFromDB: (id: string) => Promise<void>;
   addStaffLogToDB: (log: StaffLog) => Promise<void>;
   updateStaffLogLogoutInDB: (userId: number, logoutTime: string) => Promise<void>;
-  addUserToDB: (user: Omit<User, 'id'>) => Promise<void>;
-  updateUserInDB: (user: User) => Promise<void>;
-  deleteUserFromDB: (id: number) => Promise<void>;
 }
 
 const PosContext = createContext<PosContextType | undefined>(undefined);
@@ -223,30 +223,9 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [currentUser, setCurrentUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('mediPosCurrentUser');
-    if (saved) {
-      try {
-        const u = JSON.parse(saved);
-        if (u && (u.role === 'manager' || u.role === 'staff')) {
-          return u;
-        }
-        localStorage.removeItem('mediPosCurrentUser');
-        return null;
-      } catch {
-        return null;
-      }
-    }
-    return null;
-  });
-
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('mediPosCurrentUser', JSON.stringify(currentUser));
-    } else {
-      localStorage.removeItem('mediPosCurrentUser');
-    }
-  }, [currentUser]);
+  const [authReady, setAuthReady] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const dataSession = useRef<AbortController | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [staffLogs, setStaffLogs] = useState<StaffLog[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -269,40 +248,68 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     ? new URLSearchParams(window.location.search).get('view') === 'customer'
     : false;
 
+  useEffect(() => {
+    if (isCustomerView) {
+      setAuthReady(true);
+      return;
+    }
+
+    let active = true;
+    let signedOut = false;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(event => {
+      if (event === 'SIGNED_OUT') {
+        signedOut = true;
+        dataSession.current?.abort();
+        setCurrentUser(null);
+      }
+    });
+
+    getMyProfile().then(me => {
+      if (active && !signedOut && me) {
+        setCurrentUser({ id: me.id, name: me.name, role: me.role, pin: '' });
+      }
+    }).catch(() => {
+      if (active) showNotification('Không kiểm tra được phiên đăng nhập', 'error');
+    }).finally(() => {
+      if (active) setAuthReady(true);
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, [isCustomerView]);
+
   const getStock = (p: Product) => p.initialStock + p.totalIn - p.totalOut;
 
   const formatPrice = (val: number) =>
     new Intl.NumberFormat('vi-VN').format(val || 0) + ' ₫';
 
-  const getNow = (includeSec = false) => {
+  const getNow = useCallback((includeSec = false) => {
     const now = new Date();
     return includeSec
       ? now.toLocaleString('vi-VN')
       : now.toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' });
-  };
+  }, []);
 
   // --- SUPABASE FETCH ---
-  const refreshData = async () => {
+  const refreshData = useCallback(async () => {
+    const signal = dataSession.current?.signal;
+    if (!signal || signal.aborted) return;
+
     setIsLoadingData(true);
     try {
       // Users
-      const { data: dbUsers } = await supabase.from('users').select('*').order('id', { ascending: true });
+      const { data: dbUsers } = await supabase.from('users').select('id, name, role, email, phone, status').order('id', { ascending: true }).abortSignal(signal);
+      if (signal.aborted) return;
       if (dbUsers) {
-        const mappedUsers: User[] = dbUsers.map(u => ({ id: u.id, name: u.name, role: u.role, pin: u.pin }));
+        const mappedUsers: User[] = dbUsers.map(u => ({ id: u.id, name: u.name, role: u.role, status: u.status, pin: '' }));
         setUsers(mappedUsers);
-        setCurrentUser(prev => {
-          if (!prev) return null;
-          const fresh = mappedUsers.find(u => u.id === prev.id);
-          if (!fresh || (fresh.role !== 'manager' && fresh.role !== 'staff')) {
-            localStorage.removeItem('mediPosCurrentUser');
-            return null;
-          }
-          return fresh;
-        });
       }
 
       // Products
-      const { data: dbProducts } = await supabase.from('products').select('*').order('id', { ascending: true });
+      const { data: dbProducts } = await supabase.from('products').select('*').order('id', { ascending: true }).abortSignal(signal);
+      if (signal.aborted) return;
       if (dbProducts) {
         setProducts(dbProducts.map(p => ({
           id: p.id, name: p.name, category: p.category, unit: p.unit,
@@ -312,7 +319,8 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
 
       // Staff Logs
-      const { data: dbLogs } = await supabase.from('staff_logs').select('*').order('id', { ascending: true });
+      const { data: dbLogs } = await supabase.from('staff_logs').select('*').order('id', { ascending: true }).abortSignal(signal);
+      if (signal.aborted) return;
       if (dbLogs) {
         setStaffLogs(dbLogs.map(l => ({
           userId: l.user_id, name: l.name, role: l.role,
@@ -321,7 +329,8 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
 
       // Invoices
-      const { data: dbInvoices } = await supabase.from('invoices').select('*, invoice_items(*)').order('created_at', { ascending: false });
+      const { data: dbInvoices } = await supabase.from('invoices').select('*, invoice_items(*)').order('created_at', { ascending: false }).abortSignal(signal);
+      if (signal.aborted) return;
       if (dbInvoices) {
         setInvoices(dbInvoices.map(inv => ({
           id: inv.id, time: inv.time, employeeName: inv.employee_name, employeeId: inv.employee_id,
@@ -342,7 +351,8 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
 
       // Purchases
-      const { data: dbPurchases } = await supabase.from('purchases').select('*, purchase_items(*)').order('created_at', { ascending: false });
+      const { data: dbPurchases } = await supabase.from('purchases').select('*, purchase_items(*)').order('created_at', { ascending: false }).abortSignal(signal);
+      if (signal.aborted) return;
       if (dbPurchases) {
         setPurchases(dbPurchases.map(pur => ({
           id: pur.id, date: pur.date, supplier: pur.supplier, supplierId: pur.supplier_id,
@@ -355,7 +365,8 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
 
       // Suppliers
-      const { data: dbSuppliers } = await supabase.from('suppliers').select('*').order('id', { ascending: true });
+      const { data: dbSuppliers } = await supabase.from('suppliers').select('*').order('id', { ascending: true }).abortSignal(signal);
+      if (signal.aborted) return;
       if (dbSuppliers) {
         setSuppliers(dbSuppliers.map(s => ({
           id: s.id, code: s.code, name: s.name, bankName: s.bank_name, accountNumber: s.account_number, accountName: s.account_name
@@ -363,7 +374,8 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
 
       // Payment Orders
-      const { data: dbPaymentOrders } = await supabase.from('payment_orders').select('*').order('created_at', { ascending: false });
+      const { data: dbPaymentOrders } = await supabase.from('payment_orders').select('*').order('created_at', { ascending: false }).abortSignal(signal);
+      if (signal.aborted) return;
       if (dbPaymentOrders) {
         setPaymentOrders(dbPaymentOrders.map(p => ({
           id: p.id, purchaseId: p.purchase_id, supplierId: p.supplier_id,
@@ -372,7 +384,8 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
 
       // Export Orders
-      const { data: dbExportOrders } = await supabase.from('export_orders').select('*, export_order_items(*)').order('created_at', { ascending: false });
+      const { data: dbExportOrders } = await supabase.from('export_orders').select('*, export_order_items(*)').order('created_at', { ascending: false }).abortSignal(signal);
+      if (signal.aborted) return;
       if (dbExportOrders) {
         setExportOrders(dbExportOrders.map(ord => ({
           id: ord.id, date: ord.date, recipientName: ord.recipient_name, recipientPhone: ord.recipient_phone,
@@ -387,19 +400,42 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
 
     } catch (e) {
+      if (signal.aborted) return;
       const errMsg = e instanceof Error ? e.message : String(e);
       showNotification(`Lỗi khi tải dữ liệu từ Supabase! Chi tiết: ${errMsg}`, 'error');
       console.error("Lỗi khi tải dữ liệu từ Supabase:", e);
     } finally {
-      setIsLoadingData(false);
+      if (!signal.aborted) setIsLoadingData(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    if (!isCustomerView) {
-      refreshData();
+    if (isCustomerView) return;
+
+    if (!currentUser) {
+      setUsers([]);
+      setStaffLogs([]);
+      setProducts([]);
+      setCart([]);
+      setInvoices([]);
+      setPurchases([]);
+      setExportOrders([]);
+      setSuppliers([]);
+      setPaymentOrders([]);
+      setInventoryHistory([]);
+      setIsPreviousMonthClosed(null);
+      setIsLoadingData(false);
+      return;
     }
-  }, [isCustomerView]);
+
+    const controller = new AbortController();
+    dataSession.current = controller;
+    void refreshData();
+    return () => {
+      controller.abort();
+      dataSession.current = null;
+    };
+  }, [currentUser, isCustomerView, refreshData]);
 
   // --- SUPABASE MUTATIONS ---
   // Items only carry the optional `dosage` column when at least one has a dosage, so
@@ -773,7 +809,9 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const { error } = await supabase.from('payment_orders').update({ status }).eq('id', id);
     if (error) throw error;
     setPaymentOrders(prev => prev.map(p => p.id === id ? { ...p, status } : p));
-  };  const addStaffLogToDB = async (log: StaffLog) => {
+  };
+
+  const addStaffLogToDB = useCallback(async (log: StaffLog) => {
     const { data, error } = await supabase.from('staff_logs').insert([{
       user_id: log.userId, name: log.name, role: log.role, login_time: log.loginTime, logout_time: log.logoutTime
     }]).select();
@@ -781,55 +819,25 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (data) {
       setStaffLogs(prev => [...prev, log]);
     }
-  };
+  }, []);
 
   const updateStaffLogLogoutInDB = async (userId: number, logoutTime: string) => {
     // Find latest log without logout time
     const log = staffLogs.slice().reverse().find(l => l.userId === userId && !l.logoutTime);
     if (log) {
       // In a real app we'd need the exact log ID, but here we can just update the most recent one for the user via DB query
-      await supabase.from('staff_logs').update({ logout_time: logoutTime })
+      const { error } = await supabase.from('staff_logs').update({ logout_time: logoutTime })
         .eq('user_id', userId).is('logout_time', null);
+      if (error) throw error;
       
       setStaffLogs(prev => prev.map(l => (l === log ? { ...l, logoutTime } : l)));
     }
   };
 
-  const addUserToDB = async (user: Omit<User, 'id'>) => {
-    const { data, error } = await supabase.from('users').insert([{
-      name: user.name, role: user.role, pin: user.pin
-    }]).select();
-    if (error) throw error;
-    if (data) {
-      setUsers(prev => [...prev, { id: data[0].id, name: data[0].name, role: data[0].role, pin: data[0].pin }]);
-    }
-  };
-
-  const updateUserInDB = async (user: User) => {
-    const existing = users.find(u => u.id === user.id);
-    if (existing?.role === 'admin' || user.role === 'admin') {
-      throw new Error('Không thể chỉnh sửa tài khoản quản trị trên POS');
-    }
-    const { error } = await supabase.from('users').update({
-      name: user.name, role: user.role, pin: user.pin
-    }).eq('id', user.id);
-    if (error) throw error;
-    setUsers(prev => prev.map(u => u.id === user.id ? user : u));
-  };
-
-  const deleteUserFromDB = async (id: number) => {
-    const target = users.find(u => u.id === id);
-    if (target?.role === 'admin') {
-      throw new Error('Không thể xóa tài khoản quản trị');
-    }
-    const { error } = await supabase.from('users').delete().eq('id', id);
-    if (error) throw error;
-    setUsers(prev => prev.filter(u => u.id !== id));
-  };
-
   // --- MONTHLY INVENTORY ROLLOVER ---
   const checkPreviousMonthStatus = async () => {
-    if (!previousMonthYear) return;
+    const signal = dataSession.current?.signal;
+    if (!previousMonthYear || !signal || signal.aborted) return;
     try {
       const isEnabled = localStorage.getItem('mediPosRolloverEnabled') !== 'false';
       if (!isEnabled) {
@@ -851,8 +859,10 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         .from('inventory_history')
         .select('id')
         .eq('month_year', previousMonthYear)
-        .limit(1);
+        .limit(1)
+        .abortSignal(signal);
       
+      if (signal.aborted) return;
       if (error) throw error;
       
       if (data && data.length > 0) {
@@ -866,6 +876,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setIsPreviousMonthClosed(false);
       }
     } catch (e) {
+      if (signal.aborted) return;
       const errMsg = e instanceof Error ? e.message : String(e);
       showNotification(`Lỗi kiểm tra trạng thái tháng trước! Chi tiết: ${errMsg}`, 'error');
       console.error('Error checking previous month status:', e);
@@ -991,7 +1002,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   return (
     <PosContext.Provider value={{
       isLoadingData,
-      currentUser, setCurrentUser,
+      authReady, currentUser, setCurrentUser,
       users, setUsers,
       staffLogs, setStaffLogs,
       products, setProducts,
@@ -1008,7 +1019,7 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       addExportOrderToDB, updateExportOrderStatusInDB, updateExportOrderInDB, deleteExportOrderFromDB,
       addSupplierToDB, updateSupplierInDB, deleteSupplierFromDB,
       addPaymentOrderToDB, updatePaymentOrderStatusInDB,
-      addStaffLogToDB, updateStaffLogLogoutInDB, addUserToDB, updateUserInDB, deleteUserFromDB
+      addStaffLogToDB, updateStaffLogLogoutInDB
     }}>
       {children}
     </PosContext.Provider>
