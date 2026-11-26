@@ -643,10 +643,27 @@
 
       const runFaceId = async () => {
         if (busy) return;
+        const done = startBusy(faceIdBtn, 'Đang mở khóa...');
         const ok = await App.faceId();
-        if (!isActiveView(el) || busy) return;
-        if (ok) App.reset('home', {}, 'fade');
-        else showPassForm();
+        if (!isActiveView(el)) return;
+        if (!ok) {
+          done();
+          showPassForm();
+          return;
+        }
+        if (window.API && API.live) {
+          const me = await API.profile();
+          if (!isActiveView(el)) return;
+          done();
+          if (!me) {
+            App.toast('Phiên đăng nhập đã hết, vui lòng đăng nhập lại', 'alert');
+            App.reset('login');
+            return;
+          }
+        } else {
+          done();
+        }
+        App.reset('home', {}, 'fade');
       };
 
       if (!p.showPass && !p.qa) {
