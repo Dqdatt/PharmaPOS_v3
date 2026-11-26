@@ -42,7 +42,7 @@ Phần UI thuần (màn prototype/PWA, màn POS web không đụng token) thì �
 ## Giai đoạn hoàn thiện app → DB thật (người dùng chốt 26/11/2026, sau khi test iPhone đạt bước 1–4)
 Quyết định:
 - Push báo cả 4 việc: đăng nhập POS mới (cho chính tài khoản đó), doanh thu cuối ngày (QL + admin), thuốc sắp hết / sắp hết hạn (mỗi sáng), công nợ nhà cung cấp.
-- App chạy thật trên **Netlify** (`https://medipos-app.netlify.app/`) → passkey RP ID = `medipos-app.netlify.app`. Passkey tạo trên link tunnel chỉ để test, không dùng được trên host Netlify.
+- App chạy thật trên **Netlify** (`https://medipos-app.netlify.app/`) → passkey RP ID = `medipos-app.netlify.app`. Passkey tạo trên link tunnel chỉ để test, sẽ mất khi lên Netlify.
 - Mail mã OTP khi lên thật: **Gmail SMTP** (người dùng tự nhập mật khẩu ứng dụng Gmail vào Supabase, Claude không nhập).
 
 Thứ tự (mỗi bước = việc `giao`; máy chủ/bảo mật `--chi-claude`):
@@ -51,4 +51,4 @@ B. **Push (Web Push VAPID)**: bảng `push_subscriptions` / `notif_prefs` / `not
 C. **Dữ liệu cho cảnh báo**: thêm `products.min_stock`, hạn dùng theo lô ở `purchase_items.expiry_date` + ô nhập ở màn Nhập hàng POS. — Claude migration, UI POS giao
 D. **App đọc dữ liệu thật**: Trang chủ/Doanh thu/Hoá đơn/Nhân viên/Tiện ích theo RLS (NV xem của mình, QL/admin toàn bộ); tính doanh thu dùng chung logic `reportRevenue.ts`. — Claude API tiền, UI giao
 E. **Admin trong app**: cấp / khoá / đổi vai trò tài khoản (Edge Function `admin-update-user`), danh sách + thu hồi phiên web (đọc `auth.sessions`). — Claude + UI giao
-F. **Chuyển DB thật** (project Supabase hiện có): sao lưu → áp migration → điền email cho nhân viên cũ → deploy Edge Functions + secrets (VAPID_PUBLIC_KEY/PRIVATE_KEY/SUBJECT, khoá mới, không dùng khoá local) + Vault `functions_url` = `https://<ref>.supabase.co/functions/v1` → SMTP Gmail → deploy PWA lên Netlify (site `medipos-app.netlify.app`) + POS mới CÙNG LÚC (RLS bật là POS cũ dùng PIN ngừng chạy). Mỗi thao tác trên DB thật hỏi người dùng trước. — Claude
+F. **Chuyển DB thật** (project Supabase hiện có): làm theo đúng thứ tự trong `docs/GO_LIVE.md` (functions/secrets/SMTP trước, migration sau để POS cũ ngừng ít nhất). Mỗi thao tác trên DB thật hỏi người dùng trước. — Claude

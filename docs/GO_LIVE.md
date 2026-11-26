@@ -26,7 +26,7 @@ Từ lúc chạy migration (bước 6), **POS cũ (PIN) ngừng chạy** cho t�
    SUPABASE_URL=https://fbppvryvfdeohocsgwtl.supabase.co SUPABASE_SERVICE_ROLE_KEY=... node scripts/link-account.mjs 1 <email Đạt> admin
    SUPABASE_URL=https://fbppvryvfdeohocsgwtl.supabase.co SUPABASE_SERVICE_ROLE_KEY=... node scripts/link-account.mjs 2 <email ĐQĐ> manager
    ```
-8. **[Claude]** Ghi lại SHA của `main` trước khi gộp; gộp `prototype-mobile` → `main` (fast-forward), push → Netlify tự deploy cùng lúc POS `pharmapos-v3` (biến `VITE_SUPABASE_*` giữ nguyên) và app `medipos-app`.
+8. **[Claude]** Ghi lại SHA của `main` trước khi gộp (`63e6cb3`); gộp `prototype-mobile` → `main` (fast-forward), push → Netlify tự deploy cùng lúc POS `pharmapos-v3` (biến `VITE_SUPABASE_*` giữ nguyên) và app `medipos-app`.
 9. **[Claude]** Kiểm 2 deploy trên Netlify đã Published; mở `https://medipos-app.netlify.app/` thấy màn đăng nhập app; POS mở được màn QR.
 
 ## Kiểm sau khi lên (M10)
@@ -34,4 +34,8 @@ Từ lúc chạy migration (bước 6), **POS cũ (PIN) ngừng chạy** cho t�
 11. Admin (Đạt) đăng nhập app → Quản lý tài khoản → cấp tài khoản NV mới / khoá / mở khoá; Phiên POS đang mở → thu hồi → POS về màn đăng nhập (≤ 30 giây).
 
 ## Quay lui nếu hỏng
-Tắt site app `medipos-app` trên Netlify (Site configuration → Manage site → Disable site) trước khi khôi phục DB để chặn truy cập từ các phiên PWA đang mở (vì app gọi Supabase trực tiếp); khôi phục DB từ bản sao bước 3 (Dashboard → Database → Backups, hoặc psql nạp lại); tạo commit quay lui toàn bộ thay đổi từ SHA của `main` đã ghi ở bước 8 (`git revert <SHA>..HEAD`) rồi push → Netlify deploy lại POS cũ.
+Netlify → project `medipos-app` → Deploys → dừng tự publish (Stop auto publishing). App đang mở trên điện thoại vẫn gọi được Supabase cho tới khi DB khôi phục xong. Khôi phục DB từ bản sao bước 3 (Dashboard → Database → Backups, hoặc psql nạp lại). SHA `main` trước khi gộp ở bước 8 là `63e6cb3`. Quay lui POS cũ bằng một commit khôi phục cây file:
+```bash
+git switch main && git restore --source=63e6cb3 --staged --worktree :/ && git commit -m "quay lui main ve 63e6cb3" && git push
+```
+→ Netlify deploy lại POS cũ. Kiểm `git diff 63e6cb3 --stat` rỗng trước khi push.
