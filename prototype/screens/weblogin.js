@@ -18,9 +18,11 @@
 .wl-camera { min-height: 100%; position: relative; overflow: hidden; display: flex; flex-direction: column; color: var(--on-dark);
   padding: calc(var(--sat) + 4px) 16px var(--sab);
   background: repeating-radial-gradient(circle at 27% 39%, color-mix(in srgb, var(--on-dark) 3%, transparent) 0 .6px, transparent 1px 4px) var(--teal-950); }
+.wl-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; }
+.wl-video[hidden] { display: none; }
 .wl-camera-top { position: relative; z-index: 1; display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 8px; align-items: center; }
 .wl-camera-top .nav-btn { color: var(--on-dark); }
-.wl-camera-center { display: grid; place-items: center; flex: 1; padding: 24px 0; }
+.wl-camera-center { position: relative; z-index: 1; display: grid; place-items: center; flex: 1; padding: 24px 0; }
 .wl-camera-frame { width: 248px; height: 248px; position: relative; display: grid; place-items: center; border-radius: 24px;
   color: var(--on-dark); box-shadow: 0 0 0 999px color-mix(in srgb, var(--ink) 56%, transparent);
   transition: width .35s var(--pop), height .35s var(--pop), color .25s var(--ease); animation: wlBreathe 2.8s var(--ease) infinite; }
@@ -41,6 +43,7 @@
 .wl-camera-help { z-index: 1; display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 24px; }
 .wl-camera-help p { font-size: 15px; line-height: 1.5; }
 .wl-torch { flex: none; width: 44px; height: 44px; border: 1px solid var(--on-dark-2); border-radius: 50%; display: grid; place-items: center; }
+.wl-torch[hidden] { display: none; }
 .wl-torch[aria-pressed="true"] { background: var(--mint); color: var(--teal-950); border-color: var(--mint); }
 .wl-camera-denied { color: var(--on-dark); max-width: 350px; }
 .wl-camera-denied .btn, .wl-session-empty .btn { margin-top: 20px; }
@@ -58,20 +61,15 @@
 .wl-ticket dt { font-size: 13px; color: var(--ink-2); }
 .wl-ticket dd { margin: 0; font-size: 15px; line-height: 1.35; font-weight: 500; overflow-wrap: anywhere; }
 .wl-expiry { display: flex; align-items: center; gap: 6px; margin: 14px 4px 12px; color: var(--ink-2); font-size: 14px; }
-.wl-prompt { margin: 0 4px 10px; font-size: 15px; font-weight: 600; line-height: 1.4; }
-.wl-choices { display: grid; grid-template-columns: repeat(3, minmax(0, 96px)); justify-content: space-between; gap: 8px; padding: 0 4px; }
-.wl-choice { height: 88px; border-radius: 20px; font-size: 34px; font-weight: 700; transition: background .2s var(--ease), transform .3s var(--pop); }
-.wl-choice:disabled { cursor: default; background: var(--soft); color: var(--ink-3); }
-.wl-choice.wl-correct { background: var(--teal-700); border-color: var(--teal-700); color: var(--on-dark); animation: wlChoicePop .35s var(--pop); }
-.wl-choice.wl-wrong { background: var(--bad-soft); color: var(--bad); animation: shake .45s var(--ease); }
-@keyframes wlChoicePop { 50% { transform: scale(1.07); } }
-.wl-feedback { min-height: 66px; padding: 8px 4px; font-size: 14px; line-height: 1.45; color: var(--bad); }
+.wl-feedback { min-height: 52px; padding: 8px 4px; font-size: 14px; line-height: 1.45; color: var(--bad); }
 .wl-feedback .btn { height: 34px; padding: 0; font-size: 14px; }
-.wl-confirm-actions { margin-top: auto; }
-.wl-cancelled { flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: center; padding: 24px 8px; }
-.wl-cancelled .tile { width: 72px; height: 72px; margin: 0 auto 18px; border-radius: 23px; }
-.wl-cancelled h1, .wl-done h1 { font-size: 24px; line-height: 1.3; overflow-wrap: anywhere; }
-.wl-cancelled p, .wl-done p { margin: 12px 0 24px; font-size: 15px; line-height: 1.5; color: var(--ink-2); }
+.wl-confirm-actions { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
+.wl-confirm-err { flex: 1; display: flex; flex-direction: column; justify-content: center; text-align: center; padding: 24px 8px; }
+.wl-confirm-err .tile { width: 72px; height: 72px; margin: 0 auto 18px; border-radius: 23px; }
+.wl-confirm-err h1 { font-size: 22px; line-height: 1.3; overflow-wrap: anywhere; }
+.wl-confirm-err p { margin: 12px 0 24px; font-size: 15px; line-height: 1.5; color: var(--ink-2); }
+.wl-done h1 { font-size: 24px; line-height: 1.3; overflow-wrap: anywhere; }
+.wl-done p { margin: 12px 0 24px; font-size: 15px; line-height: 1.5; color: var(--ink-2); }
 .wl-sheet-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 20px; }
 .wl-sheet-actions .btn { padding: 0 8px; }
 .wl-rescan { margin-top: 20px; }
@@ -127,226 +125,357 @@
     });
   }
 
+  const deniedBody = `
+    <div class="wl-camera-center"><div class="empty wl-camera-denied">
+      <p>Cần quyền camera để quét mã. Mở bằng HTTPS hoặc localhost và cho phép camera.</p>
+      <button class="btn btn-primary tap" data-wl-settings>Mở Cài đặt</button>
+    </div></div>`;
+
   App.screen('webScan', {
     cls: 'dark',
     statusLight: true,
     render: (p) => `
       <div class="wl-camera">
+        ${p.state === 'denied' ? '' : '<video class="wl-video" playsinline muted autoplay hidden></video>'}
         <header class="wl-camera-top">
           <button class="nav-btn glass-clear tap" data-back aria-label="Đóng máy quét">${App.icon('x', 22)}</button>
           <h1 class="nav-title ell">Quét mã trên web</h1>
         </header>
-        ${p.state === 'denied' ? `
-          <div class="wl-camera-center"><div class="empty wl-camera-denied">
-            <p>MediPOS cần camera để quét mã đăng nhập web. Camera chỉ bật khi bạn mở màn này.</p>
-            <button class="btn btn-primary tap" data-wl-settings>Mở Cài đặt</button>
-          </div></div>` : `
+        ${p.state === 'denied' ? deniedBody : `
           <div class="wl-camera-center"><div class="wl-camera-frame" aria-hidden="true">
             <span class="wl-corner"></span><span class="wl-corner"></span><span class="wl-corner"></span><span class="wl-corner"></span>
             <span class="wl-scan-line"></span>${App.icon('qr', 96)}
           </div></div>
           <div class="wl-camera-help glass-clear">
             <p>Mở trang đăng nhập MediPOS trên máy tính, rồi đưa mã QR vào khung.</p>
-            <button class="wl-torch tap" data-wl-torch aria-label="Đèn pin" aria-pressed="false">${App.icon('wlTorch', 22)}</button>
+            <button class="wl-torch tap" data-wl-torch aria-label="Đèn pin" aria-pressed="false" hidden>${App.icon('wlTorch', 22)}</button>
           </div>`}
       </div>`,
     mount(el, p) {
-      if (p.state === 'denied') {
-        el.querySelector('[data-wl-settings]').onclick = () => App.toast('Mở Cài đặt của iPhone', 'sliders');
-        return;
-      }
+      const cameraBox = el.querySelector('.wl-camera');
+      const bindDenied = () => {
+        const btn = el.querySelector('[data-wl-settings]');
+        if (btn) btn.onclick = () => App.toast('Mở Cài đặt của iPhone', 'sliders');
+      };
+      if (p.state === 'denied') { bindDenied(); return; }
+
+      const live = !!(window.API && API.live) && !p.qa;
       const torch = el.querySelector('[data-wl-torch]');
-      torch.onclick = () => {
-        const on = torch.getAttribute('aria-pressed') === 'false';
-        torch.setAttribute('aria-pressed', String(on));
-        torch.innerHTML = App.icon(on ? 'wlTorchOn' : 'wlTorch', 22);
-        App.toast(on ? 'Đã bật đèn' : 'Đã tắt đèn');
+      const frame = el.querySelector('.wl-camera-frame');
+      const video = el.querySelector('.wl-video');
+      let timer, stream, stopped = false;
+
+      const stopCamera = () => {
+        stopped = true;
+        clearTimeout(timer);
+        if (stream) {
+          stream.getTracks().forEach((t) => t.stop());
+          stream = null;
+        }
+        if (video) video.srcObject = null;
       };
 
-      const frame = el.querySelector('.wl-camera-frame');
-      let timer;
-      const scan = () => {
-        clearTimeout(timer);
-        frame.classList.remove('wl-found');
-        timer = setTimeout(() => {
-          if (!active(el)) return;
-          frame.classList.add('wl-found');
-          const expiresAt = Date.now() + request.expiresIn * 1000;
+      const showDenied = () => {
+        stopCamera();
+        cameraBox.querySelectorAll('.wl-video, .wl-camera-center, .wl-camera-help').forEach((n) => n.remove());
+        cameraBox.insertAdjacentHTML('beforeend', deniedBody);
+        bindDenied();
+      };
+
+      el.querySelector('[data-back]').addEventListener('click', stopCamera, { capture: true });
+
+      if (!live) {
+        torch.hidden = false;
+        torch.onclick = () => {
+          const on = torch.getAttribute('aria-pressed') === 'false';
+          torch.setAttribute('aria-pressed', String(on));
+          torch.innerHTML = App.icon(on ? 'wlTorchOn' : 'wlTorch', 22);
+          App.toast(on ? 'Đã bật đèn' : 'Đã tắt đèn');
+        };
+        const scan = () => {
+          clearTimeout(timer);
+          frame.classList.remove('wl-found');
           timer = setTimeout(() => {
             if (!active(el)) return;
-            if (p.state === 'expired') {
-              App.sheet(`<h3>Mã đã hết hạn</h3><p>Tải lại trang đăng nhập trên máy tính để lấy mã mới.</p>
-                <button class="btn btn-primary block wl-rescan" data-close>Quét lại</button>`,
-              { onClose: () => { if (active(el)) scan(); } });
-            } else {
-              App.go('webConfirm', { from: 'scan', expiresAt }, 'push');
+            frame.classList.add('wl-found');
+            timer = setTimeout(() => {
+              if (!active(el)) return;
+              if (p.state === 'expired') {
+                App.sheet(`<h3>Mã đã hết hạn</h3><p>Tải lại trang đăng nhập trên máy tính để lấy mã mới.</p>
+                  <button class="btn btn-primary block wl-rescan" data-close>Quét lại</button>`,
+                { onClose: () => { if (active(el)) scan(); } });
+              } else {
+                App.go('webConfirm', { id: 'mock', from: 'scan', qa: p.qa }, 'push');
+              }
+            }, 350);
+          }, 1800);
+        };
+        scan();
+        return;
+      }
+
+      if (!navigator.mediaDevices?.getUserMedia) { showDenied(); return; }
+
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+        .then((s) => {
+          if (stopped || !active(el)) {
+            s.getTracks().forEach((t) => t.stop());
+            return;
+          }
+          stream = s;
+          video.srcObject = s;
+          video.hidden = false;
+          video.play().catch(() => {});
+
+          const track = s.getVideoTracks()[0];
+          if (track?.getCapabilities?.().torch) {
+            torch.hidden = false;
+            torch.onclick = async () => {
+              const on = torch.getAttribute('aria-pressed') === 'false';
+              try {
+                await track.applyConstraints({ advanced: [{ torch: on }] });
+                torch.setAttribute('aria-pressed', String(on));
+                torch.innerHTML = App.icon(on ? 'wlTorchOn' : 'wlTorch', 22);
+              } catch (e) { App.toast('Không bật được đèn pin', 'alert'); }
+            };
+          }
+
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d', { willReadFrequently: true });
+          let lastBadAt = 0;
+
+          const tick = () => {
+            if (stopped || !el.isConnected || !active(el)) { stopCamera(); return; }
+            if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0 && typeof window.jsQR === 'function') {
+              const scale = Math.min(1, 640 / video.videoWidth);
+              const w = Math.max(1, Math.round(video.videoWidth * scale));
+              const h = Math.max(1, Math.round(video.videoHeight * scale));
+              if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+              ctx.drawImage(video, 0, 0, w, h);
+              const img = ctx.getImageData(0, 0, w, h);
+              const code = window.jsQR(img.data, w, h, { inversionAttempts: 'dontInvert' });
+              if (code && code.data) {
+                const id = API.webLogin.parse(code.data);
+                if (id) {
+                  stopCamera();
+                  frame.classList.add('wl-found');
+                  setTimeout(() => { if (active(el)) App.go('webConfirm', { id, from: 'scan' }, 'push'); }, 250);
+                  return;
+                }
+                if (Date.now() - lastBadAt >= 2000) {
+                  lastBadAt = Date.now();
+                  App.toast('Đây không phải mã đăng nhập MediPOS', 'alert');
+                }
+              }
             }
-          }, 350);
-        }, 1800);
-      };
-      scan();
+            timer = setTimeout(tick, 200);
+          };
+          timer = setTimeout(tick, 200);
+        })
+        .catch(() => { if (active(el)) showDenied(); });
     },
   });
 
-  const cancelled = `
-    <div class="wl-cancelled" role="status">
-      <div class="tile bad">${App.icon('shield', 36)}</div>
-      <h1>Đã hủy yêu cầu đăng nhập</h1>
-      <p>Số bạn chọn không khớp với máy tính. Nếu không phải bạn đang đăng nhập, hãy đổi mật khẩu web.</p>
-      <button class="btn btn-primary block" data-wl-home>Về trang chủ</button>
-      <button class="btn btn-ghost block" data-wl-password>Đổi mật khẩu</button>
-    </div>`;
-  const failedFaceId = `<p>Face ID không khớp.</p><button class="btn btn-ghost" data-wl-retry>Thử lại Face ID</button>`;
+  const failedFaceId = '<p>Face ID không khớp.</p><button class="btn btn-ghost" data-wl-retry>Thử lại Face ID</button>';
+
+  function confirmBody(req, p) {
+    const fields = [
+      ['Trình duyệt', `${req.browser} trên ${req.os}`],
+      ['Địa chỉ IP', req.ip || 'Không rõ'],
+      ['Thời gian', req.time || 'Vừa xong'],
+    ];
+    return `
+      <h1 class="page-title">Đăng nhập web quản lý?</h1>
+      ${p.unusual ? `<div class="wl-warning">${App.icon('alert', 20)}<p>Vị trí này khác nơi bạn thường đăng nhập. Chỉ duyệt nếu chính bạn đang ngồi ở máy đó.</p></div>` : ''}
+      <dl class="card wl-ticket">
+        ${fields.map(([label, value]) => `<div><dt>${label}</dt><dd>${App.esc(value)}</dd></div>`).join('')}
+      </dl>
+      <div class="wl-expiry">${App.icon('clock', 16)} Hết hạn sau <span class="num" data-wl-time></span></div>
+      <div class="wl-feedback" aria-live="polite"></div>
+      <div class="wl-confirm-actions">
+        <button class="btn btn-primary block" data-wl-approve>Đăng nhập máy tính này</button>
+        <button class="btn btn-danger block" data-wl-refuse>Không phải tôi, từ chối</button>
+      </div>`;
+  }
+
+  function confirmError(msg, btnText, btnAttr) {
+    return `
+      <div class="wl-confirm-err" role="status">
+        <div class="tile bad">${App.icon('shield', 36)}</div>
+        <h1>Không thể đăng nhập</h1>
+        <p>${App.esc(msg)}</p>
+        <button class="btn btn-primary block" ${btnAttr}>${App.esc(btnText)}</button>
+      </div>`;
+  }
 
   App.screen('webConfirm', {
-    render: (p) => {
-      const fields = [
-        ['Trình duyệt', `${request.browser} trên ${request.os}`],
-        ['Máy', request.device],
-        ['Vị trí', `${request.place} (ước tính theo IP)`],
-        ['Địa chỉ IP', request.ip],
-        ['Thời gian', `${request.time} hôm nay`],
-      ];
-      return `
-        <header class="nav"><div class="nav-side">
-          <button class="nav-btn glass tap" data-back aria-label="Đóng xác nhận">${App.icon('x', 22)}</button>
-        </div></header>
-        <div class="wl-confirm">${p.state === 'cancelled' ? cancelled : `
-          <h1 class="page-title">Đăng nhập web quản lý?</h1>
-          ${p.unusual ? `<div class="wl-warning">${App.icon('alert', 20)}<p>Vị trí này khác nơi bạn thường đăng nhập. Chỉ duyệt nếu chính bạn đang ngồi ở máy đó.</p></div>` : ''}
-          <dl class="card wl-ticket">
-            ${fields.map(([label, value]) => `<div><dt>${label}</dt><dd>${App.esc(value)}</dd></div>`).join('')}
-          </dl>
-          <div class="wl-expiry">${App.icon('clock', 16)} Hết hạn sau <span class="num" data-wl-time></span></div>
-          <p class="wl-prompt" id="wl-prompt">Chọn số đang hiện trên màn hình máy tính</p>
-          <div class="wl-choices" role="group" aria-labelledby="wl-prompt">
-            ${request.choices.map((code) => `<button class="wl-choice card num tap" data-wl-code="${App.esc(code)}">${App.esc(String(code).padStart(2, '0'))}</button>`).join('')}
-          </div>
-          <div class="wl-feedback" aria-live="polite"></div>
-          <div class="wl-confirm-actions">
-            <button class="btn btn-danger block" data-wl-refuse>Không phải tôi, từ chối</button>
-          </div>`}
-        </div>`;
-    },
-    mount(el, p) {
+    render: (p) => `
+      <header class="nav"><div class="nav-side">
+        <button class="nav-btn glass tap" data-back aria-label="Đóng xác nhận">${App.icon('x', 22)}</button>
+      </div></header>
+      <div class="wl-confirm">${p.qa ? confirmBody({
+        browser: request.browser, os: request.os, ip: request.ip, time: `${request.time} hôm nay`,
+      }, p) : App.skeleton(3)}</div>`,
+    async mount(el, p) {
       const content = el.querySelector('.wl-confirm');
-      const clock = el.querySelector('[data-wl-time]');
-      const feedback = el.querySelector('.wl-feedback');
-      const actions = el.querySelector('.wl-confirm-actions');
-      const choices = [...el.querySelectorAll('[data-wl-code]')];
-      const correct = choices.find((btn) => Number(btn.dataset.wlCode) === request.code);
-      const expiresAt = Number.isFinite(p.expiresAt) ? p.expiresAt : Date.now() + (p.state === 'expired' ? 3 : request.expiresIn) * 1000;
-      let phase = p.state === 'cancelled' ? 'cancelled' : p.state === 'faceIdFailed' ? 'retry' : 'choose';
-      let closeRefusal, timer;
+      let phase = p.state === 'faceIdFailed' ? 'retry' : 'ready';
+      let timer;
 
-      function setChoices(disabled) {
-        choices.forEach((btn) => { btn.disabled = disabled; });
+      el.querySelector('[data-back]').onclick = (event) => {
+        if (p.from !== 'scan' || (phase !== 'expired' && phase !== 'error')) return;
+        event.stopPropagation();
+        App.reset('home');
+      };
+
+      const bindError = () => {
+        const rescan = content.querySelector('[data-wl-rescan]');
+        const home = content.querySelector('[data-wl-home]');
+        if (rescan) rescan.onclick = () => App.back();
+        if (home) home.onclick = () => App.reset('home');
+      };
+
+      let req;
+      if (p.qa) {
+        req = {
+          browser: request.browser,
+          os: request.os,
+          ip: request.ip,
+          time: `${request.time} hôm nay`,
+          expiresAt: Number.isFinite(p.expiresAt) ? p.expiresAt : Date.now() + (p.state === 'expired' ? 3 : request.expiresIn) * 1000,
+        };
+      } else {
+        const res = await API.webLogin.info(p.id);
+        if (!active(el)) return;
+        if (!res.ok) {
+          phase = 'error';
+          content.innerHTML = confirmError(res.error, 'Quét lại', 'data-wl-rescan');
+          bindError();
+          return;
+        }
+        req = res.request;
+        content.innerHTML = confirmBody(req, p);
       }
+
+      const clock = content.querySelector('[data-wl-time]');
+      const feedback = content.querySelector('.wl-feedback');
+      const actions = content.querySelector('.wl-confirm-actions');
+      const approveBtn = content.querySelector('[data-wl-approve]');
+      const refuseBtn = content.querySelector('[data-wl-refuse]');
+
       function tick() {
         if (!active(el)) { clearInterval(timer); return false; }
-        const left = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+        const left = Math.max(0, Math.ceil((req.expiresAt - Date.now()) / 1000));
         clock.textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
         if (left) return true;
         clearInterval(timer);
         phase = 'expired';
-        closeRefusal?.();
-        correct.classList.remove('wl-correct');
-        setChoices(true);
+        approveBtn.disabled = true;
+        refuseBtn.disabled = true;
         feedback.textContent = 'Yêu cầu đã hết hạn. Tải lại trang web để thử lại.';
         actions.innerHTML = '<button class="btn btn-primary block" data-wl-home>Về trang chủ</button>';
         return false;
       }
 
       async function approve() {
-        if (!tick()) return;
+        if (!tick() || (phase !== 'ready' && phase !== 'retry')) return;
         phase = 'faceId';
-        setChoices(true);
+        const unbusy = App.busy(approveBtn, 'Đang xác nhận...');
+        refuseBtn.disabled = true;
         feedback.textContent = '';
-        correct.classList.add('wl-correct');
         const matched = await App.faceId();
         if (!active(el) || phase !== 'faceId' || !tick()) return;
-        if (matched) {
-          clearInterval(timer);
-          App.go('webDone', {}, 'fade');
-        } else {
+        if (!matched) {
+          unbusy();
+          refuseBtn.disabled = false;
           phase = 'retry';
-          correct.classList.remove('wl-correct');
-          setChoices(false);
           feedback.innerHTML = failedFaceId;
+          return;
         }
+        if (!p.qa) {
+          const dec = await API.webLogin.decide(p.id, true);
+          if (!active(el)) return;
+          if (!dec.ok) {
+            clearInterval(timer);
+            phase = 'error';
+            content.innerHTML = confirmError(dec.error, 'Về trang chủ', 'data-wl-home');
+            bindError();
+            return;
+          }
+        }
+        clearInterval(timer);
+        App.go('webDone', { id: p.id, request: req }, 'fade');
       }
 
-      el.querySelector('[data-back]').onclick = (event) => {
-        if (p.from !== 'scan' || (phase !== 'cancelled' && phase !== 'expired')) return;
-        event.stopPropagation();
+      async function refuse() {
+        if (!tick() || (phase !== 'ready' && phase !== 'retry')) return;
+        phase = 'refusing';
+        App.busy(refuseBtn, 'Đang từ chối...');
+        approveBtn.disabled = true;
+        if (!p.qa) {
+          const dec = await API.webLogin.decide(p.id, false);
+          if (!active(el)) return;
+          if (!dec.ok) {
+            clearInterval(timer);
+            phase = 'error';
+            content.innerHTML = confirmError(dec.error, 'Về trang chủ', 'data-wl-home');
+            bindError();
+            return;
+          }
+        } else {
+          await new Promise((r) => setTimeout(r, 400));
+          if (!active(el)) return;
+        }
+        clearInterval(timer);
+        App.toast('Đã từ chối');
         App.reset('home');
-      };
+      }
 
       content.onclick = (event) => {
         const btn = event.target.closest('button');
         if (!btn || btn.disabled) return;
         if (btn.hasAttribute('data-wl-home')) App.reset('home');
-        if (btn.hasAttribute('data-wl-password')) App.toast('Đổi mật khẩu trên web, mục Tài khoản', 'info');
-        if (closeRefusal || (phase !== 'choose' && phase !== 'retry')) return;
-        if (btn.hasAttribute('data-wl-retry')) approve();
-        if (btn.hasAttribute('data-wl-code') && tick()) {
-          if (btn === correct) {
-            approve();
-          } else {
-            clearInterval(timer);
-            phase = 'cancelled';
-            setChoices(true);
-            actions.querySelector('button').disabled = true;
-            btn.classList.add('wl-wrong');
-            setTimeout(() => { if (active(el)) content.innerHTML = cancelled; }, 500);
-          }
-        }
-        if (btn.hasAttribute('data-wl-refuse') && tick()) {
-          closeRefusal = actionSheet({
-            title: 'Từ chối yêu cầu này?',
-            body: 'Máy tính sẽ không đăng nhập được. Bạn có thể đăng nhập lại bất cứ lúc nào.',
-            cancel: 'Quay lại', action: 'Từ chối', busy: 'Đang từ chối...', delay: 600,
-            onClose: () => { closeRefusal = null; },
-            done: () => {
-              if (!active(el) || phase === 'expired') return;
-              clearInterval(timer);
-              App.toast('Đã từ chối đăng nhập');
-              App.reset('home');
-            },
-          });
-        }
+        if (btn.hasAttribute('data-wl-approve') || btn.hasAttribute('data-wl-retry')) approve();
+        if (btn.hasAttribute('data-wl-refuse')) refuse();
       };
 
-      if (clock) {
-        if (phase === 'retry') feedback.innerHTML = failedFaceId;
-        timer = setInterval(tick, 1000);
-        tick();
-      }
+      if (phase === 'retry') feedback.innerHTML = failedFaceId;
+      timer = setInterval(tick, 1000);
+      tick();
     },
   });
 
   App.screen('webDone', {
-    render: () => `
+    render: (p) => {
+      const req = p.request || request;
+      const target = req.device || `${req.browser} trên ${req.os}`;
+      return `
       <div class="wl-done">
         <div class="wl-done-mark">
           <svg class="ic" width="58" height="58" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
             <path pathLength="1" d="M20 6 9 17l-5-5"/>
           </svg>
         </div>
-        <h1>Đã đăng nhập trên ${App.esc(request.device)}</h1>
+        <h1>Đã đăng nhập trên ${App.esc(target)}</h1>
         <p>Trang web sẽ tự mở trong vài giây. Phiên tự đăng xuất sau 12 giờ không dùng.</p>
         <button class="btn btn-primary block" data-wl-home>Xong</button>
         <button class="btn btn-ghost block" data-wl-sessions>Xem các phiên web</button>
-      </div>`,
-    mount(el) {
-      const { id, browser, os, device, place, ip, time } = request;
-      sessions = [{ id, browser, os, device, place, ip, since: `${time} hôm nay`, lastActive: 'vừa xong' }, ...sessions.filter((session) => session.id !== id)];
+      </div>`;
+    },
+    mount(el, p) {
+      const req = p.request || request;
+      const id = p.id || req.id || request.id;
+      const browser = req.browser || request.browser;
+      const os = req.os || request.os;
+      const device = req.device || `${browser} trên ${os}`;
+      const place = req.place || req.ip || '';
+      const time = req.time || '';
+      sessions = [{ id, browser, os, device, place, ip: req.ip || '', since: time, lastActive: 'vừa xong' }, ...sessions.filter((session) => session.id !== id)];
       DATA.webSessions = sessions;
       const doneEntry = {
         id: `done-${id}`,
         status: 'ok',
         title: `Đã duyệt ${browser} trên ${device}`,
-        meta: `${place}, ${time} hôm nay`,
+        meta: place ? `${place}, ${time}` : time,
       };
       loginHistory = [doneEntry, ...loginHistory.filter((item) => item.id !== doneEntry.id)];
       el.querySelector('[data-wl-home]').onclick = () => App.reset('home');
@@ -470,14 +599,13 @@
     App.reset('home', {}, 'none');
     App.go(name, p, 'none');
   }
-  App.state('Quét mã', () => preview('webScan'), group);
-  App.state('Quét mã: chưa cấp camera', () => preview('webScan', { state: 'denied' }), group);
-  App.state('Quét mã: mã hết hạn', () => preview('webScan', { state: 'expired' }), group);
-  App.state('Xác nhận đăng nhập', () => preview('webConfirm'), group);
-  App.state('Xác nhận: vị trí lạ', () => preview('webConfirm', { unusual: true }), group);
-  App.state('Xác nhận: hết hạn', () => preview('webConfirm', { state: 'expired' }), group);
-  App.state('Xác nhận: chọn sai số', () => preview('webConfirm', { state: 'cancelled' }), group);
-  App.state('Xác nhận: Face ID không khớp', () => preview('webConfirm', { state: 'faceIdFailed' }), group);
+  App.state('Quét mã', () => preview('webScan', { qa: true }), group);
+  App.state('Quét mã: chưa cấp camera', () => preview('webScan', { state: 'denied', qa: true }), group);
+  App.state('Quét mã: mã hết hạn', () => preview('webScan', { state: 'expired', qa: true }), group);
+  App.state('Xác nhận đăng nhập', () => preview('webConfirm', { qa: true }), group);
+  App.state('Xác nhận: vị trí lạ', () => preview('webConfirm', { unusual: true, qa: true }), group);
+  App.state('Xác nhận: hết hạn', () => preview('webConfirm', { state: 'expired', qa: true }), group);
+  App.state('Xác nhận: Face ID không khớp', () => preview('webConfirm', { state: 'faceIdFailed', qa: true }), group);
   App.state('Đăng nhập web thành công', () => App.reset('webDone'), group);
   App.state('Web xin đăng nhập (thông báo đẩy)', () => {
     App.reset('home');
@@ -488,7 +616,7 @@
       App.notify({
         title: 'Yêu cầu đăng nhập web',
         body: 'Safari trên iMac quầy thuốc, Quận 3. Chạm để duyệt.',
-        onTap: () => { if (active(home)) App.go('webConfirm', { from: 'push', expiresAt }, 'up'); },
+        onTap: () => { if (active(home)) App.go('webConfirm', { from: 'push', expiresAt, qa: true }, 'up'); },
       });
     }, 700);
   }, group);
