@@ -17,7 +17,9 @@
     "test:rls": "docker exec -i supabase_db_PharmaPOS_V3 psql -U postgres -v ON_ERROR_STOP=1 -q < supabase/tests/rls_check.sql",
     "test:web-login": "node scripts/test-web-login.mjs",
     "test:passkey": "node scripts/test-passkey.mjs",
-    "serve:pwa": "node pwa/build.mjs && node pwa/tools/serve.mjs"
+    "serve:pwa": "node pwa/build.mjs && node pwa/tools/serve.mjs",
+    "push:keys": "node scripts/push-keys.mjs",
+    "test:push": "node --import tsx scripts/test-push.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",

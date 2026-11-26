@@ -25,7 +25,8 @@
 - [x] Auth 2a: Edge Function cấp tài khoản + trigger kích hoạt + `prototype/js/api.js` (e415938)
 - [x] Auth 2b: UI app email + mã 6 số + tạo mật khẩu, bỏ PIN app (giao 024, 025), test trên PWA — [opus xhigh]
 - [x] A: Face ID thật = passkey WebAuthn (test iPhone đạt) — [opus xhigh]
-- [ ] B: Push thông báo 4 loại — [opus xhigh]
+- [ ] B: Push — server + api.js xong (test:push đạt), còn UI Cài đặt thông báo + Thông báo (giao) và test iPhone — [opus xhigh]
+- [ ] C: gửi push thuốc sắp hết / cận hạn (dùng `notify()` + `notif_prefs.low_stock/expiring/expiry_days`) — [opus xhigh]
 - [ ] C: min_stock + hạn dùng theo lô (POS Nhập hàng) — [opus xhigh] + UI giao
 - [ ] D: app đọc dữ liệu thật — [opus xhigh] + UI giao
 - [ ] E: admin cấp/khoá/đổi quyền trong app + xem/thu hồi phiên POS — [opus xhigh] + UI giao

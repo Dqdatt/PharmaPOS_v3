@@ -47,11 +47,13 @@
     ],
     // Yêu cầu đăng nhập web đang chờ duyệt (web hiện số 47, điện thoại phải chọn đúng số này)
     webRequest: { id: 'r1', browser: 'Safari', os: 'macOS', device: 'iMac quầy thuốc', place: 'Quận 3, TP.HCM', ip: '113.161.24.10', time: '14:36', code: 47, choices: [82, 47, 15], expiresIn: 120 },
+    // Thông báo mẫu (mock của API.notifications.list): time 'HH:MM' = hôm nay, còn lại tính lùi daysAgo ngày
     notifications: [
-      { id: 'n1', kind: 'web', title: 'Có yêu cầu đăng nhập web', body: 'Safari trên iMac quầy thuốc, Quận 3', time: '14:36', unread: true },
-      { id: 'n2', kind: 'stock', title: 'Panadol Extra sắp hết', body: 'Còn 3 hộp, mức tối thiểu 10 hộp', time: '13:10', unread: true },
-      { id: 'n3', kind: 'revenue', title: 'Doanh thu hôm qua 11.534.000 ₫', body: 'Thấp hơn thứ Ba tuần trước 4%', time: '08:00', unread: false },
-      { id: 'n4', kind: 'expiry', title: '3 lô thuốc hết hạn trong 30 ngày', body: 'Augmentin 625mg hết hạn sớm nhất, 12/12', time: 'Hôm qua', unread: false },
+      { id: 'n1', kind: 'web', title: 'Đăng nhập POS mới', body: 'Chrome trên Windows', time: '14:36', unread: true },
+      { id: 'n2', kind: 'stock', title: 'Panadol Extra sắp hết', body: 'Còn 3 hộp, mức tối thiểu 10 hộp', time: '08:00', unread: true },
+      { id: 'n3', kind: 'revenue', title: 'Doanh thu 25/11', body: '11.534.000 ₫ từ 38 đơn bán lẻ', time: 'Hôm qua', daysAgo: 1, unread: false },
+      { id: 'n4', kind: 'debt', title: 'Công nợ nhà cung cấp', body: 'Còn nợ 2 nhà cung cấp, tổng 18.240.000 ₫', time: '23/11', daysAgo: 3, unread: false },
+      { id: 'n5', kind: 'expiry', title: '3 lô thuốc hết hạn trong 30 ngày', body: 'Augmentin 625mg hết hạn sớm nhất, 12/12', time: '22/11', daysAgo: 4, unread: false },
     ],
   };
 })();

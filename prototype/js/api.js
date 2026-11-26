@@ -35,6 +35,7 @@
   const badEmail = (email) => (EMAIL_RE.test(email) ? null : 'Email không hợp lệ');
   const badPass = (p) => (String(p || '').length >= MIN_PASS ? null : `Mật khẩu cần ít nhất ${MIN_PASS} ký tự`);
 
+  let me = null; // hồ sơ người đang đăng nhập (live), đọc qua API.me()
   async function readProfile() {
     const { data, error } = await sb.rpc('my_profile');
     if (error) throw error;
@@ -47,6 +48,7 @@
     if (profile.status === 'locked') { await sb.auth.signOut(); return fail('Tài khoản đã bị khoá, vui lòng liên hệ admin'); }
     const pk = pkLocal();
     if (pk && pk.uid !== profile.id) localStorage.removeItem(PK_KEY); // passkey của tài khoản khác: không mở khoá nhầm người
+    me = profile;
     return { ok: true, profile };
   }
 
@@ -91,12 +93,48 @@
   }
   const mockFace = async (error) => ((await App.faceId()) ? { ok: true } : { ok: false, retry: true, error });
 
+  // ---------- Thông báo đẩy (Web Push), gửi ở Edge Function `push` ----------
+  const UA = navigator.userAgent;
+  const isIOS = /iPhone|iPad|iPod/.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1);
+  const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  const pushReg = async () => { try { return pushSupported() ? await navigator.serviceWorker.getRegistration() : null; } catch (e) { return null; } };
+  let pushKey = null; // tải trước khoá VAPID (lúc đọc trạng thái) để sau khi bấm Bật không phải chờ mạng
+  const loadKey = () => pushKey || (pushKey = sb.functions.invoke('push', { body: { action: 'key' } })
+    .then(({ data }) => (data && data.key ? unb64u(data.key) : null), () => null)
+    .then((k) => { if (!k) pushKey = null; return k; }));
+  const prefsOut = (r) => ({ revenue: r.revenue, debt: r.debt, lowStock: r.low_stock, expiring: r.expiring, expiryDays: r.expiry_days });
+  const prefsIn = (p) => {
+    const o = {};
+    for (const [k, col] of [['revenue', 'revenue'], ['debt', 'debt'], ['lowStock', 'low_stock'], ['expiring', 'expiring']]) if (k in p) o[col] = !!p[k];
+    if ('expiryDays' in p) o.expiry_days = Number(p.expiryDays);
+    return o;
+  };
+  const mockPrefs = { revenue: true, debt: true, lowStock: true, expiring: true, expiryDays: 30 };
+  let mockList = null;
+  const mockNotifs = () => mockList || (mockList = (DATA.notifications || []).map((n) => {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(n.time || ''), t = new Date();
+    if (m) t.setHours(+m[1], +m[2], 0, 0); else t.setDate(t.getDate() - (n.daysAgo || 1));
+    return { id: n.id, kind: n.kind, title: n.title, body: n.body || '', at: t.getTime(), unread: !!n.unread };
+  }));
+  // Thông báo vừa bấm để mở app: ?notif=<kind> (app chưa mở) hoặc tin nhắn từ sw.js (app đang mở)
+  let opened = new URLSearchParams(location.search).get('notif');
+  if (opened !== null) history.replaceState(null, '', location.pathname + location.hash);
+  const openFns = [];
+  if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', (e) => {
+    if (!e.data || e.data.type !== 'medipos-notif') return;
+    opened = null;
+    openFns.forEach((fn) => { try { fn(String(e.data.kind || '')); } catch (err) { console.error(err); } });
+  });
+
   const MOCK_PROFILE = () => ({ id: 0, name: DATA.owner.name, role: 'manager', status: 'active', email: 'demo@medipos.vn', phone: '84903128466' });
   let mockStatus = 'invited';
 
   const API = (window.API = {
     live,
     MIN_PASS,
+    /** Hồ sơ đã đăng nhập { id, name, role: admin|manager|staff, ... } hoặc null. Mock: luôn là QL. */
+    me: () => (live ? me : MOCK_PROFILE()),
 
     /** Gửi mã 6 số qua email (lần đầu đăng nhập hoặc quên mật khẩu). */
     async sendCode(email) {
@@ -152,13 +190,16 @@
         if (!data.session) return null;
         const p = await readProfile();
         if (!p || p.status === 'locked') { await sb.auth.signOut(); return null; }
+        me = p;
         return p;
       } catch (e) { return null; }
     },
 
     async signOut() {
+      await API.push.disable(); // máy dùng chung không nhận thông báo của người trước
       await API.bio.disable();
       localStorage.removeItem(PK_KEY); // xoá ở server lỗi (mất mạng) thì máy này vẫn phải quên passkey
+      me = null;
       if (live) { try { await sb.auth.signOut(); } catch (e) { /* vẫn xoá phiên cục bộ */ } }
       return { ok: true };
     },
@@ -257,6 +298,89 @@
           if (e && e.vi) localStorage.removeItem(PK_KEY); // phiên hết hạn: server không xoá được, máy này vẫn tắt
           return e && e.vi ? { ok: true } : pkFail(e);
         }
+      },
+    },
+
+    /** Thông báo đẩy trên máy này. Đăng nhập POS luôn báo; các loại khác theo prefs. */
+    push: {
+      /** 'unsupported' | 'install' (iPhone: phải Thêm vào Màn hình chính) | 'denied' (đã chặn trong Cài đặt) | 'off' | 'on' */
+      async status() {
+        if (!live) return localStorage.getItem('medipos.push') === '1' ? 'on' : 'off';
+        if (!pushSupported()) return isIOS && !standalone() ? 'install' : 'unsupported';
+        const reg = await pushReg();
+        if (!reg) return 'unsupported';
+        if (Notification.permission === 'denied') return 'denied';
+        let sub = null;
+        try { sub = Notification.permission === 'granted' ? await reg.pushManager.getSubscription() : null; } catch (e) { /* coi như chưa bật */ }
+        // Đã bật: đăng ký lại cho khớp tài khoản đang đăng nhập (server có thể đã xoá endpoint)
+        if (sub) sb.rpc('push_subscribe', { sub: sub.toJSON(), ua: UA }).then(() => {}, () => {});
+        else loadKey();
+        return sub ? 'on' : 'off';
+      },
+      /** Bật: gọi NGAY trong sự kiện bấm (iOS chỉ hỏi quyền khi người dùng vừa bấm). Từ chối → { ok: false, denied }. */
+      async enable() {
+        if (!live) { await wait(500); localStorage.setItem('medipos.push', '1'); return { ok: true }; }
+        if (!pushSupported()) return fail(isIOS && !standalone() ? 'Thêm MediPOS vào Màn hình chính để nhận thông báo' : 'Máy này không nhận được thông báo');
+        try {
+          const perm = await Notification.requestPermission(); // trước mọi await khác
+          if (perm !== 'granted') return { ok: false, denied: perm === 'denied', error: 'MediPOS chưa được phép gửi thông báo' };
+          const reg = await pushReg();
+          const key = reg && await loadKey();
+          if (!reg) return fail('Máy này không nhận được thông báo');
+          if (!key) return fail('Máy chủ chưa bật thông báo');
+          const old = await reg.pushManager.getSubscription();
+          if (old) await old.unsubscribe(); // khoá VAPID có thể đã đổi
+          const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: key });
+          const { data, error } = await sb.rpc('push_subscribe', { sub: sub.toJSON(), ua: UA });
+          if (error || data !== true) { await sub.unsubscribe(); return error ? fail(error) : fail('Không bật được thông báo trên máy này'); }
+          return { ok: true };
+        } catch (e) { return fail(e); }
+      },
+      /** Tắt trên máy này (đăng xuất cũng gọi). */
+      async disable() {
+        localStorage.removeItem('medipos.push');
+        if (!live) return { ok: true };
+        try {
+          const reg = await pushReg();
+          const sub = reg && await reg.pushManager.getSubscription();
+          if (!sub) return { ok: true };
+          await sb.rpc('push_unsubscribe', { endpoint: sub.endpoint }); // lỗi (hết phiên) cũng không sao: huỷ ở máy → server xoá khi gặp 410
+          await sub.unsubscribe();
+          return { ok: true };
+        } catch (e) { return fail(e); }
+      },
+      /** Đọc (không truyền gì) hoặc lưu cài đặt của tài khoản. prefs = { revenue, debt, lowStock, expiring, expiryDays: 15|30|60|90 } */
+      async prefs(changes) {
+        if (!live) { await wait(300); Object.assign(mockPrefs, changes || {}); return { ok: true, prefs: { ...mockPrefs } }; }
+        try {
+          const { data, error } = await sb.rpc('my_notif_prefs', { changes: prefsIn(changes || {}) });
+          return error ? fail(error) : { ok: true, prefs: prefsOut(data) };
+        } catch (e) { return fail(e); }
+      },
+      /** kind của thông báo vừa bấm để mở app (null nếu không), chỉ trả 1 lần. Gọi sau khi vào được app. */
+      takeOpened() { const k = opened; opened = null; return k; },
+      /** fn(kind) khi người dùng bấm thông báo lúc app đang mở. */
+      onOpen(fn) { openFns.push(fn); },
+    },
+
+    /** Thông báo đã nhận (màn Thông báo). item = { id, kind: web|revenue|debt|stock|expiry, title, body, at (ms), unread } */
+    notifications: {
+      async list() {
+        if (!live) { await wait(400); return { ok: true, items: mockNotifs().map((n) => ({ ...n })) }; }
+        try {
+          const { data, error } = await sb.from('notifications').select('id, kind, title, body, created_at, read_at')
+            .order('created_at', { ascending: false }).limit(50);
+          if (error) return fail(error);
+          return { ok: true, items: data.map((n) => ({ id: n.id, kind: n.kind, title: n.title, body: n.body || '', at: new Date(n.created_at).getTime(), unread: !n.read_at })) };
+        } catch (e) { return fail(e); }
+      },
+      /** Đánh dấu đã đọc: ids = mảng id, bỏ trống = tất cả. */
+      async read(ids) {
+        if (!live) { mockNotifs().forEach((n) => { if (!ids || ids.includes(n.id)) n.unread = false; }); return { ok: true }; }
+        try {
+          const { error } = await sb.rpc('notifications_read', { ids: ids && ids.length ? ids : null });
+          return error ? fail(error) : { ok: true };
+        } catch (e) { return fail(e); }
       },
     },
   });

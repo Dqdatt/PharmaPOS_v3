@@ -137,3 +137,6 @@ BEGIN
     UPDATE public.invoices SET total = v_total WHERE id = v_inv_id;
   END LOOP;
 END $$;
+
+-- Cron thông báo đẩy → Edge Function `push` (DB local gọi Kong trong mạng Docker). DB thật: đặt URL project ở bước F.
+SELECT vault.create_secret('http://kong:8000/functions/v1', 'functions_url');

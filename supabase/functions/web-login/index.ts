@@ -4,6 +4,9 @@
 // Phiên chỉ cấp 1 lần (approved → used), chỉ cho QL/NV đang active; admin không vào POS.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { issueSession } from '../_shared/session.ts';
+import { deviceName, notify } from '../_shared/push.ts';
+
+declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void };
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -49,7 +52,7 @@ Deno.serve(async (req) => {
     const id = String(body.id ?? ''), secret = String(body.secret ?? '');
     if (!UUID.test(id) || secret.length < 32) return reply(400, { error: 'Dữ liệu không hợp lệ' });
     const { data: r } = await db.from('web_login_requests')
-      .select('status, secret_hash, expires_at, decided_at').eq('id', id).maybeSingle();
+      .select('status, secret_hash, expires_at, decided_at, user_agent').eq('id', id).maybeSingle();
     if (!r || r.secret_hash !== await sha256(secret)) return reply(404, { error: 'Không tìm thấy yêu cầu' });
 
     if (r.status === 'rejected') return reply(200, { status: 'rejected' });
@@ -67,6 +70,8 @@ Deno.serve(async (req) => {
     }
     const session = await issueSession(db, u.email);
     if (!session) return reply(500, { error: 'Không cấp được phiên đăng nhập' });
+    // Báo cho chính tài khoản đó, không chờ (POS nhận phiên ngay)
+    EdgeRuntime.waitUntil(notify(db, [claimed.user_id], { kind: 'web', title: 'Đăng nhập POS mới', body: deviceName(r.user_agent), ref: id }));
     return reply(200, { status: 'approved', session });
   }
 

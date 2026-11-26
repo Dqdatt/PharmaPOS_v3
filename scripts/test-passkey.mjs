@@ -3,7 +3,9 @@
 import assert from 'node:assert/strict';
 import { execSync } from 'node:child_process';
 import { createHash, generateKeyPairSync, randomBytes, sign } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
+import { fakePushService } from './lib/fake-push.mjs';
 
 const env = Object.fromEntries(execSync('supabase status -o env', { encoding: 'utf8' })
   .split('\n').map(l => l.match(/^(\w+)="?(.*?)"?$/)).filter(Boolean).map(m => [m[1], m[2]]));
@@ -108,8 +110,17 @@ assert.deepEqual(o.allowCredentials.map(c => c.id), [phone.id], 'chỉ passkey c
 assert.equal((await pk(nv, { action: 'approve', id: w.id, response: lanPhone.get(o) })).code, 'bio_failed', 'passkey người khác');
 o = await pk(nv, { action: 'approve-options', id: w.id });
 assert.equal((await pk(nv, { action: 'approve', id: w.id, response: phone.get(o) })).status, 'approved');
+const push = await fakePushService(readFileSync(new URL('../supabase/functions/.env', import.meta.url), 'utf8').match(/^VAPID_PUBLIC_KEY=(.+)$/m)[1]);
+const nvPush = push.add('nv-web');
+await svc.from('push_subscriptions').insert({ endpoint: nvPush.sub.endpoint, user_id: 3, p256dh: nvPush.sub.keys.p256dh, auth: nvPush.sub.keys.auth });
 const poll = (await mk().functions.invoke('web-login', { body: { action: 'poll', id: w.id, secret: w.secret } })).data;
 assert.equal(poll.status, 'approved'); assert.ok(poll.session?.access_token);
+await push.waitFor(1);
+assert.deepEqual(push.errors, []);
+assert.deepEqual(push.inbox.map((x) => [x.name, x.msg.kind, x.msg.title]), [['nv-web', 'web', 'Đăng nhập POS mới']], 'POS đăng nhập → báo cho chính tài khoản');
+assert.equal((await nv.from('notifications').select('kind').eq('kind', 'web').eq('ref', w.id)).data.length, 1, 'lưu vào màn Thông báo');
+await svc.from('push_subscriptions').delete().eq('endpoint', nvPush.sub.endpoint);
+push.close();
 assert.equal((await pk(nv, { action: 'approve-options', id: w.id })).code, 'expired', 'mã đã dùng');
 
 // Tắt Face ID → passkey hết hiệu lực
