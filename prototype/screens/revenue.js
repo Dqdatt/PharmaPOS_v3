@@ -78,13 +78,15 @@ App.css(`
 .rv-rc-head h2 { font-size: 17px; font-weight: 700; }
 .rv-rc-head p { font-size: 13px; color: var(--ink-2); margin-top: 4px; line-height: 1.4; }
 .rv-rc-meta { font-size: 13px; color: var(--ink-3); margin-top: 10px; }
+.rv-rc-deleted { margin-top: 10px; }
 .rv-rc-dash { border-top: 1px dashed var(--line); margin: 16px 0; }
 .rv-rc-item { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 6px 0; font-size: 15px; }
 .rv-rc-item-main { min-width: 0; flex: 1; }
 .rv-rc-usage { font-size: 13px; color: var(--ink-3); margin-top: 2px; line-height: 1.4; }
 .rv-rc-item > span:last-child { color: var(--ink-2); white-space: nowrap; }
 .rv-rc-total { display: flex; justify-content: space-between; align-items: baseline; font-size: 20px; font-weight: 700; }
-.rv-rc-info { display: flex; justify-content: space-between; font-size: 14px; color: var(--ink-2); margin-top: 8px; }
+.rv-rc-info { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; color: var(--ink-2); margin-top: 8px; }
+.rv-rc-info span:last-child { text-align: right; }
 .rv-rc-cust .row { grid-template-columns: auto minmax(0, 1fr); cursor: default; }
 .rv-rc-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 20px 16px calc(var(--sab) + 16px); }
 .rv-rc-actions .btn { padding: 0 12px; width: 100%; }
@@ -93,106 +95,78 @@ App.css(`
 App.icons.rvSend = '<path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/>';
 
 (function () {
+  let firstRev = true;
   const itemsText = (a) => (a.length <= 2 ? a.join(', ') : `${a.slice(0, 2).join(', ')} và ${a.length - 2} món khác`);
-  const initials = (name) => name.trim().split(/\s+/).slice(-2).map((w) => w[0]).join('').toUpperCase();
-
-  const EXTRA_INVOICES = [
-    { id: 'HD2511-081', time: '13:28', items: ['Efferalgan 500mg', 'Vitamin C 500'], total: 118000, staff: 'Ngọc Hân', pay: 'Chuyển khoản' },
-    { id: 'HD2511-080', time: '13:06', items: ['Decolgen Forte', 'Strepsils'], total: 74000, staff: 'Thu Trang', pay: 'Tiền mặt' },
-    { id: 'HD2511-079', time: '12:42', items: ['Panadol Extra', 'Oresol 245'], total: 68000, staff: 'Minh Tuấn', pay: 'Tiền mặt' },
-    { id: 'HD2511-078', time: '12:15', items: ['Telfast HD 180', 'Nước muối sinh lý'], total: 145000, staff: 'Ngọc Hân', pay: 'Chuyển khoản' },
-    { id: 'HD2511-077', time: '11:48', items: ['Smecta', 'Berberin 100mg', 'Oresol'], total: 112000, staff: 'Minh Tuấn', pay: 'Thẻ' },
-    { id: 'HD2511-076', time: '11:24', items: ['Augmentin 625mg', 'Men vi sinh Enterogermina'], total: 315000, staff: 'Ngọc Hân', pay: 'Chuyển khoản' },
-    { id: 'HD2511-075', time: '11:05', items: ['Berberin 100mg'], total: 48000, staff: 'Thu Trang', pay: 'Tiền mặt' },
-  ];
-  const ALL_INVOICES = [...DATA.invoices, ...EXTRA_INVOICES];
+  const initials = (name) => name.trim().split(/\s+/).slice(-2).map((w) => w[0]).join('').toUpperCase() || '?';
   const PAY_FILTERS = ['Tất cả', 'Chuyển khoản', 'Tiền mặt', 'Thẻ'];
-  const USAGE_GUIDE = {
-    'Panadol Extra': 'Khi đau hoặc sốt, cách 4 đến 6 giờ',
-    'Berberin': 'Sáng 2, tối 2 viên, sau ăn',
-    'Berberin 100mg': 'Sáng 2, tối 2 viên, sau ăn',
-    'Oresol': 'Pha 1 gói với 200 ml nước',
-    'Oresol 245': 'Pha 1 gói với 200 ml nước',
-    'Vitamin C 500': 'Sáng 1 viên, sau ăn',
-    'Augmentin 625mg': 'Sáng 1, tối 1 viên, sau ăn',
-    'Telfast HD 180': 'Tối 1 viên trước khi ngủ',
-    'Strepsils': 'Ngậm 1 viên khi đau họng, cách 3 giờ',
-    'Smecta': 'Sáng 1, chiều 1 gói, pha với nước',
-    'Men vi sinh Enterogermina': 'Sáng 1, tối 1 ống, lắc đều trước khi uống',
-    'Gaviscon': 'Chiều tối 1 gói sau ăn 30 phút',
-    'Efferalgan 500mg': 'Khi sốt, pha 1 viên với nước, cách 4 đến 6 giờ',
-    'Decolgen Forte': 'Sáng 1, chiều 1 viên, sau ăn',
-    'Nước muối sinh lý': 'Nhỏ hoặc rửa mũi 2 đến 3 lần mỗi ngày',
-  };
-  const usageOf = (name) => USAGE_GUIDE[name] || 'Theo chỉ dẫn của dược sĩ';
   const hourOf = (iv) => Number(String(iv.time).split(':')[0]) || 0;
 
-  function buildReceiptLines(iv) {
-    const items = iv.items || [];
-    const n = items.length;
-    if (!n || iv.total <= 0) return [];
-    if (n === 1) return [{ name: items[0], qty: 1, unit: iv.total }];
-    const unitStep = iv.total >= n * 1000 ? 1000 : 1;
-    const base = Math.max(unitStep, Math.floor(iv.total / n / unitStep) * unitStep);
-    let rem = iv.total;
-    return items.map((name, i) => {
-      if (i === n - 1) return { name, qty: 1, unit: rem };
-      const lineTotal = Math.min(base, Math.max(unitStep, rem - (n - 1 - i) * unitStep));
-      const qty = i === 0 && lineTotal >= 60000 && lineTotal % 2000 === 0 ? 2 : 1;
-      rem -= lineTotal;
-      return { name, qty, unit: lineTotal / qty };
-    });
-  }
-
-  function renderPeriod(period) {
-    const D = DATA, t = D.today, m = D.month;
+  function renderPeriod(period, D) {
+    const t = D.today, m = D.month, isStaff = D.role === 'staff';
+    const prefix = isStaff ? 'Doanh số' : 'Doanh thu';
     if (period === 'week') {
-      const sum = D.week.reduce((s, d) => s + d.value, 0);
-      const avg = sum / D.week.length;
-      const max = Math.max(...D.week.map((d) => d.value));
-      const bars = D.week.map((d, i) => {
+      const w = D.week || [];
+      const sum = w.reduce((s, d) => s + d.value, 0);
+      const avg = w.length ? sum / w.length : 0;
+      const max = Math.max(...w.map((d) => d.value), 1);
+      const bars = w.map((d, i) => {
         const h = Math.max(8, Math.round((d.value / max) * 72));
-        const isNow = i === D.week.length - 1;
+        const isNow = i === w.length - 1;
         return `<div class="rv-wcol" data-wi="${i}"><span class="rv-wbar${isNow ? ' now' : ''}" style="height:${h}px;animation-delay:${i * 30}ms"></span></div>`;
       }).join('');
-      const axis = D.week.map((d, i) => `<span class="${i === D.week.length - 1 ? 'now' : ''}">${App.esc(d.label)}</span>`).join('');
+      const axis = w.map((d, i) => `<span class="${i === w.length - 1 ? 'now' : ''}">${App.esc(d.label)}</span>`).join('');
       return {
-        label: 'Doanh thu 7 ngày qua',
+        label: `${prefix} 7 ngày qua`,
         total: sum,
         deltaHtml: `<div class="rv-delta neutral" data-skel>Trung bình ${App.short(avg)} mỗi ngày</div>`,
         chartHtml: `<div class="rv-wbars">${bars}</div><div class="rv-waxis">${axis}</div>`,
       };
     }
     if (period === 'month') {
-      const delta = ((m.revenue - m.lastMonthSameDay) / m.lastMonthSameDay) * 100;
+      const hasLast = m.lastMonthSameDay > 0;
+      const delta = hasLast ? ((m.revenue - m.lastMonthSameDay) / m.lastMonthSameDay) * 100 : 0;
       const up = delta >= 0;
-      const pct = Math.min(100, Math.round((m.revenue / m.target) * 100));
-      const left = Math.max(0, m.target - m.revenue);
-      return {
-        label: `Doanh thu ${m.label.toLowerCase()}`,
-        total: m.revenue,
-        deltaHtml: `<div class="rv-delta ${up ? 'ok' : 'bad'}" data-skel>${App.icon(up ? 'up' : 'downRight', 16)}${up ? 'Cao hơn' : 'Thấp hơn'} cùng kỳ tháng trước ${App.pct(Math.abs(Math.round(delta * 10) / 10))}</div>`,
-        chartHtml: `<div class="rv-goal">
+      const deltaHtml = hasLast
+        ? `<div class="rv-delta ${up ? 'ok' : 'bad'}" data-skel>${App.icon(up ? 'up' : 'downRight', 16)}${up ? 'Cao hơn' : 'Thấp hơn'} cùng kỳ tháng trước ${App.pct(Math.abs(Math.round(delta * 10) / 10))}</div>`
+        : `<div class="rv-delta neutral" data-skel>Chưa có số liệu tháng trước</div>`;
+      let chartHtml = '';
+      if (m.target > 0) {
+        const pct = Math.min(100, Math.round((m.revenue / m.target) * 100));
+        const left = Math.max(0, m.target - m.revenue);
+        chartHtml = `<div class="rv-goal">
           <div class="rv-goal-top"><span>Mục tiêu ${App.short(m.target)}</span><span class="num">${pct}%</span></div>
           <div class="rv-goal-track"><div class="rv-goal-fill" data-pct="${pct}"></div></div>
-          <div class="rv-goal-sub">Còn ${App.short(left)}, 5 ngày nữa hết tháng</div>
-        </div>`,
+          <div class="rv-goal-sub">Còn ${App.short(left)}</div>
+        </div>`;
+      } else if (m.invoices !== undefined) {
+        chartHtml = `<div class="rv-goal"><div class="rv-goal-sub">${App.num(m.invoices)} hóa đơn trong ${App.esc((m.label || 'tháng này').toLowerCase())}</div></div>`;
+      }
+      return {
+        label: `${prefix} ${(m.label || 'tháng này').toLowerCase()}`,
+        total: m.revenue,
+        deltaHtml,
+        chartHtml,
       };
     }
-    const delta = ((t.revenue - t.yesterday) / t.yesterday) * 100;
+    const hasYest = t.yesterday > 0;
+    const delta = hasYest ? ((t.revenue - t.yesterday) / t.yesterday) * 100 : 0;
     const up = delta >= 0;
-    const max = Math.max(...t.hourly);
+    const deltaHtml = hasYest
+      ? `<div class="rv-delta ${up ? 'ok' : 'bad'}" data-skel>${App.icon(up ? 'up' : 'downRight', 16)}${up ? 'Cao hơn' : 'Thấp hơn'} hôm qua ${App.pct(Math.abs(Math.round(delta * 10) / 10))}</div>`
+      : `<div class="rv-delta neutral" data-skel>Chưa có số liệu hôm qua</div>`;
+    const arr = t.hourly && t.hourly.length ? t.hourly : Array(16).fill(0);
+    const max = Math.max(...arr, 1);
     const nowIdx = t.nowHour - t.hourStart;
-    const bars = t.hourly.map((v, i) => {
+    const bars = arr.map((v, i) => {
       const later = i > nowIdx;
       const h = later ? 4 : Math.max(6, Math.round((v / max) * 72));
       return `<span class="rv-bar${i === nowIdx ? ' now' : ''}${later ? ' later' : ''}" style="height:${h}px;animation-delay:${i * 30}ms"></span>`;
     }).join('');
     const axis = [[1, '7h'], [6, '12h'], [11, '17h'], [16, '22h']].map(([c, l]) => `<span style="grid-column:${c}">${l}</span>`).join('');
     return {
-      label: 'Doanh thu hôm nay',
+      label: isStaff ? 'Doanh số của bạn' : 'Doanh thu hôm nay',
       total: t.revenue,
-      deltaHtml: `<div class="rv-delta ${up ? 'ok' : 'bad'}" data-skel>${App.icon(up ? 'up' : 'downRight', 16)}${up ? 'Cao hơn' : 'Thấp hơn'} hôm qua ${App.pct(Math.abs(Math.round(delta * 10) / 10))}</div>`,
+      deltaHtml,
       chartHtml: `<div class="rv-bars">${bars}</div><div class="rv-axis">${axis}</div>`,
     };
   }
@@ -201,12 +175,11 @@ App.icons.rvSend = '<path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/>';
     tab: 'revenue',
     render: (p) => {
       const period = p.period || 'today';
-      const D = DATA, t = D.today;
-      const view = renderPeriod(period);
-      const payTotal = t.payments.reduce((s, x) => s + x.value, 0) || 1;
-      const showTodayNote = period !== 'today';
+      const isStaff = !!(window.API && API.me && API.me() && API.me().role === 'staff');
+      const axis = [[1, '7h'], [6, '12h'], [11, '17h'], [16, '22h']].map(([c, l]) => `<span style="grid-column:${c}">${l}</span>`).join('');
+      const skelBars = Array.from({ length: 16 }, () => '<span class="rv-bar" style="height:24px"></span>').join('');
       return `
-        <h1 class="page-title rv-title">Doanh thu</h1>
+        <h1 class="page-title rv-title">${isStaff ? 'Doanh số của bạn' : 'Doanh thu'}</h1>
         <div class="rv-seg-wrap">
           <div class="seg" role="tablist">
             <span class="seg-thumb"></span>
@@ -216,53 +189,58 @@ App.icons.rvSend = '<path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/>';
           </div>
         </div>
 
-        <div class="rv-hero">
-          <div class="rv-label">${view.label}</div>
-          <div class="rv-total num" data-skel><span class="rv-v">${App.num(view.total)}</span><span class="rv-cur">₫</span></div>
-          <div class="rv-delta-slot">${view.deltaHtml}</div>
-          <div class="rv-chart">${view.chartHtml}</div>
-        </div>
-
-        <div class="section">
-          <div class="section-head"><h2>Hình thức thanh toán</h2></div>
-          <div class="card" style="margin:0 16px">
-            ${t.payments.map((x) => {
-              const pct = Math.round((x.value / payTotal) * 100);
-              return `<div class="row rv-pay-row">
-                <div class="rv-pay-head"><span>${App.esc(x.key)}</span><b class="num" data-skel>${App.money(x.value)}</b></div>
-                <div class="rv-pay-track"><div class="rv-pay-fill" style="width:${pct}%"></div></div>
-                <div class="rv-pay-pct" data-skel>${pct}% tổng</div>
-              </div>`;
-            }).join('')}
+        <div class="rv-body">
+          <div class="rv-hero">
+            <div class="rv-label" data-skel>${isStaff ? 'Doanh số của bạn' : 'Doanh thu hôm nay'}</div>
+            <div class="rv-total num" data-skel><span class="rv-v">0</span><span class="rv-cur">₫</span></div>
+            <div class="rv-delta-slot"><div class="rv-delta neutral" data-skel>Đang tải số liệu</div></div>
+            <div class="rv-chart"><div class="rv-bars">${skelBars}</div><div class="rv-axis">${axis}</div></div>
           </div>
-        </div>
 
-        <div class="section">
-          <div class="section-head"><h2>Theo nhân viên</h2><span class="rv-staff-note" style="font-size:13px;color:var(--ink-3)">${showTodayNote ? 'Hôm nay' : ''}</span></div>
-          <div class="card" style="margin:0 16px">
-            ${t.byStaff.map((s) => `
-              <div class="row" style="cursor:default">
-                <div class="rv-ava">${App.esc(initials(s.name))}</div>
-                <div class="row-main"><div class="row-title" data-skel>${App.esc(s.name)}</div><div class="row-sub" data-skel>${s.invoices} hóa đơn</div></div>
-                <div class="row-end num" data-skel>${App.money(s.value)}</div>
+          <div class="section">
+            <div class="section-head"><h2>Hình thức thanh toán</h2></div>
+            <div class="card rv-pay-list" style="margin:0 16px">
+              ${[0, 1].map(() => `<div class="row rv-pay-row">
+                <div class="rv-pay-head"><span data-skel>Thanh toán</span><b class="num" data-skel>0 ₫</b></div>
+                <div class="rv-pay-track"><div class="rv-pay-fill" style="width:50%"></div></div>
+                <div class="rv-pay-pct" data-skel>0% tổng</div>
               </div>`).join('')}
+            </div>
+          </div>
+
+          <div class="section rv-staff-sec">
+            <div class="section-head"><h2>Theo nhân viên</h2><span class="rv-staff-note" style="font-size:13px;color:var(--ink-3)">${period !== 'today' ? 'Hôm nay' : ''}</span></div>
+            <div class="card rv-staff-list" style="margin:0 16px">
+              ${[0, 1].map(() => `
+                <div class="row" style="cursor:default">
+                  <div class="rv-ava" data-skel>NV</div>
+                  <div class="row-main"><div class="row-title" data-skel>Nhân viên</div><div class="row-sub" data-skel>0 hóa đơn</div></div>
+                  <div class="row-end num" data-skel>0 ₫</div>
+                </div>`).join('')}
+            </div>
+          </div>
+
+          <div class="section rv-recent">
+            <div class="section-head"><h2>Hóa đơn</h2><a data-go="invoices">Xem tất cả</a></div>
+            <div class="rv-recent-list">
+              ${[0, 1, 2].map(() => `
+                <div class="row">
+                  <div class="rv-time num" data-skel>00:00</div>
+                  <div class="row-main"><div class="row-title" data-skel>Đang tải hóa đơn</div><div class="row-sub" data-skel>Vui lòng chờ</div></div>
+                  <div class="row-end num" data-skel>0 ₫</div>
+                </div>`).join('')}
+            </div>
           </div>
         </div>
-
-        <div class="section rv-recent">
-          <div class="section-head"><h2>Hóa đơn</h2><a data-go="invoices">Xem tất cả</a></div>
-          ${D.invoices.slice(0, 3).map((iv) => `
-            <div class="row tap" data-go="invoiceDetail" data-p='${JSON.stringify({ id: iv.id })}'>
-              <div class="rv-time num" data-skel>${iv.time}</div>
-              <div class="row-main"><div class="row-title" data-skel>${App.esc(itemsText(iv.items))}</div><div class="row-sub" data-skel>${App.esc(iv.staff)}, ${App.esc(iv.pay.toLowerCase())}</div></div>
-              <div class="row-end num" data-skel>${App.money(iv.total)}</div>
-            </div>`).join('')}
-        </div>`;
+        <div class="rv-err-wrap" hidden></div>`;
     },
     mount: (el, p) => {
       const seg = el.querySelector('.seg');
       const thumb = el.querySelector('.seg-thumb');
       const btns = [...seg.querySelectorAll('button')];
+      let dashData = null;
+      let curPeriod = p.period || 'today';
+
       const placeThumb = () => {
         const on = seg.querySelector('button.on');
         if (on && on.offsetWidth) {
@@ -274,9 +252,13 @@ App.icons.rvSend = '<path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/>';
       requestAnimationFrame(placeThumb);
 
       const animateChart = (period, countUp) => {
+        if (!dashData) return;
         const valEl = el.querySelector('.rv-v');
-        const target = period === 'week' ? DATA.week.reduce((s, d) => s + d.value, 0) : period === 'month' ? DATA.month.revenue : DATA.today.revenue;
+        const target = period === 'week'
+          ? (dashData.week || []).reduce((s, d) => s + d.value, 0)
+          : period === 'month' ? dashData.month.revenue : dashData.today.revenue;
         if (countUp) App.countUp(valEl, target, 650);
+        else valEl.textContent = App.num(target);
         const bars = el.querySelector('.rv-bars, .rv-wbars');
         if (bars) { void bars.offsetWidth; bars.classList.add('grow'); }
         const fill = el.querySelector('.rv-goal-fill');
@@ -293,7 +275,8 @@ App.icons.rvSend = '<path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/>';
 
       const bindWeekTap = () => {
         const wbars = el.querySelector('.rv-wbars');
-        if (!wbars) return;
+        if (!wbars || !dashData) return;
+        const w = dashData.week || [];
         wbars.addEventListener('click', (e) => {
           const col = e.target.closest('.rv-wcol');
           if (!col) return;
@@ -302,15 +285,28 @@ App.icons.rvSend = '<path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/>';
           const wasPicked = col.querySelector('.rv-wbar').classList.contains('picked');
           clearTip();
           if (wasPicked) return;
-          const d = DATA.week[idx];
+          const d = w[idx];
+          if (!d) return;
           wbars.classList.add('has-pick');
           col.querySelector('.rv-wbar').classList.add('picked');
-          const posCls = idx === 0 ? ' left' : idx === DATA.week.length - 1 ? ' right' : '';
+          const posCls = idx === 0 ? ' left' : idx === w.length - 1 ? ' right' : '';
           const tip = document.createElement('div');
           tip.className = 'rv-tip num' + posCls;
           tip.textContent = `${d.label} ${d.date}, ${App.money(d.value)}`;
           col.appendChild(tip);
         });
+      };
+
+      const drawPeriod = (period, countUp) => {
+        if (!dashData) return;
+        curPeriod = period;
+        const view = renderPeriod(period, dashData);
+        el.querySelector('.rv-label').textContent = view.label;
+        el.querySelector('.rv-delta-slot').innerHTML = view.deltaHtml;
+        el.querySelector('.rv-chart').innerHTML = view.chartHtml;
+        el.querySelector('.rv-staff-note').textContent = period !== 'today' ? 'Hôm nay' : '';
+        animateChart(period, countUp);
+        bindWeekTap();
       };
 
       el.addEventListener('click', (e) => {
@@ -322,22 +318,74 @@ App.icons.rvSend = '<path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/>';
         btns.forEach((x) => x.classList.remove('on'));
         b.classList.add('on');
         placeThumb();
-        const period = b.dataset.period;
-        const view = renderPeriod(period);
-        el.querySelector('.rv-label').textContent = view.label;
-        el.querySelector('.rv-delta-slot').innerHTML = view.deltaHtml;
-        el.querySelector('.rv-chart').innerHTML = view.chartHtml;
-        el.querySelector('.rv-staff-note').textContent = period !== 'today' ? 'Hôm nay' : '';
-        animateChart(period, true);
-        bindWeekTap();
+        drawPeriod(b.dataset.period, true);
       }));
 
-      bindWeekTap();
-      const initPeriod = p.period || 'today';
-      App.load(el, 'revenue').then((first) => {
+      const load = async (fresh) => {
+        el.classList.add('loading');
+        const bodyEl = el.querySelector('.rv-body');
+        const errEl = el.querySelector('.rv-err-wrap');
+        bodyEl.hidden = false;
+        errEl.hidden = true;
+
+        const r = await API.dashboard(fresh);
+        if (!el.isConnected) return;
+        el.classList.remove('loading');
+
+        if (!r.ok) {
+          App.toast(r.error, 'alert');
+          bodyEl.hidden = true;
+          errEl.hidden = false;
+          errEl.innerHTML = `<div class="empty"><div class="tile">${App.icon('chart', 28)}</div>${App.esc(r.error)}<br><br><button class="btn btn-secondary tap" data-retry>Thử lại</button></div>`;
+          errEl.querySelector('[data-retry]').addEventListener('click', () => load(true));
+          return;
+        }
+
+        dashData = r;
+        const isStaff = r.role === 'staff';
+        el.querySelector('.rv-title').textContent = isStaff ? 'Doanh số của bạn' : 'Doanh thu';
+
+        const t = r.today;
+        const payments = (t.payments || []).filter((x) => x.value > 0);
+        const payTotal = payments.reduce((s, x) => s + x.value, 0) || 1;
+        el.querySelector('.rv-pay-list').innerHTML = payments.length
+          ? payments.map((x) => {
+            const pct = Math.round((x.value / payTotal) * 100);
+            return `<div class="row rv-pay-row">
+              <div class="rv-pay-head"><span>${App.esc(x.key)}</span><b class="num">${App.money(x.value)}</b></div>
+              <div class="rv-pay-track"><div class="rv-pay-fill" style="width:${pct}%"></div></div>
+              <div class="rv-pay-pct">${pct}% tổng</div>
+            </div>`;
+          }).join('')
+          : `<div class="row" style="cursor:default"><div class="row-main"><div class="row-sub">Chưa có giao dịch hôm nay</div></div></div>`;
+
+        const staffList = (t.byStaff || []).filter((s) => s.value > 0);
+        el.querySelector('.rv-staff-list').innerHTML = staffList.length
+          ? staffList.map((s) => `
+            <div class="row" style="cursor:default">
+              <div class="rv-ava">${App.esc(initials(s.name))}</div>
+              <div class="row-main"><div class="row-title">${App.esc(s.name)}</div><div class="row-sub">${s.invoices} hóa đơn</div></div>
+              <div class="row-end num">${App.money(s.value)}</div>
+            </div>`).join('')
+          : `<div class="row" style="cursor:default"><div class="row-main"><div class="row-sub">Chưa có dữ liệu nhân viên</div></div></div>`;
+
+        const recent = (r.invoices || []).slice(0, 3);
+        el.querySelector('.rv-recent-list').innerHTML = recent.length
+          ? recent.map((iv) => `
+            <div class="row tap" data-go="invoiceDetail" data-p='${JSON.stringify({ id: iv.id })}'>
+              <div class="rv-time num">${App.esc(iv.time)}</div>
+              <div class="row-main"><div class="row-title">${App.esc(itemsText(iv.items))}</div><div class="row-sub">${App.esc(iv.staff)}, ${App.esc(iv.pay.toLowerCase())}</div></div>
+              <div class="row-end num">${App.money(iv.total)}</div>
+            </div>`).join('')
+          : `<div class="row" style="cursor:default"><div class="row-main"><div class="row-sub">Chưa có hóa đơn hôm nay</div></div></div>`;
+
+        const countUp = firstRev;
+        firstRev = false;
         placeThumb();
-        animateChart(initPeriod, first);
-      });
+        drawPeriod(curPeriod, countUp);
+      };
+
+      load(false);
     },
   });
 
@@ -348,11 +396,11 @@ App.icons.rvSend = '<path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/>';
         ${App.header({ title: 'Hóa đơn hôm nay' })}
         <div class="rv-inv-summary">
           <div>
-            <div class="rv-inv-sum-val num">${DATA.today.invoices} hóa đơn</div>
+            <div class="rv-inv-sum-val num" data-skel>0 hóa đơn</div>
             <div class="rv-inv-sum-sub">hôm nay</div>
           </div>
           <div class="rv-inv-sum-right">
-            <div class="rv-inv-sum-val num">${App.money(DATA.today.revenue)}</div>
+            <div class="rv-inv-sum-val num" data-skel>0 ₫</div>
             <div class="rv-inv-sum-sub">tổng tiền</div>
           </div>
         </div>
@@ -365,24 +413,29 @@ App.icons.rvSend = '<path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/>';
         <div class="rv-chips" role="tablist" aria-label="Lọc theo hình thức thanh toán">
           ${PAY_FILTERS.map((f, i) => `<button class="chip${i === 0 ? ' on' : ''}" data-pay="${App.esc(f)}" aria-pressed="${i === 0}">${App.esc(f)}</button>`).join('')}
         </div>
-        <div class="rv-inv-list"></div>`;
+        <div class="rv-inv-list" style="padding:0 16px">${App.skeleton(5)}</div>`;
     },
     mount: (el, p) => {
       const input = el.querySelector('input');
       const chips = [...el.querySelectorAll('.rv-chips .chip')];
       const list = el.querySelector('.rv-inv-list');
+      const sumVals = el.querySelectorAll('.rv-inv-sum-val');
       let activePay = 'Tất cả';
+      let allInvoices = [];
+
       const renderGroup = (label, rows, last) => `
         <div class="rv-inv-group">${label}</div>
         <div class="card rv-recent" style="margin:0 16px ${last ? 24 : 16}px">${rows.map((iv) => `
           <div class="row tap" data-go="invoiceDetail" data-p='${JSON.stringify({ id: iv.id })}'>
-            <div class="rv-time num">${iv.time}</div>
+            <div class="rv-time num">${App.esc(iv.time)}</div>
             <div class="row-main"><div class="row-title">${App.esc(itemsText(iv.items))}</div><div class="row-sub">${App.esc(iv.staff)}, ${App.esc(iv.pay.toLowerCase())}</div></div>
             <div class="row-end num">${App.money(iv.total)}</div>
           </div>`).join('')}</div>`;
+
       const draw = (q) => {
+        list.style.padding = '';
         const kw = q.trim().toLowerCase();
-        const rows = ALL_INVOICES.filter((iv) => {
+        const rows = allInvoices.filter((iv) => {
           const matchPay = activePay === 'Tất cả' || iv.pay === activePay;
           const matchKw = !kw || iv.id.toLowerCase().includes(kw) || iv.items.some((m) => m.toLowerCase().includes(kw));
           return matchPay && matchKw;
@@ -390,7 +443,9 @@ App.icons.rvSend = '<path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/>';
         if (!rows.length) {
           const msg = kw
             ? `Không thấy hóa đơn khớp với "${App.esc(q.trim())}".`
-            : `Không có hóa đơn thanh toán bằng ${App.esc(activePay.toLowerCase())}.`;
+            : activePay !== 'Tất cả'
+              ? `Không có hóa đơn thanh toán bằng ${App.esc(activePay.toLowerCase())}.`
+              : 'Chưa có hóa đơn hôm nay.';
           list.innerHTML = `<div class="empty"><div class="tile">${App.icon('search', 26)}</div>${msg}</div>`;
           return;
         }
@@ -401,7 +456,7 @@ App.icons.rvSend = '<path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/>';
         if (morning.length) groups.push(['Sáng', morning]);
         list.innerHTML = groups.map(([label, grp], idx) => renderGroup(label, grp, idx === groups.length - 1)).join('');
       };
-      draw(p.q || '');
+
       input.addEventListener('input', () => draw(input.value));
       chips.forEach((chip) => chip.addEventListener('click', () => {
         activePay = chip.dataset.pay;
@@ -412,77 +467,124 @@ App.icons.rvSend = '<path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/>';
         });
         draw(input.value);
       }));
+
+      const load = async (fresh) => {
+        el.classList.add('loading');
+        list.style.padding = '0 16px';
+        list.innerHTML = App.skeleton(5);
+        const r = await API.dashboard(fresh);
+        if (!el.isConnected) return;
+        el.classList.remove('loading');
+
+        if (!r.ok) {
+          App.toast(r.error, 'alert');
+          list.style.padding = '';
+          list.innerHTML = `<div class="empty"><div class="tile">${App.icon('receipt', 28)}</div>${App.esc(r.error)}<br><br><button class="btn btn-secondary tap" data-retry>Thử lại</button></div>`;
+          list.querySelector('[data-retry]').addEventListener('click', () => load(true));
+          return;
+        }
+
+        sumVals[0].textContent = `${r.today.invoices} hóa đơn`;
+        sumVals[1].textContent = App.money(r.today.revenue);
+        allInvoices = r.invoices || [];
+        draw(input.value || p.q || '');
+      };
+
+      load(false);
     },
   });
 
   App.screen('invoiceDetail', {
-    render: (p) => {
-      const iv = ALL_INVOICES.find((x) => x.id === p.id);
-      if (!iv) {
-        return `${App.header({ title: 'Chi tiết hóa đơn' })}
-          <div class="empty"><div class="tile">${App.icon('receipt', 28)}</div>Không tìm thấy hóa đơn này.</div>`;
-      }
-      const lines = buildReceiptLines(iv);
-      const customer = iv.id === 'HD2511-085'
-        ? { title: 'Chị Lan', sub: '0912 *** 208, mua lần thứ 6' }
-        : { title: 'Khách lẻ', sub: 'Không lưu thông tin khách' };
-      return `
-        ${App.header({ title: iv.id })}
-        <div class="rv-receipt">
-          <div class="rv-rc-head">
-            <h2>${App.esc(DATA.store.name)}</h2>
-            <p>${App.esc(DATA.store.address)}</p>
-            <div class="rv-rc-meta num">${App.esc(iv.id)}, ${App.esc(iv.time)}</div>
+    render: (p) => `
+      ${App.header({ title: p.id || 'Chi tiết hóa đơn' })}
+      <div class="rv-detail-body" style="padding:12px 16px">${App.skeleton(5)}</div>`,
+    mount: (el, p) => {
+      const body = el.querySelector('.rv-detail-body');
+
+      const load = async () => {
+        body.style.padding = '12px 16px';
+        body.innerHTML = App.skeleton(5);
+        const r = await API.invoice(p.id);
+        if (!el.isConnected) return;
+
+        if (!r.ok) {
+          App.toast(r.error, 'alert');
+          body.style.padding = '';
+          body.innerHTML = `<div class="empty"><div class="tile">${App.icon('receipt', 28)}</div>${App.esc(r.error)}<br><br><button class="btn btn-secondary tap" data-retry>Thử lại</button></div>`;
+          body.querySelector('[data-retry]').addEventListener('click', load);
+          return;
+        }
+
+        const iv = r.invoice;
+        const titleEl = el.querySelector('.nav-title');
+        if (titleEl) titleEl.textContent = iv.id;
+        const cust = iv.customer
+          ? { title: iv.customer.name || 'Khách lẻ', sub: iv.customer.phone || 'Đã lưu thông tin' }
+          : { title: 'Khách lẻ', sub: 'Không lưu thông tin khách' };
+        const meta = [iv.id, iv.time, iv.date].filter(Boolean).join(', ');
+
+        body.style.padding = '';
+        body.innerHTML = `
+          <div class="rv-receipt">
+            <div class="rv-rc-head">
+              <h2>${App.esc(DATA.store.name)}</h2>
+              <p>${App.esc(DATA.store.address)}</p>
+              <div class="rv-rc-meta num">${App.esc(meta)}</div>
+              ${iv.deleted ? '<div class="rv-rc-deleted"><span class="chip bad">Đã huỷ</span></div>' : ''}
+            </div>
+            <div class="rv-rc-dash"></div>
+            ${(iv.items || []).map((l) => `
+              <div class="rv-rc-item">
+                <div class="rv-rc-item-main">
+                  <div>${App.esc(l.name)}</div>
+                  <div class="rv-rc-usage num">${l.qty}${l.unit ? ` ${App.esc(l.unit)}` : ''} x ${App.money(l.price)}</div>
+                </div>
+                <span class="num">${App.money(l.qty * l.price)}</span>
+              </div>`).join('')}
+            ${iv.otherCosts > 0 ? `<div class="rv-rc-info"><span>Chi phí khác</span><span class="num">-${App.money(iv.otherCosts)}</span></div>` : ''}
+            <div class="rv-rc-dash"></div>
+            <div class="rv-rc-total">
+              <span>Tổng cộng</span>
+              <span class="num">${App.money(iv.total)}</span>
+            </div>
+            <div class="rv-rc-info"><span>Thanh toán</span><span>${App.esc(iv.pay)}</span></div>
+            <div class="rv-rc-info"><span>Người bán</span><span>${App.esc(iv.staff)}</span></div>
+            ${iv.note ? `<div class="rv-rc-info"><span>Ghi chú</span><span>${App.esc(iv.note)}</span></div>` : ''}
           </div>
-          <div class="rv-rc-dash"></div>
-          ${lines.map((l) => `
-            <div class="rv-rc-item">
-              <div class="rv-rc-item-main">
-                <div>${App.esc(l.name)}</div>
-                <div class="rv-rc-usage">${App.esc(usageOf(l.name))}</div>
-              </div>
-              <span class="num">${l.qty} x ${App.money(l.unit)}</span>
-            </div>`).join('')}
-          <div class="rv-rc-dash"></div>
-          <div class="rv-rc-total">
-            <span>Tổng cộng</span>
-            <span class="num">${App.money(iv.total)}</span>
-          </div>
-          <div class="rv-rc-info"><span>Thanh toán</span><span>${App.esc(iv.pay)}</span></div>
-          <div class="rv-rc-info"><span>Người bán</span><span>${App.esc(iv.staff)}</span></div>
-        </div>
-        <div class="section rv-rc-cust">
-          <div class="section-head"><h2>Khách hàng</h2></div>
-          <div class="card" style="margin:0 16px">
-            <div class="row">
-              <div class="tile">${App.icon('user', 20)}</div>
-              <div class="row-main">
-                <div class="row-title">${App.esc(customer.title)}</div>
-                <div class="row-sub">${App.esc(customer.sub)}</div>
+          <div class="section rv-rc-cust">
+            <div class="section-head"><h2>Khách hàng</h2></div>
+            <div class="card" style="margin:0 16px">
+              <div class="row">
+                <div class="tile">${App.icon('user', 20)}</div>
+                <div class="row-main">
+                  <div class="row-title">${App.esc(cust.title)}</div>
+                  <div class="row-sub">${App.esc(cust.sub)}</div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <div class="rv-rc-actions">
-          <button class="btn btn-secondary tap" data-print>${App.icon('printer', 20)}In lại</button>
-          <button class="btn btn-secondary tap" data-zalo>${App.icon('rvSend', 20)}Gửi Zalo</button>
-        </div>`;
-    },
-    mount: (el) => {
-      const printBtn = el.querySelector('[data-print]');
-      if (printBtn) {
-        printBtn.addEventListener('click', () => {
-          const done = App.busy(printBtn, 'Đang gửi tới máy in...');
-          setTimeout(() => { done(); App.toast('Đã in hóa đơn', 'printer'); }, 1000);
-        });
-      }
-      const zaloBtn = el.querySelector('[data-zalo]');
-      if (zaloBtn) {
-        zaloBtn.addEventListener('click', () => {
-          const done = App.busy(zaloBtn, 'Đang gửi...');
-          setTimeout(() => { done(); App.toast('Đã gửi hóa đơn qua Zalo'); }, 900);
-        });
-      }
+          <div class="rv-rc-actions">
+            <button class="btn btn-secondary tap" data-print>${App.icon('printer', 20)}In lại</button>
+            <button class="btn btn-secondary tap" data-zalo>${App.icon('rvSend', 20)}Gửi Zalo</button>
+          </div>`;
+
+        const printBtn = body.querySelector('[data-print]');
+        if (printBtn) {
+          printBtn.addEventListener('click', () => {
+            const done = App.busy(printBtn, 'Đang gửi tới máy in...');
+            setTimeout(() => { done(); App.toast('Đã in hóa đơn', 'printer'); }, 1000);
+          });
+        }
+        const zaloBtn = body.querySelector('[data-zalo]');
+        if (zaloBtn) {
+          zaloBtn.addEventListener('click', () => {
+            const done = App.busy(zaloBtn, 'Đang gửi...');
+            setTimeout(() => { done(); App.toast('Đã gửi hóa đơn qua Zalo'); }, 900);
+          });
+        }
+      };
+
+      load();
     },
   });
 
