@@ -22,12 +22,15 @@ App.screen('splash', {
       <div class="sp-word">Medi<b>POS</b></div>
     </div></div>`,
   mount: (el, p) => {
-    // Live: còn phiên → Face ID (nếu bật) hoặc Trang chủ; không phiên → Đăng nhập. Chạy song song animation.
-    const route = (p.next || !API.live) ? Promise.resolve(p.next)
-      : API.profile().then((me) => (me ? (API.bio.enabled() && App.screens.lock ? 'lock' : 'home') : null));
-    Promise.all([route, new Promise((r) => setTimeout(r, 1850))]).then(([next]) => {
+    // Live: phiên 'invited' (đã qua mã, chưa đặt mật khẩu) → Tạo mật khẩu; còn phiên → Face ID (nếu bật) hoặc Trang chủ;
+    // không phiên → Đăng nhập. Chạy song song animation.
+    const route = (p.next || !API.live) ? Promise.resolve([p.next])
+      : API.profile().then((me) => !me ? []
+        : me.status === 'invited' ? ['password', { status: 'invited' }]
+        : [API.bio.enabled() && App.screens.lock ? 'lock' : 'home']);
+    Promise.all([route, new Promise((r) => setTimeout(r, 1850))]).then(([[next, np]]) => {
       if (App.current().el !== el) return; // đã nhảy màn khác từ bảng QA
-      App.reset(next || (App.screens.login ? 'login' : 'home'), {}, 'reveal');
+      App.reset(next || (App.screens.login ? 'login' : 'home'), np || {}, 'reveal');
     });
   },
 });
