@@ -296,7 +296,9 @@
       const kbEl = el.querySelector('.au-kb');
       const backBtn = el.querySelector('[data-back]');
       let busy = false;
-      let sec = 60;
+      let resendAt = Date.now() + 60000;
+      let timer = null;
+      const getSec = () => Math.max(0, Math.ceil((resendAt - Date.now()) / 1000));
 
       const setBusy = (on) => {
         busy = on;
@@ -322,8 +324,17 @@
       };
 
       const fmtSec = (n) => `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;
+      const startTimer = () => {
+        if (timer) clearInterval(timer);
+        timer = setInterval(() => {
+          if (!el.isConnected) { clearInterval(timer); timer = null; return; }
+          if (!busy) renderResend();
+          if (getSec() <= 0) { clearInterval(timer); timer = null; }
+        }, 1000);
+      };
       const renderResend = () => {
         if (busy) return;
+        const sec = getSec();
         if (sec > 0) {
           resendEl.innerHTML = `Gửi lại mã sau <span class="num">${fmtSec(sec)}</span>`;
         } else {
@@ -339,7 +350,8 @@
               inp.value = '';
               errBox.hidden = true;
               App.toast('Đã gửi mã mới');
-              sec = 60;
+              resendAt = Date.now() + 60000;
+              startTimer();
               renderResend();
               drawBoxes('');
               focusInput();
@@ -396,10 +408,7 @@
         }
       });
 
-      const timer = setInterval(() => {
-        if (!el.isConnected) { clearInterval(timer); return; }
-        if (sec > 0) { sec--; if (!busy) renderResend(); }
-      }, 1000);
+      startTimer();
     },
   });
 
@@ -593,6 +602,14 @@
       const allowSample = p.qa || !(window.API && API.live);
       let userEmail = p.email || (allowSample ? SAMPLE_EMAIL : '');
       let busy = false;
+      let autoFaceTimer = null;
+
+      const cancelAutoFace = () => {
+        if (autoFaceTimer) {
+          clearTimeout(autoFaceTimer);
+          autoFaceTimer = null;
+        }
+      };
 
       if (!p.qa) {
         API.profile().then((prof) => {
@@ -606,6 +623,7 @@
       }
 
       const showPassForm = () => {
+        cancelAutoFace();
         passArea.inert = false;
         passArea.removeAttribute('inert');
         passArea.classList.add('show');
@@ -626,6 +644,7 @@
       };
 
       const startBusy = (activeBtn, text) => {
+        cancelAutoFace();
         busy = true;
         passIn.disabled = true;
         [unlockBtn, usePassBtn, faceIdBtn, logoutBtn].forEach((b) => { if (b !== activeBtn) b.disabled = true; });
@@ -667,7 +686,8 @@
       };
 
       if (!p.showPass && !p.qa) {
-        setTimeout(() => {
+        autoFaceTimer = setTimeout(() => {
+          autoFaceTimer = null;
           if (isActiveView(el)) runFaceId();
         }, 400);
       }
