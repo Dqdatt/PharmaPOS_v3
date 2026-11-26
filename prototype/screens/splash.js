@@ -32,7 +32,9 @@ App.screen('splash', {
         : [lockTarget]);
     Promise.all([route, new Promise((r) => setTimeout(r, 1850))]).then(([[next, np]]) => {
       if (App.current().el !== el) return; // đã nhảy màn khác từ bảng QA
-      App.reset(next || (App.screens.login ? 'login' : 'home'), np || {}, 'reveal');
+      const freshLockTarget = (API.bio.enabled() && (typeof localStorage !== 'undefined' ? localStorage.getItem('medipos.applock') : null) === '1' && App.screens.lock) ? 'lock' : 'home';
+      const finalNext = next === 'home' || next === 'lock' ? freshLockTarget : next;
+      App.reset(finalNext || (App.screens.login ? 'login' : 'home'), np || {}, 'reveal');
     });
   },
 });

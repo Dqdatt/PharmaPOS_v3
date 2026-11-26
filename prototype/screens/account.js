@@ -290,13 +290,13 @@ App.css(`
           checking = true;
           try {
             const r = on ? await API.bio.disable() : await API.bio.enable();
+            if (r.ok && typeof localStorage !== 'undefined') localStorage.removeItem('medipos.applock');
             if (!el.isConnected || App.current()?.el !== el) return;
             if (r.ok) {
               const nowOn = !on;
               fidBtn.classList.toggle('on', nowOn);
               fidBtn.setAttribute('aria-checked', String(nowOn));
               if (!nowOn) {
-                if (typeof localStorage !== 'undefined') localStorage.removeItem('medipos.applock');
                 updateAppLockUI(false, false);
               } else {
                 updateAppLockUI(true, false);
