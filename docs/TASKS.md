@@ -16,9 +16,10 @@ Chốt: #2 Đoàn Quốc Đường → Quản lý (giữ id, 1673 hoá đơn cũ
 - [ ] M10 Test cuối trên iPhone với link https://medipos-app.netlify.app (thông báo + Face ID cấp 1 lần là giữ) — [opus high]
 - [x] POS đọc đủ hoá đơn (chia trang, `selectAll`) — doanh thu POS thiếu do PostgREST cắt 1000 dòng (lỗi có từ POS cũ) — [opus xhigh] 7a7a6b5
 - [ ] Face ID nhớ theo từng tài khoản trên cùng máy (`api.js` PK_KEY) — [opus xhigh]
+- [ ] App quét QR: tự mở lại camera khi khung đen (Safari/màn hình chính) — d9294f3 đã commit, CHƯA push main — [opus high]
 - [ ] Admin sửa tên + email nhân viên từ app (Edge Function tự cập nhật Supabase Auth) — [opus xhigh] server + UI giao
 - [ ] Đổi "Nhà thuốc Tâm An" → "MediPOS" (`data.js`, `screens/account.js`) — [haiku]
-- [ ] Icon màn hình chính iPhone hiện chữ "M" (thử xoá dữ liệu Safari + thêm lại; không được thì thêm apple-touch-icon gốc) — [haiku]
+- [ ] Icon màn hình chính hiện chữ "M" CHỈ khi thêm từ Safari (Chrome đúng logo → manifest ổn; Safari dùng apple-touch-icon, nghi Safari nhớ lúc site 404) — thử thêm `apple-touch-icon.png` ở gốc pwa — [haiku]
 - [ ] (SAU) Bàn phím đè nội dung; đẩy ô nhập + nút lên sát bàn phím — sửa prototype trước rồi build PWA — [sonnet] giao
 
 - [x] Prototype app điện thoại (`prototype/`): khung, logo, splash, Trang chủ — [opus high]
