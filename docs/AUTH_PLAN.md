@@ -38,3 +38,17 @@ Phần UI thuần (màn prototype/PWA, màn POS web không đụng token) thì �
 4. `web_login_requests` + Edge Function duyệt/đổi phiên; màn POS web hiện QR thay PIN + rút gọn `weblogin.js` bỏ so số (UI giao) — [opus xhigh]
 5. RLS dữ liệu bán hàng; màn app xem NV/doanh số đọc dữ liệu thật (UI giao [sonnet]) — [opus xhigh]
 6. Màn app quản lý tài khoản (chỉ admin: cấp, khoá, đổi quyền) — UI giao [sonnet], logic quyền [opus xhigh]
+
+## Giai đoạn hoàn thiện app → DB thật (người dùng chốt 26/11/2026, sau khi test iPhone đạt bước 1–4)
+Quyết định:
+- Push báo cả 4 việc: đăng nhập POS mới (cho chính tài khoản đó), doanh thu cuối ngày (QL + admin), thuốc sắp hết / sắp hết hạn (mỗi sáng), công nợ nhà cung cấp.
+- App chạy thật trên **GitHub Pages** (`https://dqdatt.github.io/PharmaPOS_v3/`) → passkey RP ID = `dqdatt.github.io`. Passkey tạo trên link tunnel chỉ để test, sẽ mất khi lên Pages.
+- Mail mã OTP khi lên thật: **Gmail SMTP** (người dùng tự nhập mật khẩu ứng dụng Gmail vào Supabase, Claude không nhập).
+
+Thứ tự (mỗi bước = việc `giao`; máy chủ/bảo mật `--chi-claude`):
+A. **Face ID thật = passkey WebAuthn**: bảng `passkeys`, Edge Function `passkey` (đăng ký / xác minh, `@simplewebauthn/server`), đăng nhập bằng passkey → cấp phiên (generateLink như web-login); `API.bio` + `App.faceId()` gọi `navigator.credentials` thật khi có. RP ID theo host (tunnel khi test, Pages khi thật). — Claude + UI giao
+B. **Push (Web Push VAPID)**: bảng `push_subscriptions`, SW `pwa/src/sw.js` nhận `push` + `notificationclick`, Edge Function `push-send`; gửi khi: duyệt web-login (ngay), cron cuối ngày (doanh thu), cron sáng (tồn kho/hạn dùng), công nợ. Cron = `pg_cron` + `pg_net` gọi function. iOS chỉ nhận khi PWA đã thêm vào Màn hình chính và người dùng cho phép. — Claude + UI giao
+C. **Dữ liệu cho cảnh báo**: thêm `products.min_stock`, hạn dùng theo lô ở `purchase_items.expiry_date` + ô nhập ở màn Nhập hàng POS. — Claude migration, UI POS giao
+D. **App đọc dữ liệu thật**: Trang chủ/Doanh thu/Hoá đơn/Nhân viên/Tiện ích theo RLS (NV xem của mình, QL/admin toàn bộ); tính doanh thu dùng chung logic `reportRevenue.ts`. — Claude API tiền, UI giao
+E. **Admin trong app**: cấp / khoá / đổi vai trò tài khoản (Edge Function `admin-update-user`), danh sách + thu hồi phiên web (đọc `auth.sessions`). — Claude + UI giao
+F. **Chuyển DB thật** (project Supabase hiện có): sao lưu → áp migration → điền email cho nhân viên cũ → deploy Edge Functions + secrets (VAPID) → SMTP Gmail → deploy PWA lên Pages + POS mới CÙNG LÚC (RLS bật là POS cũ dùng PIN ngừng chạy). Mỗi thao tác trên DB thật hỏi người dùng trước. — Claude

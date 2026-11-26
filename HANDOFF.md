@@ -1,7 +1,7 @@
 # HANDOFF — MediPOS (repo PharmaPOS_V3), 26/11/2026 chiều
 
 ## Mục tiêu phiên vừa rồi
-Chốt PWA ổn; nhận yêu cầu mới: nâng cấp hệ thống đăng nhập + bảo mật (admin/QL/NV, OTP 6 số, Face ID, đăng nhập POS web bằng điện thoại). Xong bước 1, 2, 4 (đăng nhập POS bằng QR), đã chạy thật đầu–cuối trên máy Mac. Chờ người dùng test iPhone (cần HTTPS).
+Chốt PWA ổn; nhận yêu cầu mới: nâng cấp hệ thống đăng nhập + bảo mật (admin/QL/NV, OTP 6 số, Face ID, đăng nhập POS web bằng điện thoại). Xong bước 1, 2, 4 (đăng nhập POS bằng QR), đã chạy thật đầu–cuối trên máy Mac. Người dùng đã test iPhone qua tunnel: chạy ổn. Tiếp: giai đoạn hoàn thiện app (A–F trong `docs/AUTH_PLAN.md`).
 
 ## Đã xong (nhánh `prototype-mobile`, chưa push, chưa gộp main)
 - PWA iOS hết hở đáy (giao 019+020, 03a5931) — người dùng xác nhận "hoạt động ổn như tôi muốn".
@@ -25,6 +25,7 @@ Chốt PWA ổn; nhận yêu cầu mới: nâng cấp hệ thống đăng nhập
 - Chỉ 1 cơ sở. Admin cấp toàn bộ tài khoản (QL không cấp). NV xem doanh số cá nhân, QL xem toàn bộ.
 - POS web chỉ 1 cách đăng nhập: quét QR bằng app + Face ID (bỏ so số, bỏ mã 6 số dự phòng).
 - Admin mới = quản lý toàn hệ thống, chỉ dùng app, bị chặn ở POS. QL khác admin. App PWA KHÔNG bán hàng.
+- Hoàn thiện: push 4 loại (đăng nhập POS, doanh thu cuối ngày, tồn kho/hạn dùng, công nợ); app thật trên GitHub Pages (passkey RP ID `dqdatt.github.io`); OTP qua Gmail SMTP do người dùng tự nhập.
 - Đăng nhập chỉ bằng **email** (mã 6 số qua mail, miễn phí); SĐT chỉ để liên hệ, không SMS. Lần đầu OTP → tạo mật khẩu; sau đó Face ID/sinh trắc học HĐH.
 - Dev dùng dữ liệu local: Supabase local (`supabase start` → `npm run db:reset` → `npm run test:rls`; Mailpit :54324 đọc mã email; tài khoản test trong `supabase/seed.sql`, mật khẩu test trong `scripts/seed-auth.mjs`).
 - Test bằng bản PWA build (preview `pwa`), không dùng trang QA prototype. Mã nguồn vẫn ở `prototype/` → `npm run build:pwa`; không sửa `pwa/dist`.
@@ -38,10 +39,9 @@ Chốt PWA ổn; nhận yêu cầu mới: nâng cấp hệ thống đăng nhập
 - WebAuthn (Face ID) cần HTTPS: test iPhone qua `http://192.168.x` sẽ không chạy → cần GitHub Pages/tunnel HTTPS khi tới bước 3.
 
 ## Việc tiếp theo
-1. Cho người dùng test iPhone: cần HTTPS cho camera → cloudflared tunnel + server PWA proxy Supabase cùng origin + api.js nhận origin tunnel — [opus high]
-2. Bước 5: app đọc dữ liệu thật (Trang chủ/Doanh thu/NV đang là DATA mẫu) theo RLS — [opus xhigh] + UI giao
-3. Bước 3: Face ID = passkey WebAuthn (cần HTTPS) — [opus xhigh]
-
+1. A — Face ID thật (passkey WebAuthn), test qua tunnel — [opus xhigh]
+2. B — Push thông báo (VAPID, 4 loại đã chốt) — [opus xhigh]
+3. C → D → E → F theo `docs/AUTH_PLAN.md` (F = chuyển DB thật, hỏi trước mỗi thao tác) — [opus xhigh]
 
 ## File cần đọc đầu tiên
 `docs/AUTH_PLAN.md` · `AGENTS.md` · `supabase/migrations/20261126090000_auth_roles_rls.sql` · `prototype/screens/auth.js` · `prototype/js/core.js`
