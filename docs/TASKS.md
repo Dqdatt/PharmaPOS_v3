@@ -24,6 +24,7 @@
 - [x] Auth 2a: Edge Function cấp tài khoản + trigger kích hoạt + `prototype/js/api.js` (e415938)
 - [x] Auth 2b: UI app email + mã 6 số + tạo mật khẩu, bỏ PIN app (giao 024, 025), test trên PWA — [opus xhigh]
 - [ ] Auth 3: Face ID = passkey WebAuthn (cần HTTPS) — [opus xhigh]
-- [ ] Auth 4: đăng nhập POS web chỉ bằng QR + Face ID (bỏ so số trong weblogin.js); chặn admin ở POS — [opus xhigh]
+- [x] Auth 4: đăng nhập POS web bằng QR + Face ID (giao 026, 027), chặn admin ở POS
+- [ ] Test iPhone thật: HTTPS tunnel cho PWA + Supabase — [opus xhigh]
 - [ ] Auth 5: RLS dữ liệu bán hàng theo tài khoản; app xem NV/doanh số dữ liệu thật — [opus xhigh] + UI [sonnet]
 - [ ] Auth 6: màn app quản lý tài khoản (chỉ admin: cấp, khoá, đổi quyền) — UI [sonnet], quyền [opus xhigh]
