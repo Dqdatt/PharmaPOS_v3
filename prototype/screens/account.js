@@ -2,8 +2,9 @@
 App.css(`
 .ac-profile { display: flex; flex-direction: column; align-items: center; text-align: center; padding: calc(var(--sat) + 16px) 20px 20px; }
 .ac-avatar { width: 72px; height: 72px; border-radius: 50%; background: var(--teal-100); color: var(--teal-800); display: grid; place-items: center; font-size: 26px; font-weight: 700; margin-bottom: 12px; }
-.ac-name { font-size: 22px; font-weight: 700; color: var(--ink); line-height: 1.25; }
+.ac-name { font-size: 22px; font-weight: 700; color: var(--ink); line-height: 1.25; overflow-wrap: anywhere; }
 .ac-role { font-size: 14px; color: var(--ink-2); margin-top: 4px; }
+.ac-session-count { min-width: 3ch; }
 
 .ac-switch {
   position: relative;
@@ -64,8 +65,9 @@ App.css(`
 (function () {
   if (typeof API === 'undefined') {
     window.API = {
-      me: () => ({ role: 'manager' }),
+      me: () => ({ name: DATA.owner.name, role: 'manager' }),
       bio: { enabled: () => false, set: () => {} },
+      webSessions: { list: async () => ({ ok: true, sessions: [] }) },
       push: {
         status: async () => 'off',
         enable: async () => ({ ok: true }),
@@ -169,23 +171,35 @@ App.css(`
     });
   }
 
+  const ROLE_LABEL = { admin: 'Admin', manager: 'Quản lý', staff: 'Nhân viên' };
+
   // 1. Màn Tài khoản
   App.screen('account', {
     tab: 'account',
     render: () => {
-      const owner = DATA.owner || { name: 'Trần Minh Khoa', role: 'Chủ nhà thuốc', initials: 'MK' };
-      const store = DATA.store || { name: 'Nhà thuốc Tâm An' };
-      const ws = DATA.webSessions || [];
+      const me = API.me();
+      const name = me?.name?.trim() || '';
+      const words = name.normalize().split(/\s+/);
+      const initials = (words[0].charAt(0) + (words.length > 1 ? words.at(-1).charAt(0) : '')).toLocaleUpperCase('vi');
+      const isAdmin = me?.role === 'admin';
       const on = API.bio.enabled();
       const lockOn = on && localStorage.getItem('medipos.applock') === '1';
 
       return `
-        <div class="ac-profile">
-          <div class="ac-avatar">${App.esc(owner.initials || 'MK')}</div>
-          <div class="ac-name">${App.esc(owner.name)}</div>
-          <div class="ac-role">${App.esc(owner.role)}, ${App.esc(store.name)}</div>
-        </div>
+        ${me ? `<div class="ac-profile">
+          <div class="ac-avatar">${App.esc(initials)}</div>
+          <div class="ac-name">${App.esc(name)}</div>
+          <div class="ac-role">${App.esc(ROLE_LABEL[me.role])}, ${App.esc(DATA.store.name)}</div>
+        </div>` : ''}
 
+        ${isAdmin ? `
+          <div class="card" style="margin:8px 16px 0">
+            <div class="row tap" data-go="accounts">
+              <div class="tile">${App.icon('users', 20)}</div>
+              <div class="row-main"><div class="row-title ell">Quản lý tài khoản</div></div>
+              <div class="row-end">${App.icon('chev', 20)}</div>
+            </div>
+          </div>` : ''}
         <div class="section" style="margin-top:8px">
           <div class="section-head"><h2 style="font-size:15px">Bảo mật</h2></div>
           <div class="card" style="margin:0 16px">
@@ -211,7 +225,7 @@ App.css(`
             <div class="row tap" data-go="webSessions">
               <div class="tile">${App.icon('monitor', 20)}</div>
               <div class="row-main"><div class="row-title">Phiên web đang mở</div></div>
-              <div class="row-end num">${ws.length}${App.icon('chev', 20)}</div>
+              <div class="row-end num"><span class="ac-session-count"></span>${App.icon('chev', 20)}</div>
             </div>
           </div>
         </div>
@@ -256,6 +270,13 @@ App.css(`
     mount: (el) => {
       if (el._mounted) return;
       el._mounted = true;
+
+      const sessionCount = el.querySelector('.ac-session-count');
+      if (API.me()) {
+        API.webSessions.list().then((r) => {
+          if (el.isConnected && r.ok && r.sessions.length) sessionCount.textContent = r.sessions.length;
+        });
+      }
 
       const fidBtn = el.querySelector('#acFaceIdBtn');
       const fidRow = el.querySelector('#acFaceIdRow');
@@ -922,7 +943,10 @@ App.css(`
   });
 
   // State QA (nhóm 'Tài khoản')
-  App.state('Tài khoản', () => App.reset('account'), 'Tài khoản');
+  App.state('Tài khoản', () => {
+    localStorage.removeItem('medipos.mockRole');
+    App.reset('account');
+  }, 'Tài khoản');
   App.state('Tài khoản: đã bật khoá app', () => {
     localStorage.setItem('medipos.bio', '1');
     localStorage.setItem('medipos.applock', '1');

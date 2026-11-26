@@ -1,7 +1,7 @@
-/* Đăng nhập web bằng điện thoại — các yêu cầu và phiên chỉ dùng dữ liệu mẫu. */
+/* Đăng nhập web bằng điện thoại và quản lý các phiên đang mở. */
 (function () {
   const request = DATA.webRequest;
-  let sessions = [...DATA.webSessions];
+  const mockRevoked = new Set();
   let loginHistory = [
     { id: 'h1', status: 'ok', title: 'Đã duyệt Chrome trên MacBook Pro', meta: 'Quận 3, TP.HCM, 08:12 hôm nay' },
     { id: 'h2', status: 'bad', title: 'Đã từ chối Edge trên Windows', meta: 'Quận 7, TP.HCM, 22:41 hôm qua' },
@@ -95,7 +95,6 @@
 .wl-session .btn { height: 40px; margin: 12px 0 0 48px; padding: 0 14px; font-size: 14px; }
 .wl-session-empty h2 { font-size: 17px; color: var(--ink); }
 .wl-session-empty p { margin-top: 8px; }
-.wl-sessions-view.loading .wl-sessions { pointer-events: none; }
 .wl-history .section-head { padding: 0 4px 12px; }
 .wl-history .row { grid-template-columns: auto minmax(0, 1fr); align-items: start; cursor: default; }
 .wl-history .row-title { overflow-wrap: anywhere; }
@@ -103,7 +102,7 @@
 .wl-note .ic { margin-top: 1px; }
 `);
 
-  function actionSheet({ title, body, cancel, action, busy, delay, onClose, done }) {
+  function actionSheet({ title, body, cancel, action, busy, onClose, revoke }) {
     return App.sheet(`
       <h3>${App.esc(title)}</h3><p>${App.esc(body)}</p>
       <div class="wl-sheet-actions">
@@ -112,13 +111,14 @@
       </div>`, {
       onMount(sheet, close) {
         const submit = sheet.querySelector('[data-wl-submit]');
-        submit.onclick = () => {
+        submit.onclick = async () => {
           const wrap = sheet.parentElement;
           if (submit.disabled || !wrap.classList.contains('open')) return;
           App.busy(submit, busy);
           sheet.querySelector('[data-close]').disabled = true;
           wrap.querySelector('.scrim').removeAttribute('data-close');
-          setTimeout(() => { close(); done(); }, delay);
+          await revoke();
+          close();
         };
       },
       onClose,
@@ -467,8 +467,6 @@
       const device = req.device || `${browser} trên ${os}`;
       const place = req.place || req.ip || '';
       const time = req.time || '';
-      sessions = [{ id, browser, os, device, place, ip: req.ip || '', since: time, lastActive: 'vừa xong' }, ...sessions.filter((session) => session.id !== id)];
-      DATA.webSessions = sessions;
       const doneEntry = {
         id: `done-${id}`,
         status: 'ok',
@@ -481,13 +479,14 @@
     },
   });
 
-  const sessionTitle = (session) => `${session.browser} trên ${session.device}`;
+  const sessionTitle = (session) => `${session.browser} trên ${session.device || session.os}`;
   const historyTile = {
     ok: { cls: ' ok', icon: 'check' },
     bad: { cls: ' bad', icon: 'x' },
     exp: { cls: '', icon: 'clock' },
   };
   function historySection() {
+    if (API.live) return '';
     return `
       <div class="section wl-history">
         <div class="section-head"><h2>Lịch sử đăng nhập web</h2></div>
@@ -511,6 +510,7 @@
       </div>`;
   }
   function sessionList(items) {
+    const showUser = typeof API !== 'undefined' && API.me()?.role === 'admin';
     const activeHtml = !items.length ? `
       <div class="empty wl-session-empty">
         <div class="tile">${App.icon('monitor', 28)}</div>
@@ -521,26 +521,28 @@
       <div class="wl-session" data-wl-session="${App.esc(session.id)}">
         <div class="card">
           <div class="row">
-            <div class="tile" data-skel>${App.icon('laptop', 20)}</div>
+            <div class="tile">${App.icon('laptop', 20)}</div>
             <div class="row-main">
-              <div class="row-title" data-skel>${App.esc(sessionTitle(session))}</div>
-              <div class="wl-session-place" data-skel>${App.esc(session.place)}</div>
-              <div class="row-sub" data-skel>Đăng nhập lúc ${App.esc(session.since)}, hoạt động ${App.esc(session.lastActive)}</div>
+              <div class="row-title">${App.esc(sessionTitle(session))}</div>
+              ${showUser && session.userName ? `<div class="wl-session-place">${App.esc(session.userName)}</div>` : ''}
+              ${session.place || session.ip ? `<div class="wl-session-place">${App.esc(session.place || session.ip)}</div>` : ''}
+              <div class="row-sub">Đăng nhập lúc ${App.esc(session.since)}, hoạt động ${App.esc(session.lastActive)}</div>
             </div>
           </div>
-          <button class="btn btn-danger tap" data-wl-logout data-skel>Đăng xuất máy này</button>
+          <button class="btn btn-danger tap" data-wl-logout>Đăng xuất máy này</button>
         </div>
       </div>`).join('') + (items.length >= 2 ? `
-      <button class="btn btn-secondary block tap" data-wl-all data-skel>Đăng xuất tất cả máy tính</button>` : '');
+      <button class="btn btn-secondary block tap" data-wl-all>Đăng xuất tất cả máy tính</button>` : '');
     return activeHtml + historySection();
   }
 
   App.screen('webSessions', {
     cls: 'wl-sessions-view',
     render: (p) => App.header({ title: 'Phiên web đang mở' }) +
-      `<div class="wl-sessions">${sessionList(p.empty ? [] : sessions)}</div>`,
+      `<div class="wl-sessions">${p.empty ? sessionList([]) : App.skeleton()}</div>`,
     mount(el, p) {
       const list = el.querySelector('.wl-sessions');
+      let sessions = [];
       let dialogOpen = false;
       if (p.fromDone) {
         el.querySelector('[data-back]').onclick = (event) => {
@@ -548,32 +550,52 @@
           App.reset('home');
         };
       }
-      if (!p.empty) {
-        App.load(el, 'webSessions').then(() => {
-          list.querySelectorAll('[data-wl-logout], [data-wl-all]').forEach((btn) => { btn.disabled = false; });
-        });
-        if (el.classList.contains('loading')) list.querySelectorAll('button').forEach((btn) => { btn.disabled = true; });
+      async function load() {
+        list.innerHTML = App.skeleton();
+        const r = await API.webSessions.list();
+        if (!active(el)) return;
+        if (!r.ok) {
+          App.toast(r.error, 'x');
+          list.innerHTML = '<button class="btn btn-secondary block" data-wl-retry>Thử lại</button>' + historySection();
+          return;
+        }
+        sessions = API.live ? r.sessions : r.sessions.filter((item) => !mockRevoked.has(item.id));
+        list.innerHTML = sessionList(sessions);
       }
+      if (!p.empty) load();
 
       list.onclick = (event) => {
+        if (event.target.closest('[data-wl-retry]')) { load(); return; }
         const btn = event.target.closest('[data-wl-logout], [data-wl-all]');
         if (!btn || btn.disabled || dialogOpen) return;
         const cards = [...list.querySelectorAll('[data-wl-session]')];
         const target = btn.closest('[data-wl-session]');
-        const session = target && sessions.find((item) => item.id === target.dataset.wlSession);
+        const session = target && sessions.find((item) => String(item.id) === target.dataset.wlSession);
         if (target && !session) return;
         dialogOpen = true;
         actionSheet({
           title: session ? `Đăng xuất ${sessionTitle(session)}?` : 'Đăng xuất tất cả máy tính?',
           body: session ? 'Trang web trên máy đó quay về màn đăng nhập ngay.' : 'Các trang web trên máy tính sẽ quay về màn đăng nhập ngay.',
-          cancel: 'Giữ lại', action: 'Đăng xuất', busy: 'Đang đăng xuất...', delay: 700,
+          cancel: 'Giữ lại', action: 'Đăng xuất', busy: 'Đang đăng xuất...',
           onClose: () => { dialogOpen = false; },
-          done: () => {
+          revoke: async () => {
             if (!active(el)) return;
-            const leaving = target ? [target] : cards;
-            const ids = leaving.map((card) => card.dataset.wlSession);
-            sessions = sessions.filter((item) => !ids.includes(item.id));
-            DATA.webSessions = sessions;
+            const removed = new Set();
+            let error;
+            for (const item of session ? [session] : sessions) {
+              const r = await API.webSessions.revoke(item.id);
+              if (r.ok) {
+                removed.add(item.id);
+                if (!API.live) mockRevoked.add(item.id);
+              } else {
+                error ||= r.error;
+              }
+            }
+            if (!active(el)) return;
+            if (error) App.toast(error, 'x');
+            if (!removed.size) return;
+            const leaving = cards.filter((card) => [...removed].some((id) => String(id) === card.dataset.wlSession));
+            sessions = sessions.filter((item) => !removed.has(item.id));
             list.querySelectorAll('button').forEach((button) => { button.disabled = true; });
             leaving.forEach((card) => {
               card.style.height = `${card.offsetHeight}px`;
@@ -584,7 +606,7 @@
             setTimeout(() => {
               if (!el.isConnected) return;
               list.innerHTML = sessionList(sessions);
-              if (active(el)) App.toast(session ? `Đã đăng xuất ${session.device}` : 'Đã đăng xuất tất cả máy tính');
+              if (!error && active(el)) App.toast(session ? `Đã đăng xuất ${session.device || session.os}` : 'Đã đăng xuất tất cả máy tính');
             }, 350);
           },
         });
