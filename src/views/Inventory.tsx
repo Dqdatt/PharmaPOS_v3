@@ -106,7 +106,7 @@ export default function Inventory() {
           <h2 className="text-2xl font-bold text-gray-800">Quản lý Kho hàng</h2>
           <p className="text-gray-500 text-sm">Quản lý sản phẩm, tồn kho và đối soát dữ liệu</p>
         </div>
-        {activeTab === 'current' && currentUser?.role === 'admin' && (
+        {activeTab === 'current' && currentUser?.role === 'manager' && (
           <div className="flex gap-2">
             <button
               onClick={() => setShowConfigModal(true)}
@@ -137,7 +137,7 @@ export default function Inventory() {
         >
           Lịch sử chốt tồn
         </button>
-        {currentUser?.role === 'admin' && (
+        {currentUser?.role === 'manager' && (
           <button
             onClick={() => setActiveTab('audit')}
             className={`px-4 py-2 rounded-md font-bold text-sm transition ${activeTab === 'audit' ? 'bg-amber-50 text-amber-700 shadow-sm' : 'text-gray-500 hover:bg-gray-50'}`}
