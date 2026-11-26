@@ -12,7 +12,7 @@ Chốt: #2 Đoàn Quốc Đường → Quản lý (giữ id, 1673 hoá đơn cũ
 - [x] M8 Bỏ URL + key viết cứng `prototype/js/api.js:11` → cấu hình local/thật khi build PWA — [sonnet] giao
 - [ ] App: nút "In lại"/"Gửi Zalo" ở chi tiết hoá đơn còn giả lập; tra tồn kho có thể nháy kết quả cũ (seq) — [sonnet] giao
 - [ ] Hỏi người dùng tên + địa chỉ nhà thuốc thật (`DATA.store`) — [haiku]
-- [ ] M9 (=F) Lên thật ngoài giờ bán: sao lưu → migration → nối ĐQĐ + admin → functions/secrets/Vault → PWA lên Pages + POS lên Vercel/Netlify cùng lúc — [opus xhigh] (hỏi trước từng thao tác)
+- [ ] M9 (=F) Lên thật ngoài giờ bán: sao lưu → migration → nối ĐQĐ + admin → functions/secrets/Vault → PWA lên Pages + POS lên Netlify cùng lúc (theo `docs/GO_LIVE.md`) — [opus xhigh] (hỏi trước từng thao tác)
 - [ ] M10 Test cuối trên iPhone với link Pages cố định (thông báo + Face ID cấp 1 lần là giữ) — [opus high]
 
 - [x] Prototype app điện thoại (`prototype/`): khung, logo, splash, Trang chủ — [opus high]
@@ -42,13 +42,13 @@ Chốt: #2 Đoàn Quốc Đường → Quản lý (giữ id, 1673 hoá đơn cũ
 - [x] A: Face ID thật = passkey WebAuthn (test iPhone đạt) — [opus xhigh]
 - [x] B: Push — server + UI (giao 029) xong, iPhone nhận được doanh thu + công nợ — [opus xhigh]
 - [ ] B: thử push "Đăng nhập POS mới" trên iPhone (bấm chốt tồn trên POS local trước) — [haiku]
-- [ ] POS: thêm nút Đăng xuất ở màn chốt tồn bắt buộc của quản lý (`MainApp.tsx`, NV đã có) — [sonnet] giao
+- [x] POS: thêm nút Đăng xuất ở màn chốt tồn bắt buộc của quản lý (`MainApp.tsx`, NV đã có) — [sonnet] giao
 - [ ] Prototype: bỏ state QA "Web xin đăng nhập (thông báo đẩy)" + luồng webConfirm `from: 'push'` (đăng nhập POS giờ chỉ quét QR) — [sonnet] giao
-- [ ] Dev: `supabase start` treo vì keychain → chạy `supabase start` một lần trong Terminal, bấm "Luôn cho phép" ở hộp thoại keychain (hoặc nâng CLI) — [haiku]
+- [x] Dev: `supabase start` treo vì keychain → chạy `supabase start` một lần trong Terminal, bấm "Luôn cho phép" ở hộp thoại keychain (hoặc nâng CLI) — [haiku]
 - [ ] (HOÃN sau MVP) C: gửi push thuốc sắp hết / cận hạn (dùng `notify()` + `notif_prefs.low_stock/expiring/expiry_days`) — [opus xhigh]
 - [ ] (HOÃN sau MVP) C: min_stock + hạn dùng theo lô (POS Nhập hàng) — [opus xhigh] + UI giao
-- [ ] D → xem M6
-- [ ] E → xem M5
+- [x] D → xem M6
+- [x] E → xem M5
 - [ ] F → xem M9
 - [x] Auth 4: đăng nhập POS web bằng QR + Face ID (giao 026, 027), chặn admin ở POS
 - [x] Test iPhone thật qua tunnel (người dùng xác nhận chạy ổn) — [opus xhigh]
