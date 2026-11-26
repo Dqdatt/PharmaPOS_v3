@@ -9,7 +9,7 @@
   .au-wrap.has-nav { padding-top: 8px; min-height: calc(100% - var(--sat) - 56px); }
   .au-h1 { font-size: 28px; font-weight: 700; line-height: 1.25; margin-top: 24px; color: var(--ink); }
   .au-sub { font-size: 15px; line-height: 1.5; color: var(--ink-2); margin-top: 8px; }
-  .au-form { margin-top: 24px; display: flex; flex-direction: column; gap: 10px; }
+  .au-form { margin-top: 20px; display: flex; flex-direction: column; gap: 6px; }
   .au-field label { display: block; font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 8px; }
   .au-input-wrap { position: relative; display: flex; align-items: center; }
   .au-input { width: 100%; height: 52px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--card);
@@ -20,7 +20,7 @@
   .au-input.err:focus { border: 2px solid var(--bad); }
   .au-input-wrap.shake { animation: shake .45s var(--ease); }
   .au-eye { position: absolute; right: 6px; width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: var(--ink-3); }
-  .au-err { display: flex; align-items: flex-start; gap: 6px; margin-top: 6px; min-height: 18px; font-size: 13px; line-height: 1.4; color: var(--bad); }
+  .au-err { display: flex; align-items: flex-start; gap: 6px; margin-top: 6px; min-height: 38px; font-size: 13px; line-height: 1.4; color: var(--bad); }
   .au-err .ic { margin-top: 1px; flex: none; }
   .au-err[hidden] { display: flex; visibility: hidden; }
   .au-hint { font-size: 13px; line-height: 1.4; color: var(--ink-2); margin-top: 6px; }
@@ -33,14 +33,15 @@
   .au-hero-word { font-size: 28px; font-weight: 600; margin-top: 20px; }
   .au-hero-word b { font-weight: 800; }
   .au-hero-sub { font-size: 15px; line-height: 1.5; color: var(--on-dark-2); margin-top: 6px; max-width: 290px; }
-  .au-login .au-wrap { min-height: 0; flex: 1; padding-top: 24px; }
+  .au-login .au-wrap { min-height: 0; flex: 1; padding-top: 20px; }
   .au-login .au-h1 { margin-top: 0; font-size: 22px; }
   .au-links { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-  .au-link { font-size: 14px; font-weight: 600; color: var(--teal-700); padding: 4px 0; }
-  .au-foot { margin-top: auto; padding-top: 24px; display: flex; flex-direction: column; gap: 8px; }
+  .au-link { font-size: 14px; font-weight: 600; color: var(--teal-700); padding: 4px 0; display: inline-flex; align-items: center; gap: 6px; }
+  .au-link:disabled { opacity: .55; pointer-events: none; }
+  .au-foot { margin-top: auto; padding-top: 16px; display: flex; flex-direction: column; gap: 8px; }
 
   /* OTP */
-  .au-otp-zone { position: relative; margin-top: 32px; }
+  .au-otp-zone { position: relative; margin-top: 28px; }
   .au-otp-input { position: absolute; inset: 0; opacity: 0; pointer-events: none; font-size: 16px; }
   .au-otp-row { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
   .au-otp-row.shake { animation: shake .45s var(--ease); }
@@ -52,12 +53,13 @@
   .au-otp-box.err { border-color: var(--bad); }
   .au-caret { width: 2px; height: 24px; border-radius: 1px; background: var(--teal-600); animation: auBlink 1s steps(1) infinite; }
   @keyframes auBlink { 50% { opacity: 0; } }
-  .au-resend { margin-top: 16px; font-size: 14px; color: var(--ink-2); min-height: 24px; display: flex; align-items: center; gap: 8px; }
+  .au-resend { margin-top: 8px; font-size: 14px; color: var(--ink-2); min-height: 24px; display: flex; align-items: center; gap: 8px; }
   .au-resend button { font-size: 14px; font-weight: 600; color: var(--teal-700); display: inline-flex; align-items: center; gap: 6px; }
   .au-checking { font-size: 14px; color: var(--teal-700); font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
 
   .au-kb { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 6px var(--sab); z-index: 5;
-    background: color-mix(in srgb, var(--soft) 72%, var(--ink-3)); animation: auKbIn .38s var(--ease) both; }
+    background: color-mix(in srgb, var(--soft) 72%, var(--ink-3)); animation: auKbIn .38s var(--ease) both; transition: opacity .2s var(--ease); }
+  .au-kb.locked { pointer-events: none; opacity: .55; }
   @keyframes auKbIn { from { transform: translateY(100%); } }
   .au-kb-suggest { width: 100%; height: 44px; display: flex; align-items: center; justify-content: center; gap: 2px; flex-direction: column; font-size: 13px; color: var(--ink-2); }
   .au-kb-suggest b { font-size: 16px; font-weight: 600; color: var(--ink); letter-spacing: .04em; }
@@ -76,7 +78,7 @@
   @keyframes auBreath { from { transform: scale(1); } to { transform: scale(.96); } }
   .au-bio-title { font-size: 24px; font-weight: 700; line-height: 1.3; margin-top: 28px; color: var(--ink); }
   .au-bio-sub { font-size: 15px; line-height: 1.5; color: var(--ink-2); margin-top: 10px; max-width: 300px; }
-  .au-bio-err { min-height: 22px; margin-top: 14px; font-size: 14px; color: var(--bad); }
+  .au-bio-err { min-height: 38px; margin-top: 14px; font-size: 14px; line-height: 1.4; color: var(--bad); }
 
   /* Lock screen */
   .au-lock { min-height: 100%; background: var(--brand-grad); color: var(--on-dark);
@@ -85,7 +87,7 @@
   .au-lock-logo { width: 64px; height: 64px; color: var(--on-dark); }
   .au-lock-hi { font-size: 22px; font-weight: 700; margin-top: 16px; color: var(--on-dark); }
   .au-lock-store { font-size: 15px; color: var(--on-dark-2); margin-top: 4px; }
-  .au-lock-pass { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 14px; opacity: 0; pointer-events: none; transition: opacity .28s var(--ease); }
+  .au-lock-pass { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 10px; opacity: 0; pointer-events: none; transition: opacity .28s var(--ease); }
   .au-lock-pass.show { opacity: 1; pointer-events: auto; }
   .au-lock-pass .au-input { background: var(--glass-clear); border-color: var(--on-dark-2); color: var(--on-dark); }
   .au-lock-pass .au-input::placeholder { color: var(--on-dark-2); }
@@ -94,13 +96,16 @@
   .au-lock-pass .au-eye { color: var(--on-dark-2); }
   .au-lock-pass .au-err { color: var(--mint); }
   .au-lock-acts { display: flex; justify-content: space-between; align-items: center; padding-top: 8px; gap: 8px; }
-  .au-lock-acts button { font-size: 14px; font-weight: 600; color: var(--on-dark-2); padding: 10px 6px; }
+  .au-lock-acts button { font-size: 14px; font-weight: 600; color: var(--on-dark-2); padding: 10px 6px; display: inline-flex; align-items: center; gap: 6px; }
   .au-lock-acts button:active { color: var(--on-dark); }
+  .au-lock-acts button:disabled { opacity: .5; pointer-events: none; }
   .au-lock-acts button[hidden] { display: none; }
   `);
 
   const SAMPLE_EMAIL = 'khoa@nhathuoc.vn';
   const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  const isActiveView = (el) => el.isConnected && (!App.current() || App.current().el === el);
 
   function maskEmail(email) {
     const s = String(email || '').trim();
@@ -172,6 +177,19 @@
       const passIn = el.querySelector('#auPass');
       const eyeBtn = el.querySelector('[data-toggle-pass]');
       const submitBtn = el.querySelector('[data-submit]');
+      const sendBtns = [...el.querySelectorAll('[data-send-code]')];
+      let busy = false;
+
+      const startBusy = (activeBtn, text) => {
+        busy = true;
+        [submitBtn, ...sendBtns].forEach((b) => { if (b !== activeBtn) b.disabled = true; });
+        const restore = App.busy(activeBtn, text);
+        return () => {
+          busy = false;
+          restore();
+          [submitBtn, ...sendBtns].forEach((b) => { b.disabled = false; });
+        };
+      };
 
       const setErr = (field, msg) => {
         const inp = field === 'email' ? emailIn : passIn;
@@ -192,17 +210,18 @@
       passIn.addEventListener('input', () => setErr('pass', ''));
       bindEyeToggle(passIn, eyeBtn);
 
-      el.querySelectorAll('[data-send-code]').forEach((btn) => {
+      sendBtns.forEach((btn) => {
         btn.addEventListener('click', async () => {
+          if (busy) return;
           const email = emailIn.value.trim().toLowerCase();
           if (!EMAIL_RE.test(email)) {
             setErr('email', 'Email không hợp lệ');
             emailIn.focus();
             return;
           }
-          const done = App.busy(btn, 'Đang gửi mã...');
+          const done = startBusy(btn, 'Đang gửi mã...');
           const r = await API.sendCode(email);
-          if (!el.isConnected) return;
+          if (!isActiveView(el)) return;
           done();
           if (r.ok) {
             App.go('otp', { email: r.email || email });
@@ -214,10 +233,10 @@
       });
 
       const submit = async () => {
-        if (submitBtn.disabled) return;
-        const done = App.busy(submitBtn, 'Đang đăng nhập...');
+        if (busy) return;
+        const done = startBusy(submitBtn, 'Đang đăng nhập...');
         const r = await API.signIn(emailIn.value, passIn.value);
-        if (!el.isConnected) return;
+        if (!isActiveView(el)) return;
         done();
         if (r.ok) {
           API.bio.enabled() ? App.reset('home', {}, 'fade') : App.go('bioSetup');
@@ -245,6 +264,7 @@
     render: (p) => {
       const masked = maskEmail(p.email || SAMPLE_EMAIL);
       const errMsg = p.error || '';
+      const showSuggest = !(window.API && API.live) || p.qa;
       return `${App.header({ title: '' })}
         <div class="au-wrap has-nav">
           <h1 class="page-title" style="padding:4px 0 0">Nhập mã xác thực</h1>
@@ -259,7 +279,7 @@
           <div class="au-resend">Gửi lại mã sau <span class="num" data-cd>1:00</span></div>
         </div>
         <div class="au-kb" aria-hidden="true">
-          <button type="button" class="au-kb-suggest" data-fill="123456">Từ Email<b class="num">123456</b></button>
+          ${showSuggest ? '<button type="button" class="au-kb-suggest" data-fill="123456">Từ Email<b class="num">123456</b></button>' : ''}
           <div class="au-kb-keys">${['1|', '2|ABC', '3|DEF', '4|GHI', '5|JKL', '6|MNO', '7|PQRS', '8|TUV', '9|WXYZ'].map((k) => {
             const [d, l] = k.split('|'); return `<button type="button" data-k="${d}"><b>${d}</b><span>${l}</span></button>`; }).join('')}
             <span class="blank"></span><button type="button" data-k="0"><b>0</b></button>
@@ -273,8 +293,15 @@
       const boxes = [...el.querySelectorAll('.au-otp-box')];
       const errBox = el.querySelector('.au-err');
       const resendEl = el.querySelector('.au-resend');
-      let locked = false;
+      const kbEl = el.querySelector('.au-kb');
+      let busy = false;
       let sec = 60;
+
+      const setBusy = (on) => {
+        busy = on;
+        inp.disabled = on;
+        kbEl.classList.toggle('locked', on);
+      };
 
       const drawBoxes = (val, isErr = false) => {
         boxes.forEach((b, i) => {
@@ -282,7 +309,7 @@
           b.classList.remove('active', 'ok', 'err');
           if (isErr) b.classList.add('err');
           if (ch) b.textContent = ch;
-          else if (i === val.length && !locked) {
+          else if (i === val.length && !busy) {
             b.classList.add('active');
             b.innerHTML = '<span class="au-caret"></span>';
           } else b.textContent = '';
@@ -291,23 +318,24 @@
 
       const fmtSec = (n) => `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;
       const renderResend = () => {
-        if (locked) {
-          resendEl.innerHTML = '<span class="au-checking"><span class="spin"></span>Đang kiểm tra mã...</span>';
-          return;
-        }
+        if (busy) return;
         if (sec > 0) {
           resendEl.innerHTML = `Gửi lại mã sau <span class="num">${fmtSec(sec)}</span>`;
         } else {
           resendEl.innerHTML = '<button type="button" data-resend>Gửi lại mã</button>';
           resendEl.querySelector('[data-resend]').addEventListener('click', async (e) => {
-            const btn = e.currentTarget;
-            const done = App.busy(btn, 'Đang gửi...');
+            if (busy) return;
+            setBusy(true);
+            const done = App.busy(e.currentTarget, 'Đang gửi...');
             const r = await API.sendCode(email);
-            if (!el.isConnected) return;
+            if (!isActiveView(el)) return;
+            setBusy(false);
             if (r.ok) {
               App.toast('Đã gửi mã mới');
               sec = 60;
               renderResend();
+              drawBoxes(inp.value);
+              focusInput();
             } else {
               done();
               App.toast(r.error, 'alert');
@@ -316,10 +344,10 @@
         }
       };
 
-      const focusInput = () => { if (!locked) inp.focus({ preventScroll: true }); };
-      el.querySelector('.au-kb').addEventListener('click', (e) => {
+      const focusInput = () => { if (!busy) inp.focus({ preventScroll: true }); };
+      kbEl.addEventListener('click', (e) => {
         const b = e.target.closest('[data-k],[data-fill]');
-        if (!b || locked) return;
+        if (!b || busy) return;
         const k = b.dataset.k;
         inp.value = b.dataset.fill || (k === 'del' ? inp.value.slice(0, -1) : (inp.value + k).slice(0, 6));
         inp.dispatchEvent(new Event('input'));
@@ -328,21 +356,21 @@
       setTimeout(focusInput, 120);
 
       inp.addEventListener('input', async () => {
-        if (locked) return;
+        if (busy) return;
         const val = inp.value.replace(/\D/g, '').slice(0, 6);
         inp.value = val;
         errBox.hidden = true;
         drawBoxes(val);
 
         if (val.length === 6) {
-          locked = true;
-          renderResend();
+          setBusy(true);
+          resendEl.innerHTML = '<span class="au-checking"><span class="spin"></span>Đang kiểm tra mã...</span>';
           const r = await API.verifyCode(email, val);
-          if (!el.isConnected) return;
+          if (!isActiveView(el)) return;
           if (r.ok) {
             boxes.forEach((b, i) => setTimeout(() => { if (el.isConnected) b.classList.add('ok'); }, i * 40));
             setTimeout(() => {
-              if (el.isConnected) App.go('password', { status: r.profile && r.profile.status });
+              if (isActiveView(el)) App.go('password', { status: r.profile && r.profile.status });
             }, 350);
           } else {
             errBox.querySelector('span').textContent = r.error;
@@ -351,8 +379,8 @@
             drawBoxes('', true);
             inp.value = '';
             setTimeout(() => {
-              if (!el.isConnected) return;
-              locked = false;
+              if (!isActiveView(el)) return;
+              setBusy(false);
               renderResend();
               drawBoxes('');
               focusInput();
@@ -363,7 +391,7 @@
 
       const timer = setInterval(() => {
         if (!el.isConnected) { clearInterval(timer); return; }
-        if (sec > 0) { sec--; if (!locked) renderResend(); }
+        if (sec > 0) { sec--; if (!busy) renderResend(); }
       }, 1000);
     },
   });
@@ -449,7 +477,7 @@
         }
         const done = App.busy(submitBtn, 'Đang lưu...');
         const r = await API.setPassword(p1);
-        if (!el.isConnected) return;
+        if (!isActiveView(el)) return;
         done();
         if (r.ok) {
           if (isChange) {
@@ -489,13 +517,17 @@
     mount: (el) => {
       const errEl = el.querySelector('.au-bio-err');
       const enableBtn = el.querySelector('[data-enable]');
+      const skipBtn = el.querySelector('[data-skip]');
 
       enableBtn.addEventListener('click', async () => {
+        if (enableBtn.disabled) return;
         const done = App.busy(enableBtn, 'Đang bật...');
+        skipBtn.disabled = true;
         errEl.textContent = '';
         const ok = await App.faceId();
-        if (!el.isConnected) return;
+        if (!isActiveView(el)) return;
         done();
+        skipBtn.disabled = false;
         if (ok) {
           API.bio.set(true);
           App.toast('Đã bật Face ID');
@@ -505,7 +537,9 @@
         }
       });
 
-      el.querySelector('[data-skip]').addEventListener('click', () => App.reset('home', {}, 'fade'));
+      skipBtn.addEventListener('click', () => {
+        if (!enableBtn.disabled) App.reset('home', {}, 'fade');
+      });
     },
   });
 
@@ -546,9 +580,12 @@
       const errBox = el.querySelector('[data-err="lockPass"]');
       const unlockBtn = el.querySelector('[data-unlock]');
       const usePassBtn = el.querySelector('[data-use-pass]');
+      const faceIdBtn = el.querySelector('[data-faceid]');
       const logoutBtn = el.querySelector('[data-logout]');
 
-      let userEmail = p.email || '';
+      const allowSample = p.qa || !(window.API && API.live);
+      let userEmail = p.email || (allowSample ? SAMPLE_EMAIL : '');
+      let busy = false;
 
       if (!p.qa) {
         API.profile().then((prof) => {
@@ -564,7 +601,7 @@
       const showPassForm = () => {
         passArea.classList.add('show');
         usePassBtn.hidden = true;
-        setTimeout(() => { if (el.isConnected) passIn.focus(); }, 120);
+        setTimeout(() => { if (el.isConnected && !busy) passIn.focus(); }, 120);
       };
 
       const setErr = (msg) => {
@@ -579,32 +616,54 @@
         }
       };
 
+      const startBusy = (activeBtn, text) => {
+        busy = true;
+        passIn.disabled = true;
+        [unlockBtn, usePassBtn, faceIdBtn, logoutBtn].forEach((b) => { if (b !== activeBtn) b.disabled = true; });
+        const restore = App.busy(activeBtn, text);
+        return () => {
+          busy = false;
+          passIn.disabled = false;
+          restore();
+          [unlockBtn, usePassBtn, faceIdBtn, logoutBtn].forEach((b) => { b.disabled = false; });
+        };
+      };
+
       passIn.addEventListener('input', () => setErr(''));
       bindEyeToggle(passIn, el.querySelector('[data-toggle-pass]'));
 
       const runFaceId = async () => {
+        if (busy) return;
         const ok = await App.faceId();
-        if (!el.isConnected || App.current().el !== el) return;
+        if (!isActiveView(el) || busy) return;
         if (ok) App.reset('home', {}, 'fade');
         else showPassForm();
       };
 
       if (!p.showPass && !p.qa) {
         setTimeout(() => {
-          if (el.isConnected && App.current().el === el) runFaceId();
+          if (isActiveView(el)) runFaceId();
         }, 400);
       }
 
       const unlock = async () => {
-        if (unlockBtn.disabled) return;
-        const done = App.busy(unlockBtn, 'Đang mở khóa...');
+        if (busy) return;
+        const done = startBusy(unlockBtn, 'Đang mở khóa...');
         if (!userEmail) {
           const prof = await API.profile();
-          if (!el.isConnected) return;
-          userEmail = (prof && prof.email) || SAMPLE_EMAIL;
+          if (!isActiveView(el)) return;
+          if (prof && prof.email) {
+            userEmail = prof.email;
+          } else if (allowSample) {
+            userEmail = SAMPLE_EMAIL;
+          } else {
+            done();
+            setErr('Không đọc được thông tin tài khoản. Thử lại hoặc đăng xuất.');
+            return;
+          }
         }
         const r = await API.signIn(userEmail, passIn.value);
-        if (!el.isConnected) return;
+        if (!isActiveView(el)) return;
         done();
         if (r.ok) {
           App.reset('home', {}, 'fade');
@@ -621,12 +680,12 @@
       });
 
       usePassBtn.addEventListener('click', showPassForm);
-      el.querySelector('[data-faceid]').addEventListener('click', runFaceId);
+      faceIdBtn.addEventListener('click', runFaceId);
       logoutBtn.addEventListener('click', async () => {
-        if (logoutBtn.disabled) return;
-        const done = App.busy(logoutBtn, 'Đang đăng xuất...');
+        if (busy) return;
+        const done = startBusy(logoutBtn, 'Đang đăng xuất...');
         await API.signOut();
-        if (!el.isConnected) return;
+        if (!isActiveView(el)) return;
         done();
         App.reset('login');
       });
@@ -637,8 +696,8 @@
   App.state('Đăng nhập', () => App.reset('login'), 'Đăng nhập');
   App.state('Đăng nhập: lỗi email', () => App.reset('login', { email: 'ten@', emailError: 'Email không hợp lệ' }), 'Đăng nhập');
   App.state('Đăng nhập: sai mật khẩu', () => App.reset('login', { email: SAMPLE_EMAIL, passError: 'Email hoặc mật khẩu không đúng' }), 'Đăng nhập');
-  App.state('Nhập mã', () => App.reset('otp', { email: SAMPLE_EMAIL }), 'Đăng nhập');
-  App.state('Mã sai', () => App.reset('otp', { email: SAMPLE_EMAIL, error: 'Mã không đúng hoặc đã hết hạn' }), 'Đăng nhập');
+  App.state('Nhập mã', () => App.reset('otp', { email: SAMPLE_EMAIL, qa: true }), 'Đăng nhập');
+  App.state('Mã sai', () => App.reset('otp', { email: SAMPLE_EMAIL, error: 'Mã không đúng hoặc đã hết hạn', qa: true }), 'Đăng nhập');
   App.state('Tạo mật khẩu (lần đầu)', () => App.reset('password', { status: 'invited' }), 'Đăng nhập');
   App.state('Đặt mật khẩu mới', () => App.reset('password', { status: 'active' }), 'Đăng nhập');
   App.state('Mật khẩu không khớp', () => App.reset('password', { status: 'invited', mismatch: true }), 'Đăng nhập');

@@ -22,12 +22,17 @@ App.screen('splash', {
       <div class="sp-word">Medi<b>POS</b></div>
     </div></div>`,
   mount: (el, p) => {
-    // Live: còn phiên → Face ID (nếu bật) hoặc Trang chủ; không phiên → Đăng nhập. Chạy song song animation.
+    // Live: còn phiên → kiểm trạng thái invited / Face ID / Trang chủ; không phiên → Đăng nhập. Chạy song song animation.
     const route = (p.next || !API.live) ? Promise.resolve(p.next)
-      : API.profile().then((me) => (me ? (API.bio.enabled() && App.screens.lock ? 'lock' : 'home') : null));
+      : API.profile().then((me) => {
+        if (!me) return null;
+        if (me.status === 'invited' && App.screens.password) return { name: 'password', p: { status: 'invited' } };
+        return API.bio.enabled() && App.screens.lock ? 'lock' : 'home';
+      });
     Promise.all([route, new Promise((r) => setTimeout(r, 1850))]).then(([next]) => {
       if (App.current().el !== el) return; // đã nhảy màn khác từ bảng QA
-      App.reset(next || (App.screens.login ? 'login' : 'home'), {}, 'reveal');
+      if (next && typeof next === 'object') App.reset(next.name, next.p || {}, 'reveal');
+      else App.reset(next || (App.screens.login ? 'login' : 'home'), {}, 'reveal');
     });
   },
 });

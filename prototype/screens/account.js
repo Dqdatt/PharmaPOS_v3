@@ -97,7 +97,6 @@ App.css(`
   }
 
   function showLogoutSheet() {
-    let cancelled = false;
     App.sheet(`
       <h3>Đăng xuất khỏi điện thoại này?</h3>
       <p>Các máy tính đang đăng nhập web vẫn mở. Muốn tắt hết thì đăng xuất chúng ở Phiên web trước.</p>
@@ -108,17 +107,16 @@ App.css(`
     `, {
       onMount(sheetEl, close) {
         const cancelBtn = sheetEl.querySelector('#acLogoutCancel');
+        let loggingOut = false;
         sheetEl.querySelector('#acLogoutConfirm')?.addEventListener('click', async (e) => {
+          if (loggingOut) return;
+          loggingOut = true;
           App.busy(e.currentTarget, 'Đang đăng xuất...');
           if (cancelBtn) cancelBtn.disabled = true;
           await API.signOut();
-          if (cancelled) return;
           close();
           App.reset('login');
         });
-      },
-      onClose() {
-        cancelled = true;
       },
     });
   }
