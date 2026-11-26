@@ -176,6 +176,7 @@ App.css(`
       const owner = DATA.owner || { name: 'Trần Minh Khoa', role: 'Chủ nhà thuốc', initials: 'MK' };
       const store = DATA.store || { name: 'Nhà thuốc Tâm An' };
       const ws = DATA.webSessions || [];
+      const isAdmin = API.me()?.role === 'admin';
       const on = API.bio.enabled();
       const lockOn = on && localStorage.getItem('medipos.applock') === '1';
 
@@ -186,6 +187,14 @@ App.css(`
           <div class="ac-role">${App.esc(owner.role)}, ${App.esc(store.name)}</div>
         </div>
 
+        ${isAdmin ? `
+          <div class="card" style="margin:8px 16px 0">
+            <div class="row tap" data-go="accounts">
+              <div class="tile">${App.icon('users', 20)}</div>
+              <div class="row-main"><div class="row-title ell">Quản lý tài khoản</div></div>
+              <div class="row-end">${App.icon('chev', 20)}</div>
+            </div>
+          </div>` : ''}
         <div class="section" style="margin-top:8px">
           <div class="section-head"><h2 style="font-size:15px">Bảo mật</h2></div>
           <div class="card" style="margin:0 16px">
@@ -922,7 +931,10 @@ App.css(`
   });
 
   // State QA (nhóm 'Tài khoản')
-  App.state('Tài khoản', () => App.reset('account'), 'Tài khoản');
+  App.state('Tài khoản', () => {
+    localStorage.removeItem('medipos.mockRole');
+    App.reset('account');
+  }, 'Tài khoản');
   App.state('Tài khoản: đã bật khoá app', () => {
     localStorage.setItem('medipos.bio', '1');
     localStorage.setItem('medipos.applock', '1');
