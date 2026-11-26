@@ -122,7 +122,7 @@ App.css(`
               <div>
                 <div class="tl-stat-num num tl-exp-num" data-skel>0</div>
                 <div class="tl-stat-lbl">Cận hạn</div>
-                <div class="tl-stat-sub">lô trong 30 ngày</div>
+                <div class="tl-stat-sub tl-exp-sub">lô trong 30 ngày</div>
               </div>
             </div>
           </div>
@@ -201,15 +201,12 @@ App.css(`
         el.querySelector('.tl-ls-num').textContent = String((r.lowStock || []).length);
 
         const exp = r.expiring || [];
-        const expCard = el.querySelector('.tl-exp-card');
-        const grid = el.querySelector('.tl-grid');
         if (exp.length) {
-          expCard.hidden = false;
-          grid.style.gridTemplateColumns = '';
           el.querySelector('.tl-exp-num').textContent = String(exp.length);
+          el.querySelector('.tl-exp-sub').textContent = 'lô trong 30 ngày';
         } else {
-          expCard.hidden = true;
-          grid.style.gridTemplateColumns = '1fr';
+          el.querySelector('.tl-exp-num').textContent = '—';
+          el.querySelector('.tl-exp-sub').textContent = 'Chưa theo dõi hạn dùng';
         }
 
         el.querySelector('.tl-inv-num').innerHTML = `${r.today.invoices}${App.icon('chev', 18)}`;
