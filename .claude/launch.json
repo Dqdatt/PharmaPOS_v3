@@ -33,6 +33,15 @@
         "pwa/dist"
       ],
       "port": 4174
+    },
+    {
+      "name": "pwa-tunnel",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "serve:pwa"
+      ],
+      "port": 4176
     }
   ]
 }

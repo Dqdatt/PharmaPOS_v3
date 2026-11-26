@@ -5,9 +5,11 @@
 (function () {
   const host = location.hostname;
   const isLocal = /^(localhost|127\.0\.0\.1|\[::1\]|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+|.+\.local)$/.test(host);
-  const live = isLocal && !!window.supabase && location.protocol === 'http:';
+  // Test iPhone qua HTTPS tunnel (pwa/tools/serve.mjs chuyển tiếp Supabase cùng origin)
+  const tunnel = /\.trycloudflare\.com$/.test(host);
+  const live = !!window.supabase && ((isLocal && location.protocol === 'http:') || tunnel);
   // shortcut: URL + anon key cố định cho Supabase LOCAL (key demo công khai của CLI), khi lên thật đọc từ cấu hình build
-  const sb = live ? window.supabase.createClient(`http://${host}:54321`,
+  const sb = live ? window.supabase.createClient(tunnel ? location.origin : `http://${host}:54321`,
     'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0',
     { auth: { storageKey: 'medipos.auth', persistSession: true, autoRefreshToken: true } }) : null;
 
