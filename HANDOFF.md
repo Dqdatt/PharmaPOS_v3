@@ -1,39 +1,32 @@
 # HANDOFF — MediPOS (repo PharmaPOS_V3), 26/11/2026 — nhánh `prototype-mobile` (chưa push, chưa gộp main)
 
-## Mục tiêu phiên này
-Bước B: thông báo đẩy Web Push (VAPID) — XONG: server + UI (giao 029), iPhone thật nhận doanh thu + công nợ. Chỉ còn thử push đăng nhập POS trên iPhone.
+## Mục tiêu phiên vừa rồi
+Bước B (`docs/AUTH_PLAN.md`): thông báo đẩy Web Push VAPID cho app — XONG, iPhone thật nhận doanh thu + công nợ.
 
 ## Đã xong
-- Trước đó: Supabase local, 3 vai trò + RLS, OTP email + mật khẩu, POS đăng nhập QR, bước A passkey (7d45767). Kế hoạch A–F ở `docs/AUTH_PLAN.md`.
-- B server (7fa98ca):
-  - Migration `20261126130000_push.sql`: `push_subscriptions` (endpoint chỉ nhận FCM/Apple/Mozilla/WNS — chặn SSRF, tối đa 10 máy/người), `notif_prefs`, `notifications` (màn Thông báo + chống gửi trùng theo user+kind+ref), `push_jobs` (mã cron dùng 1 lần), RPC `push_subscribe/push_unsubscribe/my_notif_prefs/notifications_read`, `push_cron(job)` + 2 job `pg_cron` (14:00 UTC = 21:00 VN doanh thu; 01:00 UTC thứ Hai = 8:00 công nợ). URL function lấy ở Vault `functions_url` (seed local = `http://kong:8000/functions/v1`).
-  - `_shared/push.ts` (`notify()`: lưu + đẩy, web-push chỉ mã hoá/ký, gửi bằng fetch, 404/410 xoá máy), function `push` (`key`, `cron`; `verify_jwt = false` trong config.toml), `web-login` poll → báo "Đăng nhập POS mới" cho chính tài khoản (waitUntil).
-  - `reportRevenue.ts` chuyển sang `supabase/functions/_shared/`, `src/utils/reportRevenue.ts` chỉ re-export (POS + function dùng chung 1 nguồn). Doanh thu push = `getRetailRevenueForDate().netRevenue` = ô "Doanh thu ngày (bán lẻ)".
-  - `pwa/src/sw.js`: `push` + `notificationclick` (app mở → postMessage, chưa mở → `./?notif=<kind>`).
-  - `prototype/js/api.js`: `API.me()`, `API.push.{status,enable,disable,prefs,takeOpened,onOpen}`, `API.notifications.{list,read}`; đăng xuất gọi `API.push.disable()`. `data.js`: thông báo mẫu mới.
-  - Test: `npm run test:push` (dịch vụ push giả `scripts/lib/fake-push.mjs` kiểm VAPID + giải mã RFC 8291), `test:passkey` thêm kiểm push đăng nhập POS. Đạt: rls, web-login, passkey, push, npm test, lint, build, check.mjs, check:pwa, verify:pwa.
+- 7fa98ca v3.6.0 server: migration `20261126130000_push.sql` (`push_subscriptions` chỉ nhận endpoint FCM/Apple/Mozilla/WNS, ≤10 máy/người; `notif_prefs`; `notifications` chống trùng user+kind+ref; `push_jobs` mã cron dùng 1 lần; RPC `push_subscribe/push_unsubscribe/my_notif_prefs/notifications_read`; `pg_cron` 14:00 UTC doanh thu, 01:00 UTC thứ Hai công nợ → `push_cron()` → `pg_net` → function, URL ở Vault `functions_url`). Function `push` (`key`, `cron`, `verify_jwt=false`), `_shared/push.ts` `notify()`, `web-login` báo "Đăng nhập POS mới". `reportRevenue.ts` dời sang `supabase/functions/_shared/` (src re-export). `sw.js` push + notificationclick. `api.js`: `API.me/push/notifications`, đăng xuất huỷ push.
+- 45b276f giao 029 UI: Cài đặt thông báo (bật/tắt máy, công tắc thật, thêm công nợ, bỏ giờ yên lặng, NV ẩn doanh thu/công nợ), màn Thông báo đọc thật, `App.openNotif` (revenue/stock/expiry/debt→payables).
+- 177cac3 v3.6.1: `VAPID_SUBJECT` = `https://dqdatt.github.io/PharmaPOS_v3/` (Apple 403 BadJwtToken với `.test`); `test:push` cất/trả máy thật.
+- Đạt: test:rls, web-login, passkey, push, npm test, lint, build, check.mjs, check:pwa, verify:pwa; Claude chạy thật UI; iPhone qua tunnel nhận push.
 
 ## Đang dở
-- Server 7fa98ca + UI giao 029 đã gộp (45b276f), Claude chạy thật đạt (dữ liệu live, mở app từ thông báo, quay lại không trắng màn). Đang test iPhone qua tunnel (cổng 4177 vì 4176 bị server cũ giữ). Muốn gửi thử doanh thu: xoá notifications kind revenue/debt của người nhận rồi `select public.push_cron('daily'|'weekly')`.
+- Không có việc `giao` nào mở. Chưa thử push "Đăng nhập POS mới" trên iPhone: POS local kẹt màn chốt tồn bắt buộc của QL (DB reset → tháng 10 chưa chốt) → bấm "Chốt tồn & Mở khóa làm việc" rồi quét QR lại.
 
 ## Quyết định đã chốt
-- Mọi việc qua `giao`; auth/quyền/RLS/migration/tiền → Claude tự làm. 3 vai trò cố định, 1 cơ sở. Admin chỉ dùng app.
-- Push: đăng nhập POS luôn báo (cho chính tài khoản). Doanh thu 21:00 + công nợ NCC 8:00 thứ Hai chỉ QL + admin (bật/tắt được). NV chỉ nhận đăng nhập POS. Bỏ giờ yên lặng. Kho/hạn dùng gửi ở bước C. Đăng xuất = xoá đăng ký push máy đó.
-- Duyệt đăng nhập POS bắt buộc Face ID. Test trên PWA qua tunnel. Sửa ở `prototype/`, build lại `pwa/`.
+- Mọi việc qua `giao`; auth/quyền/RLS/migration/tiền/tồn kho → Claude tự làm. 3 vai trò cố định, 1 cơ sở, admin chỉ dùng app.
+- Push: đăng nhập POS luôn báo (chính tài khoản đó); doanh thu 21:00 (= ô "Doanh thu ngày (bán lẻ)" POS) + công nợ NCC 8:00 thứ Hai chỉ QL+admin; NV chỉ nhận đăng nhập POS; bỏ giờ yên lặng; kho/hạn dùng gửi ở bước C; đăng xuất = huỷ push máy đó.
+- Nút Đăng xuất cho màn chốt tồn QL: để sau. Đăng xuất máy tính từ điện thoại = bước E (màn "Phiên web đang mở" hiện là mẫu).
 
 ## Nợ Ponytail / lưu ý
-- `supabase start` TREO vì `security find-generic-password -s "Supabase CLI"` (keychain) khi project đang link. Cách chạy: tạm cất `supabase/.temp/project-ref` → `supabase start` → trả lại file. `db reset` / `status` không bị.
-- Khoá VAPID local ở `supabase/functions/.env` (gitignore, `npm run push:keys`, xong phải `supabase stop && supabase start`). Bước F: khoá MỚI làm secret, Vault `functions_url` = URL project, deploy `push` (config đã `verify_jwt = false`).
-- `VAPID_SUBJECT` phải là mailto/https THẬT: Apple trả 403 BadJwtToken với `mailto:...@medipos.test` (đã đổi sang `https://dqdatt.github.io/PharmaPOS_v3/`, fake-push test giờ kiểm luôn). Đổi `.env` functions thì phải stop/start lại Supabase.
-- Đổi khoá VAPID thì máy cũ nhận 403 (không phải 410) → dòng đăng ký còn, bật lại thông báo trên máy là xong.
-- `test:push` cất đăng ký máy thật rồi trả lại (iPhone không nhận thông báo test) nhưng XOÁ hết bảng notifications local. Mỗi `db:reset` POS lại đòi QL chốt tồn tháng trước (bấm chốt là xong). Màn "Phiên web đang mở" trên app vẫn là mẫu: đăng xuất từ xa = bước E.
-- `api.js:11` URL + anon key local viết cứng (bước F). `verify:pwa` chập chờn ~1/5. `test:rls` chạy ngay sau `db:reset`; `test:passkey` chỉ chạy được 1 lần sau reset. Bảng mới phải tự GRANT.
-- Bước F: OTP email lạ trả 422; `passkey login-options` chưa giới hạn theo IP. Trình duyệt trong app Claude không chạy WebAuthn.
+- Không có `shortcut:` mới. Cũ: `api.js:11` URL + anon key local viết cứng (bước F).
+- `supabase start` TREO vì keychain (`security find-generic-password`) khi project đang link: tạm cất `supabase/.temp/project-ref`, start, trả lại; hoặc chạy tay 1 lần và bấm "Luôn cho phép". Đổi `supabase/functions/.env` phải stop/start lại.
+- `test:passkey` chỉ chạy 1 lần sau `db:reset`; `test:rls` chạy ngay sau reset; `test:push` xoá hết bảng notifications local. `verify:pwa` chập chờn ~1/5.
+- Bước F: khoá VAPID MỚI làm secret, Vault `functions_url` URL project, deploy `push`; OTP email lạ trả 422; `passkey login-options` chưa giới hạn theo IP.
 
 ## Việc tiếp theo
-1. Việc vặt sau B trong `docs/TASKS.md` (push đăng nhập POS trên iPhone, nút Đăng xuất màn chốt tồn QL, bỏ state QA push cũ, keychain) — [sonnet/haiku]
-2. C — `products.min_stock` + `purchase_items.expiry_date` + ô nhập POS + push kho/hạn dùng — [opus xhigh]
-3. D → E → F theo `docs/AUTH_PLAN.md` (F: hỏi trước mỗi thao tác trên DB thật) — [opus xhigh]
+1. C: `products.min_stock` + `purchase_items.expiry_date` + ô nhập POS Nhập hàng (UI giao) + push thuốc sắp hết / cận hạn qua `notify()` và `notif_prefs.low_stock/expiring/expiry_days` — [opus xhigh]
+2. Việc vặt trong `docs/TASKS.md`: push đăng nhập POS trên iPhone, nút Đăng xuất màn chốt tồn QL, bỏ state QA push cũ ở `weblogin.js` — [sonnet] giao
+3. D → E → F theo `docs/AUTH_PLAN.md` (F: hỏi trước mỗi thao tác DB thật) — [opus xhigh]
 
 ## File cần đọc đầu tiên
-`docs/AUTH_PLAN.md` · `AGENTS.md` · `prototype/js/api.js` · `supabase/functions/push/index.ts` · `supabase/functions/_shared/push.ts` · `supabase/migrations/20261126130000_push.sql`
+`docs/AUTH_PLAN.md` · `AGENTS.md` · `supabase/functions/_shared/push.ts` · `supabase/functions/push/index.ts` · `prototype/js/api.js`
