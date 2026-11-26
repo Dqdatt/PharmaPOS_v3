@@ -1,5 +1,18 @@
 # Việc đang mở
 
+## MVP lên DB thật (chốt 26/11/2026 — hoãn C tồn kho, làm trước phần này)
+Chốt: #2 Đoàn Quốc Đường → Quản lý (giữ id, 1673 hoá đơn cũ còn đủ); #1 Quốc Đạt → admin (chỉ app). Người dùng tự điền email. Quét QR giữ quét trực tiếp (iOS hỏi camera tối đa 1 lần/lần mở app). POS thật chạy Vercel/Netlify.
+- [x] M1 Diễn tập: sao bản DB thật (chỉ đọc) về local → chạy migration mới → đối chiếu số dòng, thử POS/app trên bản sao — [opus xhigh] ĐẠT 26/11: 12 bảng giống từng byte, chỉ `users` đổi role; QL đọc đủ 1673 hoá đơn
+- [x] M2 Script nối tài khoản cũ + tạo admin đầu tiên (gán email/vai trò cho hàng `users` có sẵn, giữ id) — `scripts/link-account.mjs`, chạy thật ở M9
+- [ ] (giao 030) M3 Quyền 1 lần: bỏ tự Face ID khi mở app (công tắc "Khoá app bằng Face ID", mặc định tắt); camera không xin lại khi mở lại màn quét — [sonnet] giao
+- [ ] (app xong; POS nút đăng xuất = giao 031) M4 Đăng nhập/đăng xuất trọn vẹn: quên mật khẩu (mã email), đổi mật khẩu, bị khoá/thu hồi phiên → về màn đăng nhập; nút Đăng xuất màn chốt tồn POS — [opus xhigh] + UI giao
+- [ ] M5 (=E) Admin trong app: cấp email cho NV cũ, cấp/khoá/đổi vai trò, gửi lại mã, xem + thu hồi phiên POS (`admin-update-user`) — [opus xhigh] + UI giao
+- [ ] M6 (=D) App đọc dữ liệu thật: Trang chủ, Doanh thu, Hoá đơn, Nhân viên, Tiện ích theo RLS — [opus xhigh] + UI giao
+- [ ] M7 Email thật: mẫu mail tiếng Việt (mã đăng nhập, quên mật khẩu), sửa lỗi 422 email lạ, Gmail SMTP trên Supabase thật (người dùng tự nhập mật khẩu ứng dụng) — [opus xhigh]
+- [x] M8 Bỏ URL + key viết cứng `prototype/js/api.js:11` → cấu hình local/thật khi build PWA — [sonnet] giao
+- [ ] M9 (=F) Lên thật ngoài giờ bán: sao lưu → migration → nối ĐQĐ + admin → functions/secrets/Vault → PWA lên Pages + POS lên Vercel/Netlify cùng lúc — [opus xhigh] (hỏi trước từng thao tác)
+- [ ] M10 Test cuối trên iPhone với link Pages cố định (thông báo + Face ID cấp 1 lần là giữ) — [opus high]
+
 - [x] Prototype app điện thoại (`prototype/`): khung, logo, splash, Trang chủ — [opus high]
 - [x] Prototype: Đăng nhập app + Face ID + tạo PIN (`screens/auth.js`) — [sonnet] giao
 - [x] Prototype: Đăng nhập web bằng điện thoại (QR + chọn số khớp + phiên web) (`screens/weblogin.js`) — [opus xhigh] đặc tả, giao dựng UI
@@ -30,10 +43,10 @@
 - [ ] POS: thêm nút Đăng xuất ở màn chốt tồn bắt buộc của quản lý (`MainApp.tsx`, NV đã có) — [sonnet] giao
 - [ ] Prototype: bỏ state QA "Web xin đăng nhập (thông báo đẩy)" + luồng webConfirm `from: 'push'` (đăng nhập POS giờ chỉ quét QR) — [sonnet] giao
 - [ ] Dev: `supabase start` treo vì keychain → chạy `supabase start` một lần trong Terminal, bấm "Luôn cho phép" ở hộp thoại keychain (hoặc nâng CLI) — [haiku]
-- [ ] C: gửi push thuốc sắp hết / cận hạn (dùng `notify()` + `notif_prefs.low_stock/expiring/expiry_days`) — [opus xhigh]
-- [ ] C: min_stock + hạn dùng theo lô (POS Nhập hàng) — [opus xhigh] + UI giao
-- [ ] D: app đọc dữ liệu thật — [opus xhigh] + UI giao
-- [ ] E: admin cấp/khoá/đổi quyền trong app + xem/thu hồi phiên POS — [opus xhigh] + UI giao
-- [ ] F: chuyển DB thật (hỏi trước mỗi thao tác) — [opus xhigh]
+- [ ] (HOÃN sau MVP) C: gửi push thuốc sắp hết / cận hạn (dùng `notify()` + `notif_prefs.low_stock/expiring/expiry_days`) — [opus xhigh]
+- [ ] (HOÃN sau MVP) C: min_stock + hạn dùng theo lô (POS Nhập hàng) — [opus xhigh] + UI giao
+- [ ] D → xem M6
+- [ ] E → xem M5
+- [ ] F → xem M9
 - [x] Auth 4: đăng nhập POS web bằng QR + Face ID (giao 026, 027), chặn admin ở POS
 - [x] Test iPhone thật qua tunnel (người dùng xác nhận chạy ổn) — [opus xhigh]

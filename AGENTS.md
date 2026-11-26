@@ -52,3 +52,5 @@ Nguồn chuẩn để sau này port 1:1 sang app native. Khung `index.html`, `cs
 ## Lưu ý
 - `.env`, `.env.local` không commit. `.env.example` chỉ chứa URL + publishable key (công khai được).
 - `dist/`, `node_modules/` sinh ra, không sửa tay.
+- DB thật (project `fbppvryvfdeohocsgwtl`) đang có dữ liệu bán hàng thật; POS bản thật chạy trên Vercel/Netlify. Chưa gộp `prototype-mobile` vào `main` trước bước F (POS mới cần migration mới, RLS bật là POS cũ ngừng). Mọi thao tác trên DB thật hỏi người dùng trước.
+- iOS không nhớ quyền camera của PWA qua mỗi lần mở app (giới hạn WebKit) → quét QR xin quyền tối đa 1 lần/lần mở; không đổi `location.hash` khi chuyển màn (đổi hash làm iOS hỏi lại).
