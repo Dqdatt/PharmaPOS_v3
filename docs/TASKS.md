@@ -14,4 +14,7 @@
 - [ ] Gộp nhánh `prototype-mobile` vào main khi người dùng chốt — [haiku]
 - [x] PWA MediPOS từ prototype (giao 017 vỏ PWA, 018 kiểm chứng 0 pixel) — [opus high]
 - [ ] PWA: góp ý của người dùng khi test link local (sửa ở prototype/, build lại) — [opus high]
+- [x] PWA iOS: hở dải đáy 48pt khi mở từ màn hình chính (giao 019+020, 03a5931, đã thử iPhone thật) — [opus high]
+- [ ] PWA: hỏi người dùng ô SĐT "2884 0" có mất số khi gõ không — [sonnet]
+- [ ] Kavor: áp cách sửa hở đáy PWA iOS (bộ nhớ `ios-pwa-viewport-fix`), làm ở phiên dự án Kavor — [opus high]
 - [ ] PWA: deploy lại GitHub Pages khi cần HTTPS (lần trước GitHub lỗi 500) — [haiku]
