@@ -112,6 +112,9 @@ App.screen('home', {
       bars.classList.add('grow');
       if (first) App.countUp(el.querySelector('.hm-v'), DATA.today.revenue, 900);
     });
+    const k = API.push.takeOpened();
+    // Chờ hiệu ứng vào Trang chủ xong (dài nhất 720ms) rồi mới chuyển màn; người dùng đã rời Trang chủ thì thôi
+    if (k !== null) setTimeout(() => { if (App.current().el === el) App.openNotif(k); }, 800);
   },
 });
 
