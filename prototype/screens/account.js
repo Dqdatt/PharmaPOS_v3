@@ -262,23 +262,21 @@ App.css(`
       const lockBtn = el.querySelector('#acAppLockBtn');
       const lockRow = el.querySelector('#acAppLockRow');
 
-      const updateAppLockUI = (bioEnabled, lockEnabled) => {
+      const updateAppLockUI = (bioEnabled) => {
         if (!lockRow || !lockBtn) return;
         if (bioEnabled) {
           lockRow.removeAttribute('aria-disabled');
           lockRow.classList.add('tap');
           lockBtn.removeAttribute('disabled');
           lockBtn.removeAttribute('aria-disabled');
-          lockBtn.classList.toggle('on', !!lockEnabled);
-          lockBtn.setAttribute('aria-checked', String(!!lockEnabled));
         } else {
           lockRow.setAttribute('aria-disabled', 'true');
           lockRow.classList.remove('tap');
           lockBtn.setAttribute('disabled', '');
           lockBtn.setAttribute('aria-disabled', 'true');
-          lockBtn.classList.remove('on');
-          lockBtn.setAttribute('aria-checked', 'false');
         }
+        lockBtn.classList.remove('on');
+        lockBtn.setAttribute('aria-checked', 'false');
       };
 
       if (fidRow && fidBtn) {
@@ -296,7 +294,7 @@ App.css(`
               const nowOn = !on;
               fidBtn.classList.toggle('on', nowOn);
               fidBtn.setAttribute('aria-checked', String(nowOn));
-              updateAppLockUI(nowOn, false);
+              updateAppLockUI(nowOn);
             } else if (!r.cancel) {
               App.toast(r.error, 'alert');
             }
