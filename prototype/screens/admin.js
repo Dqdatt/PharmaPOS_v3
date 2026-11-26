@@ -182,6 +182,7 @@
       </dl>
       ${readOnly ? '' : `
         <div class="adm-actions">
+          ${u.email ? '<button class="btn btn-secondary block tap" data-adm-edit>Sửa thông tin</button>' : ''}
           <h2>Vai trò</h2>
           <div class="adm-roles" role="group" aria-label="Vai trò">
             ${editableRoles.map((role) => `<button data-adm-role="${role}" aria-pressed="${role === u.role}"${disabled}>${roles[role]}</button>`).join('')}
@@ -194,7 +195,7 @@
   App.screen('accountDetail', {
     cls: 'adm-view',
     render: () => App.header({ title: 'Tài khoản' }) + `<div class="adm-content">${admin() ? App.skeleton() : denied}</div>`,
-    mount(el, { id }) {
+    mount(el, { id, edit }) {
       if (!admin()) return;
       const content = el.querySelector('.adm-content');
       let user;
@@ -247,6 +248,31 @@
         App.sheet(html, { onMount, onClose: () => { dialogOpen = false; } });
       }
 
+      function openEdit() {
+        if (!user || readOnly() || !user.email || dialogOpen || pending) return;
+        openSheet(`<h3>Sửa thông tin</h3>
+          <form class="adm-form adm-sheet">
+            <label class="adm-field">Họ tên<input name="name" autocomplete="name" required minlength="2" maxlength="80"></label>
+            ${emailField}
+            <p class="adm-note">Đổi email thì lần đăng nhập sau dùng email mới.</p>
+            <button class="btn btn-primary block tap">Lưu</button>
+          </form>`, (sheet, close) => {
+          const form = sheet.querySelector('form');
+          form.elements.name.value = user.name;
+          form.elements.email.value = user.email;
+          form.onsubmit = (event) => {
+            event.preventDefault();
+            const name = form.elements.name.value.trim();
+            const email = form.elements.email.value.trim().toLowerCase();
+            const changes = {};
+            if (name !== user.name) changes.name = name;
+            if (email !== (user.email || '').toLowerCase()) changes.email = email;
+            if (!Object.keys(changes).length) { close(); return; }
+            submit(form.querySelector('button'), 'Đang lưu...', () => API.admin.update(id, changes), changes, close);
+          };
+        });
+      }
+
       content.onclick = (e) => {
         const btn = e.target.closest('button');
         if (!btn || btn.disabled || pending || dialogOpen || !admin()) return;
@@ -264,6 +290,8 @@
           });
         } else if (!user.email) {
           return;
+        } else if (btn.hasAttribute('data-adm-edit')) {
+          openEdit();
         } else if (btn.dataset.admRole && btn.dataset.admRole !== user.role) {
           const role = btn.dataset.admRole;
           if (editableRoles.includes(role)) submit(btn, 'Đang đổi...', () => API.admin.setRole(id, role), { role });
@@ -282,7 +310,9 @@
           }
         }
       };
-      load();
+      load().then(() => {
+        if (edit && active(el) && admin() && user && !readOnly() && user.email) openEdit();
+      });
     },
   });
 
@@ -299,6 +329,7 @@
   preview('Danh sách tài khoản', 'accounts');
   preview('Cấp tài khoản', 'accountNew');
   preview('Chi tiết: đang dùng', 'accountDetail', { id: 2 });
+  preview('Chi tiết: sửa thông tin', 'accountDetail', { id: 2, edit: true });
   preview('Chi tiết: chờ kích hoạt', 'accountDetail', { id: 4 });
   preview('Chi tiết: đã khoá', 'accountDetail', { id: 5 });
   preview('Chi tiết: chưa có email', 'accountDetail', { id: 6 });
