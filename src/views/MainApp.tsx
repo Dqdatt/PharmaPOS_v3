@@ -20,6 +20,7 @@ export default function MainApp() {
   const [currentTime, setCurrentTime] = useState(getNow(true));
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isClosingInventory, setIsClosingInventory] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(getNow(true)), 1000);
@@ -73,7 +74,15 @@ export default function MainApp() {
     if (currentUser.role === 'manager') {
       return (
         <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50">
-          <CloseInventoryModal isForced={true} />
+          <CloseInventoryModal isForced={true} onClosingChange={setIsClosingInventory} />
+          <button
+            onClick={logout}
+            disabled={isLoggingOut || isClosingInventory}
+            className="fixed top-4 right-4 z-50 px-4 py-2 bg-white hover:bg-gray-200 text-gray-700 font-bold rounded-lg shadow-sm transition disabled:opacity-50"
+          >
+            <i className="fa-solid fa-right-from-bracket mr-2"></i>
+            {isLoggingOut ? 'Đang đăng xuất…' : 'Đăng xuất'}
+          </button>
         </div>
       );
     } else {

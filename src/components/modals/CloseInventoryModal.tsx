@@ -5,9 +5,10 @@ import { showNotification } from '../../utils/toast';
 interface Props {
   onClose?: () => void;
   isForced?: boolean;
+  onClosingChange?: (isClosing: boolean) => void;
 }
 
-export default function CloseInventoryModal({ onClose, isForced = false }: Props) {
+export default function CloseInventoryModal({ onClose, isForced = false, onClosingChange }: Props) {
   const { products, getStock, formatPrice, closeMonthlyInventory, previousMonthYear } = usePos();
   const [isClosing, setIsClosing] = useState(false);
 
@@ -16,6 +17,7 @@ export default function CloseInventoryModal({ onClose, isForced = false }: Props
   
   const handleCloseInventory = async () => {
     setIsClosing(true);
+    onClosingChange?.(true);
     try {
       await closeMonthlyInventory(previousMonthYear);
       showNotification(`Đã chốt tồn kho thành công cho tháng ${previousMonthYear}`, 'success');
@@ -25,6 +27,7 @@ export default function CloseInventoryModal({ onClose, isForced = false }: Props
       showNotification(`Lỗi khi chốt tồn kho! Chi tiết: ${errMsg}`, 'error');
       console.error(e);
       setIsClosing(false);
+      onClosingChange?.(false);
     }
   };
 
