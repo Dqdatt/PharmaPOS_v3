@@ -25,7 +25,11 @@
 - [x] Auth 2a: Edge Function cấp tài khoản + trigger kích hoạt + `prototype/js/api.js` (e415938)
 - [x] Auth 2b: UI app email + mã 6 số + tạo mật khẩu, bỏ PIN app (giao 024, 025), test trên PWA — [opus xhigh]
 - [x] A: Face ID thật = passkey WebAuthn (test iPhone đạt) — [opus xhigh]
-- [ ] B: Push — server + api.js xong (test:push đạt), còn UI Cài đặt thông báo + Thông báo (giao) và test iPhone — [opus xhigh]
+- [x] B: Push — server + UI (giao 029) xong, iPhone nhận được doanh thu + công nợ — [opus xhigh]
+- [ ] B: thử push "Đăng nhập POS mới" trên iPhone (bấm chốt tồn trên POS local trước) — [haiku]
+- [ ] POS: thêm nút Đăng xuất ở màn chốt tồn bắt buộc của quản lý (`MainApp.tsx`, NV đã có) — [sonnet] giao
+- [ ] Prototype: bỏ state QA "Web xin đăng nhập (thông báo đẩy)" + luồng webConfirm `from: 'push'` (đăng nhập POS giờ chỉ quét QR) — [sonnet] giao
+- [ ] Dev: `supabase start` treo vì keychain → chạy `supabase start` một lần trong Terminal, bấm "Luôn cho phép" ở hộp thoại keychain (hoặc nâng CLI) — [haiku]
 - [ ] C: gửi push thuốc sắp hết / cận hạn (dùng `notify()` + `notif_prefs.low_stock/expiring/expiry_days`) — [opus xhigh]
 - [ ] C: min_stock + hạn dùng theo lô (POS Nhập hàng) — [opus xhigh] + UI giao
 - [ ] D: app đọc dữ liệu thật — [opus xhigh] + UI giao

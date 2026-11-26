@@ -37,6 +37,12 @@ await svc.from('push_subscriptions').delete().like('endpoint', 'http://host.dock
 await svc.from('notifications').delete().gte('id', 0);
 await svc.from('invoices').delete().in('id', ['HDPUSH1', 'HDPUSH2']);
 await svc.from('notif_prefs').delete().gte('user_id', 0);
+await svc.from('push_subscriptions').delete().like('endpoint', 'https://fcm.googleapis.com/fcm/send/medipos-test-%');
+// Máy thật đang test (iPhone) không được nhận thông báo của test: cất đi, trả lại khi xong hoặc khi lỗi
+const { data: realSubs } = await svc.from('push_subscriptions').select('*');
+if (realSubs.length) await svc.from('push_subscriptions').delete().in('endpoint', realSubs.map((r) => r.endpoint));
+const restoreReal = async () => { if (realSubs.length) await svc.from('push_subscriptions').upsert(realSubs); };
+process.on('uncaughtException', async (e) => { await restoreReal(); console.error(e); process.exit(1); });
 
 await activate(1, 'Test-push-1');
 await activate(3, 'Test-push-3');
@@ -47,7 +53,7 @@ const admin = await login('admin@medipos.test', 'MediPOS-dev-2026');
 // ---------- Khoá + đăng ký máy ----------
 assert.equal((await fn({ action: 'key' })).key, VAPID_PUB);
 assert.equal((await fn({ action: 'nope' })).err, 400);
-const fcm = (s, keys = { p256dh: 'B'.repeat(87), auth: 'A'.repeat(22) }) => ({ endpoint: `https://fcm.googleapis.com/fcm/send/${s}`, keys });
+const fcm = (s, keys = { p256dh: 'B'.repeat(87), auth: 'A'.repeat(22) }) => ({ endpoint: `https://fcm.googleapis.com/fcm/send/medipos-test-${s}`, keys });
 const sub = (c, s) => c.rpc('push_subscribe', { sub: s, ua: 'test' });
 const owner = async (s) => (await svc.from('push_subscriptions').select('user_id').eq('endpoint', s.endpoint).maybeSingle()).data?.user_id;
 
@@ -68,7 +74,7 @@ for (let i = 0; i < 12; i++) assert.equal((await sub(nv, fcm(`m${i}`))).data, tr
 const nvSubs = (await svc.from('push_subscriptions').select('endpoint').eq('user_id', 3)).data.map((r) => r.endpoint);
 assert.equal(nvSubs.length, 10, 'tối đa 10 máy');
 assert.ok(!nvSubs.includes(fcm('m0').endpoint) && nvSubs.includes(fcm('m11').endpoint), 'bỏ máy cũ nhất');
-await svc.from('push_subscriptions').delete().like('endpoint', 'https://fcm.googleapis.com/%');
+await svc.from('push_subscriptions').delete().like('endpoint', 'https://fcm.googleapis.com/fcm/send/medipos-test-%');
 
 // ---------- Cài đặt ----------
 let p = (await nv.rpc('my_notif_prefs', { changes: {} })).data;
@@ -149,4 +155,5 @@ assert.ok((await nv.rpc('push_cron', { job: 'daily' })).error, 'client không g�
 await svc.from('invoices').delete().in('id', ['HDPUSH1', 'HDPUSH2']);
 await svc.from('push_subscriptions').delete().like('endpoint', `${push.base}/%`);
 push.close();
+await restoreReal();
 console.log('PUSH OK');

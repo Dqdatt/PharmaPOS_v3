@@ -1,10 +1,10 @@
 // Thông báo đẩy Web Push (VAPID) + lưu vào public.notifications. Dùng chung cho `push` (cron) và `web-login`.
-// Secret: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY (base64url, `npm run push:keys` tạo cho local), VAPID_SUBJECT (mailto:).
+// Secret: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY (base64url, `npm run push:keys` tạo cho local), VAPID_SUBJECT (mailto: hoặc https thật; Apple từ chối tên miền .test/localhost).
 import webpush from 'npm:web-push@3.6.7';
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2';
 
 const VAPID = {
-  subject: Deno.env.get('VAPID_SUBJECT') ?? 'mailto:admin@medipos.vn',
+  subject: Deno.env.get('VAPID_SUBJECT') ?? 'https://dqdatt.github.io/PharmaPOS_v3/',
   publicKey: Deno.env.get('VAPID_PUBLIC_KEY') ?? '',
   privateKey: Deno.env.get('VAPID_PRIVATE_KEY') ?? '',
 };

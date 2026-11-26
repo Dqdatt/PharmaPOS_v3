@@ -40,6 +40,8 @@ function checkVapid(header, vapidPub, origin) {
   if (!verify('sha256', enc(`${h}.${p}`), { key, dsaEncoding: 'ieee-p1363' }, Buffer.from(s, 'base64url'))) throw new Error('chữ ký VAPID sai');
   const claims = JSON.parse(Buffer.from(p, 'base64url'));
   if (claims.aud !== origin || claims.exp * 1000 < Date.now()) throw new Error('VAPID aud/exp sai');
+  // Apple trả 403 BadJwtToken nếu sub không phải mailto/https thật (vd. .test, localhost)
+  if (!/^(mailto:[^@\s]+@[^@\s]+|https:\/\/[^\s]+)$/.test(claims.sub || '') || /localhost|\.test\b/.test(claims.sub)) throw new Error(`VAPID sub Apple không nhận: ${claims.sub}`);
 }
 
 // add(name) tạo máy nhận; gone: tên endpoint trả 410. inbox: [{ name, msg }], errors: lỗi kiểm VAPID/giải mã
