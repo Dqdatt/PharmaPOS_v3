@@ -14,7 +14,7 @@ Phần UI thuần (màn prototype/PWA, màn POS web không đụng token) thì �
 1. **Môi trường local**: `supabase start` (đã có `supabase/config.toml`, Docker + CLI có sẵn). Email OTP đọc ở Mailpit http://localhost:54324 (mẫu mail `supabase/templates/otp.html`). Không dùng SMS. `.env.local` trỏ `http://127.0.0.1:54321`. Seed: 1 admin, 1 QL, 2 NV, hoá đơn mẫu.
 2. **Supabase Auth thay PIN**: bảng `users` thêm `auth_id uuid unique references auth.users`, `email`, `phone`, `status` (`invited|active|locked`); role thành `admin|manager|staff` (role `admin` cũ trên POS = chủ nhà thuốc → đổi thành `manager`, migration có kiểm tra). Tắt tự đăng ký (`enable_signup=false`); tài khoản chỉ tạo qua Edge Function `admin-create-user` (service role, chỉ **admin** được gọi, tạo cả QL và NV). Chỉ 1 nhà thuốc → không cần `store_id`.
 3. **Lần đầu đăng nhập app**: nhập email → `signInWithOtp({shouldCreateUser:false})` → nhập mã 6 số `verifyOtp` → bắt buộc `updateUser({password})` → `status=active`. Lần sau: mật khẩu, hoặc Face ID.
-4. **Face ID trên PWA = passkey WebAuthn** (platform authenticator, iOS 16+ chạy được trong PWA). Đăng ký passkey sau khi đặt mật khẩu; đăng nhập bằng passkey xác minh ở Edge Function (`@simplewebauthn/server`), đúng thì cấp phiên Supabase (generateLink magiclink → verifyOtp token_hash). **Cần HTTPS** (localhost thì được): iPhone test qua `http://192.168.x` sẽ không chạy WebAuthn → dùng GitHub Pages hoặc tunnel HTTPS.
+4. **Face ID trên PWA = passkey WebAuthn** (platform authenticator, iOS 16+ chạy được trong PWA). Đăng ký passkey sau khi đặt mật khẩu; đăng nhập bằng passkey xác minh ở Edge Function (`@simplewebauthn/server`), đúng thì cấp phiên Supabase (generateLink magiclink → verifyOtp token_hash). **Cần HTTPS** (localhost thì được): iPhone test qua `http://192.168.x` sẽ không chạy WebAuthn → dùng link Netlify thật hoặc tunnel HTTPS.
 5. **Đăng nhập POS web bằng điện thoại — 1 phương thức duy nhất: quét QR rồi xác nhận bằng Face ID** (như Zalo):
    - Web tạo yêu cầu (`web_login_requests`: id, secret băm, trình duyệt/IP, hết hạn 120s, `pending|approved|rejected|used`), hiện QR (id + nonce), tự làm mới khi hết hạn.
    - App quét QR (camera + `jsQR`, iOS không có BarcodeDetector) → màn xác nhận hiện trình duyệt, IP, giờ → Face ID → duyệt.
@@ -42,7 +42,7 @@ Phần UI thuần (màn prototype/PWA, màn POS web không đụng token) thì �
 ## Giai đoạn hoàn thiện app → DB thật (người dùng chốt 26/11/2026, sau khi test iPhone đạt bước 1–4)
 Quyết định:
 - Push báo cả 4 việc: đăng nhập POS mới (cho chính tài khoản đó), doanh thu cuối ngày (QL + admin), thuốc sắp hết / sắp hết hạn (mỗi sáng), công nợ nhà cung cấp.
-- App chạy thật trên **GitHub Pages** (`https://dqdatt.github.io/PharmaPOS_v3/`) → passkey RP ID = `dqdatt.github.io`. Passkey tạo trên link tunnel chỉ để test, sẽ mất khi lên Pages.
+- App chạy thật trên **Netlify** (`https://medipos-app.netlify.app/`) → passkey RP ID = `medipos-app.netlify.app`. Passkey tạo trên link tunnel chỉ để test, sẽ mất khi lên Pages.
 - Mail mã OTP khi lên thật: **Gmail SMTP** (người dùng tự nhập mật khẩu ứng dụng Gmail vào Supabase, Claude không nhập).
 
 Thứ tự (mỗi bước = việc `giao`; máy chủ/bảo mật `--chi-claude`):
