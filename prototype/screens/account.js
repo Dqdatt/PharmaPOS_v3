@@ -380,12 +380,8 @@ App.css(`
           if (r && r.ok) {
             App.toast('Đã đọc hết', 'check');
           } else {
-            items.forEach((n) => { if (unreadIds.has(String(n.id))) n.unread = true; });
-            body.querySelectorAll('.ac-notif-row').forEach((row) => {
-              if (unreadIds.has(String(row.dataset.id))) row.classList.add('unread');
-            });
-            updateMarkAll(items);
             App.toast((r && r.error) || 'Không đánh dấu được đã đọc', 'info');
+            loadList();
           }
         });
       }
@@ -465,16 +461,6 @@ App.css(`
       }
 
       loadList();
-
-      if (typeof MutationObserver !== 'undefined') {
-        let wasHidden = el.hidden;
-        const obs = new MutationObserver(() => {
-          if (!el.isConnected) { obs.disconnect(); return; }
-          if (wasHidden && !el.hidden) loadList();
-          wasHidden = el.hidden;
-        });
-        obs.observe(el, { attributes: true, attributeFilter: ['hidden'] });
-      }
     },
   });
 
@@ -525,7 +511,7 @@ App.css(`
     off: { title: 'Nhận thông báo trên máy này', sub: '', warn: false, action: 'enable' },
     on: { title: 'Đang nhận thông báo', sub: '', warn: false, action: 'disable' },
     denied: { title: 'Thông báo đang bị chặn', sub: 'Mở Cài đặt iPhone, chọn MediPOS, Thông báo để bật lại', warn: true, action: '' },
-    install: { title: 'Thêm MediPOS vào Màn hình chính', sub: 'Bấm Chia sẻ, chọn Thêm vào MH chính để nhận thông báo', warn: false, action: '' },
+    install: { title: 'Thêm MediPOS vào Màn hình chính', sub: 'Bấm Chia sẻ, chọn Thêm vào Màn hình chính để nhận thông báo', warn: false, action: '' },
     unsupported: { title: 'Máy này không nhận được thông báo', sub: '', warn: false, action: '' },
   };
 
@@ -879,7 +865,7 @@ App.css(`
   App.state('Cài đặt thông báo: chưa bật', () => App.go('notifSettings', { pushState: 'off' }), 'Tài khoản');
   App.state('Cài đặt thông báo: đã bật', () => App.go('notifSettings', { pushState: 'on' }), 'Tài khoản');
   App.state('Cài đặt thông báo: bị chặn', () => App.go('notifSettings', { pushState: 'denied' }), 'Tài khoản');
-  App.state('Cài đặt thông báo: thêm vào MH chính', () => App.go('notifSettings', { pushState: 'install' }), 'Tài khoản');
+  App.state('Cài đặt thông báo: thêm vào Màn hình chính', () => App.go('notifSettings', { pushState: 'install' }), 'Tài khoản');
   App.state('Cài đặt thông báo: không hỗ trợ', () => App.go('notifSettings', { pushState: 'unsupported' }), 'Tài khoản');
   App.state('Cài đặt thông báo: chọn ngưỡng cận hạn', () => {
     App.reset('account');
