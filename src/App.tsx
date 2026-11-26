@@ -10,7 +10,7 @@ function AppInner() {
     return <CustomerView />;
   }
 
-  if (!currentUser) {
+  if (!currentUser || currentUser.role === 'admin') {
     return <Login />;
   }
 

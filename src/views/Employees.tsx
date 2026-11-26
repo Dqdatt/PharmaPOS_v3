@@ -12,6 +12,13 @@ export default function Employees() {
   const [currentPage, setCurrentPage] = useState(1);
 
   const openStaffModal = (id: number | null) => {
+    if (id !== null) {
+      const target = users.find(u => u.id === id);
+      if (target?.role === 'admin') {
+        showNotification('Không thể sửa tài khoản quản trị hệ thống!', 'error');
+        return;
+      }
+    }
     setEditingStaffId(id);
     setShowStaffModal(true);
   };
@@ -20,6 +27,12 @@ export default function Employees() {
 
   const confirmDelete = async () => {
     if (confirmDeleteId === null) return;
+    const target = users.find(u => u.id === confirmDeleteId);
+    if (target?.role === 'admin') {
+      showNotification('Không thể xóa tài khoản quản trị hệ thống!', 'error');
+      setConfirmDeleteId(null);
+      return;
+    }
     try {
       await deleteUserFromDB(confirmDeleteId);
       showNotification('Xóa nhân viên thành công!', 'success');
@@ -197,19 +210,23 @@ export default function Employees() {
                     </td>
                     <td className="p-3 font-mono font-bold text-gray-700 tracking-widest">{u.pin || 'Chưa cài'}</td>
                     <td className="p-3 text-center">
-                      <button
-                        onClick={() => openStaffModal(u.id)}
-                        className="text-blue-500 hover:text-blue-700 px-2"
-                      >
-                        <i className="fa-solid fa-pen"></i>
-                      </button>
-                      {u.id !== currentUser?.id && (
-                        <button
-                          onClick={() => setConfirmDeleteId(u.id)}
-                          className="text-red-500 hover:text-red-700 px-2"
-                        >
-                          <i className="fa-solid fa-trash"></i>
-                        </button>
+                      {u.role !== 'admin' && (
+                        <>
+                          <button
+                            onClick={() => openStaffModal(u.id)}
+                            className="text-blue-500 hover:text-blue-700 px-2"
+                          >
+                            <i className="fa-solid fa-pen"></i>
+                          </button>
+                          {u.id !== currentUser?.id && (
+                            <button
+                              onClick={() => setConfirmDeleteId(u.id)}
+                              className="text-red-500 hover:text-red-700 px-2"
+                            >
+                              <i className="fa-solid fa-trash"></i>
+                            </button>
+                          )}
+                        </>
                       )}
                     </td>
                   </tr>

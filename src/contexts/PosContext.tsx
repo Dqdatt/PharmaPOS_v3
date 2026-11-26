@@ -227,7 +227,12 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const saved = localStorage.getItem('mediPosCurrentUser');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const u = JSON.parse(saved);
+        if (u && (u.role === 'manager' || u.role === 'staff')) {
+          return u;
+        }
+        localStorage.removeItem('mediPosCurrentUser');
+        return null;
       } catch {
         return null;
       }
@@ -283,7 +288,17 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       // Users
       const { data: dbUsers } = await supabase.from('users').select('*').order('id', { ascending: true });
       if (dbUsers) {
-        setUsers(dbUsers.map(u => ({ id: u.id, name: u.name, role: u.role, pin: u.pin })));
+        const mappedUsers: User[] = dbUsers.map(u => ({ id: u.id, name: u.name, role: u.role, pin: u.pin }));
+        setUsers(mappedUsers);
+        setCurrentUser(prev => {
+          if (!prev) return null;
+          const fresh = mappedUsers.find(u => u.id === prev.id);
+          if (!fresh || (fresh.role !== 'manager' && fresh.role !== 'staff')) {
+            localStorage.removeItem('mediPosCurrentUser');
+            return null;
+          }
+          return fresh;
+        });
       }
 
       // Products
@@ -791,6 +806,10 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const updateUserInDB = async (user: User) => {
+    const existing = users.find(u => u.id === user.id);
+    if (existing?.role === 'admin' || user.role === 'admin') {
+      throw new Error('Không thể chỉnh sửa tài khoản quản trị trên POS');
+    }
     const { error } = await supabase.from('users').update({
       name: user.name, role: user.role, pin: user.pin
     }).eq('id', user.id);
@@ -799,6 +818,10 @@ export const PosProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const deleteUserFromDB = async (id: number) => {
+    const target = users.find(u => u.id === id);
+    if (target?.role === 'admin') {
+      throw new Error('Không thể xóa tài khoản quản trị');
+    }
     const { error } = await supabase.from('users').delete().eq('id', id);
     if (error) throw error;
     setUsers(prev => prev.filter(u => u.id !== id));

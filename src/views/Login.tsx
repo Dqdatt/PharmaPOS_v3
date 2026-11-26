@@ -86,7 +86,7 @@ export default function Login() {
                 ].join(' ')}
               >
                 <div className="font-bold">{u.name}</div>
-                <div className="text-xs opacity-75">{u.role === 'manager' ? 'Quản lý' : u.role === 'admin' ? 'Quản trị' : 'Nhân viên'}</div>
+                <div className="text-xs opacity-75">{u.role === 'manager' ? 'Quản lý' : 'Nhân viên'}</div>
               </div>
             ))}
           </div>

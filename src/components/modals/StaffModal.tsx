@@ -13,6 +13,12 @@ export default function StaffModal({
   const user = userId ? users.find(u => u.id === userId) : null;
   const isEditing = !!user;
 
+  // Không cho phép chỉnh sửa tài khoản admin trên POS
+  if (user?.role === 'admin') {
+    onClose();
+    return null;
+  }
+
   const [form, setForm] = useState({
     name: user?.name || '',
     role: (user?.role === 'manager' ? 'manager' : 'staff') as 'manager' | 'staff',
@@ -23,6 +29,10 @@ export default function StaffModal({
     setForm(prev => ({ ...prev, [field]: value }));
 
   const saveStaff = async () => {
+    if (user?.role === 'admin') {
+      showNotification('Không thể chỉnh sửa tài khoản quản trị trên POS!', 'error');
+      return;
+    }
     if (!form.name) { showNotification('Vui lòng nhập họ tên!', 'error'); return; }
     if (form.pin && form.pin.length !== 4) { showNotification('Mã PIN phải đúng 4 số hợp lệ!', 'error'); return; }
 
