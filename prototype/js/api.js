@@ -117,6 +117,44 @@
       return { ok: true };
     },
 
+    /** Đăng nhập POS web bằng app. Nội dung QR trên POS: `medipos-login:<uuid>`. */
+    webLogin: {
+      /** Đọc nội dung QR → id yêu cầu, hoặc null nếu không phải mã MediPOS. */
+      parse(text) {
+        const m = String(text || '').trim().match(/^medipos-login:([0-9a-f-]{36})$/i);
+        return m ? m[1].toLowerCase() : null;
+      },
+      /** Thông tin máy tính đang xin đăng nhập: { ok, request: { browser, os, ip, time, expiresAt } }. */
+      async info(id) {
+        if (!live) { await wait(500); const r = DATA.webRequest; return { ok: true, request: { browser: r.browser, os: r.os, ip: r.ip, time: r.time, expiresAt: Date.now() + r.expiresIn * 1000 } }; }
+        try {
+          const { data, error } = await sb.rpc('web_login_info', { req_id: id });
+          if (error) return fail(error);
+          const r = data && data[0];
+          if (!r) return fail('Mã đã hết hạn hoặc đã được dùng, hãy tải lại mã trên máy tính');
+          const ua = r.user_agent || '';
+          const browser = /Edg\//.test(ua) ? 'Edge' : /OPR\//.test(ua) ? 'Opera' : /Firefox\//.test(ua) ? 'Firefox'
+            : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'Trình duyệt';
+          const os = /Windows/.test(ua) ? 'Windows' : /Mac OS X|Macintosh/.test(ua) && !/Mobile/.test(ua) ? 'macOS'
+            : /Android/.test(ua) ? 'Android' : /iPhone|iPad/.test(ua) ? 'iOS' : /Linux/.test(ua) ? 'Linux' : 'Máy tính';
+          const t = new Date(r.created_at);
+          return { ok: true, request: { browser, os, ip: r.ip || '', time: `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`, expiresAt: new Date(r.expires_at).getTime() } };
+        } catch (e) { return fail(e); }
+      },
+      /** Duyệt (approve=true, gọi SAU App.faceId() thành công) hoặc từ chối. */
+      async decide(id, approve) {
+        if (!live) { await wait(600); return { ok: true }; }
+        try {
+          const { data, error } = await sb.rpc('web_login_decide', { req_id: id, approve: !!approve });
+          if (error) return fail(error);
+          if (data === 'approved' || data === 'rejected') return { ok: true };
+          if (data === 'admin_blocked') return fail('Tài khoản quản trị chỉ dùng app, không đăng nhập POS');
+          if (data === 'expired') return fail('Mã đã hết hạn, hãy tải lại mã trên máy tính');
+          return fail('Tài khoản chưa có quyền đăng nhập POS');
+        } catch (e) { return fail(e); }
+      },
+    },
+
     // shortcut: Face ID hiện chỉ là cờ trên máy + App.faceId() mô phỏng; bước 3 thay bằng passkey WebAuthn xác minh ở server
     bio: {
       enabled: () => localStorage.getItem('medipos.bio') === '1',

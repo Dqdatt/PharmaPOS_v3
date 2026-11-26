@@ -14,7 +14,8 @@
     "check:pwa": "node pwa/build.mjs && node pwa/tools/check.mjs",
     "verify:pwa": "node pwa/build.mjs && node pwa/tools/verify.mjs",
     "db:reset": "supabase db reset && node scripts/seed-auth.mjs",
-    "test:rls": "docker exec -i supabase_db_PharmaPOS_V3 psql -U postgres -v ON_ERROR_STOP=1 -q < supabase/tests/rls_check.sql"
+    "test:rls": "docker exec -i supabase_db_PharmaPOS_V3 psql -U postgres -v ON_ERROR_STOP=1 -q < supabase/tests/rls_check.sql",
+    "test:web-login": "node scripts/test-web-login.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
@@ -24,9 +25,11 @@
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
+    "jsqr": "^1.4.0",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "mqtt": "^5.15.1",
+    "qrcode": "^1.5.4",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "react-router-dom": "^7.14.2",
@@ -37,6 +40,7 @@
   "devDependencies": {
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",
+    "@types/qrcode": "^1.5.6",
     "autoprefixer": "^10.4.21",
     "pixelmatch": "^8.0.0",
     "playwright": "^1.65.1",
