@@ -163,11 +163,13 @@
       const torch = el.querySelector('[data-wl-torch]');
       const frame = el.querySelector('.wl-camera-frame');
       const video = el.querySelector('.wl-video');
-      let timer, stream, stopped = false;
+      let timer, watch, onVis, stream, stopped = false;
 
       const stopCamera = () => {
         stopped = true;
         clearTimeout(timer);
+        clearTimeout(watch);
+        if (onVis) document.removeEventListener('visibilitychange', onVis);
         if (stream) {
           stream.getTracks().forEach((t) => t.stop());
           stream = null;
@@ -216,63 +218,97 @@
 
       if (!navigator.mediaDevices?.getUserMedia) { showDenied(); return; }
 
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
-        .then((s) => {
-          if (stopped || !active(el)) {
-            s.getTracks().forEach((t) => t.stop());
-            return;
-          }
-          stream = s;
-          video.srcObject = s;
-          video.hidden = false;
-          video.play().catch(() => {});
+      const helpText = el.querySelector('.wl-camera-help p');
+      let tries = 0;
+      // Nhả camera nhưng vẫn ở màn quét (khác stopCamera)
+      const release = () => {
+        clearTimeout(timer);
+        clearTimeout(watch);
+        if (stream) { stream.getTracks().forEach((t) => t.stop()); stream = null; }
+        video.srcObject = null;
+      };
+      // iOS (nhất là app ở màn hình chính) có lúc cấp camera mà không ra hình, hoặc mất hình sau khi app vào nền → mở lại
+      const restart = () => { if (stopped || !active(el)) return; release(); startCamera(); };
+      onVis = () => { if (document.visibilityState === 'visible') { tries = 0; restart(); } };
+      document.addEventListener('visibilitychange', onVis);
 
-          const track = s.getVideoTracks()[0];
-          if (track?.getCapabilities?.().torch) {
-            torch.hidden = false;
-            torch.onclick = async () => {
-              const on = torch.getAttribute('aria-pressed') === 'false';
-              try {
-                await track.applyConstraints({ advanced: [{ torch: on }] });
-                torch.setAttribute('aria-pressed', String(on));
-                torch.innerHTML = App.icon(on ? 'wlTorchOn' : 'wlTorch', 22);
-              } catch (e) { App.toast('Không bật được đèn pin', 'alert'); }
-            };
-          }
+      const startCamera = () => {
+        tries += 1;
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+          .then((s) => {
+            if (stopped || !active(el)) {
+              s.getTracks().forEach((t) => t.stop());
+              return;
+            }
+            stream = s;
+            // iOS: video phải đang hiện + muted trước khi gắn stream, không thì có lúc chỉ ra khung đen
+            video.hidden = false;
+            video.muted = true;
+            video.srcObject = s;
+            video.play().catch(() => {});
 
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d', { willReadFrequently: true });
-          let lastBadAt = 0;
+            const track = s.getVideoTracks()[0];
+            track?.addEventListener('ended', restart);
+            if (track?.getCapabilities?.().torch) {
+              torch.hidden = false;
+              torch.onclick = async () => {
+                const on = torch.getAttribute('aria-pressed') === 'false';
+                try {
+                  await track.applyConstraints({ advanced: [{ torch: on }] });
+                  torch.setAttribute('aria-pressed', String(on));
+                  torch.innerHTML = App.icon(on ? 'wlTorchOn' : 'wlTorch', 22);
+                } catch (e) { App.toast('Không bật được đèn pin', 'alert'); }
+              };
+            }
 
-          const tick = () => {
-            if (stopped || !el.isConnected || !active(el)) { stopCamera(); return; }
-            if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0 && typeof window.jsQR === 'function') {
-              const scale = Math.min(1, 640 / video.videoWidth);
-              const w = Math.max(1, Math.round(video.videoWidth * scale));
-              const h = Math.max(1, Math.round(video.videoHeight * scale));
-              if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
-              ctx.drawImage(video, 0, 0, w, h);
-              const img = ctx.getImageData(0, 0, w, h);
-              const code = window.jsQR(img.data, w, h, { inversionAttempts: 'dontInvert' });
-              if (code && code.data) {
-                const id = API.webLogin.parse(code.data);
-                if (id) {
-                  stopCamera();
-                  frame.classList.add('wl-found');
-                  setTimeout(() => { if (active(el)) App.go('webConfirm', { id, from: 'scan' }, 'push'); }, 250);
-                  return;
-                }
-                if (Date.now() - lastBadAt >= 2000) {
-                  lastBadAt = Date.now();
-                  App.toast('Đây không phải mã đăng nhập MediPOS', 'alert');
+            // 3 giây chưa có hình → mở lại camera (tối đa 3 lần), vẫn không được thì báo rõ thay vì để màn đen
+            watch = setTimeout(() => {
+              if (stopped || !active(el) || stream !== s) return;
+              if (video.readyState >= 2 && video.videoWidth > 0) return;
+              if (tries < 3) { restart(); return; }
+              helpText.textContent = `Camera chưa lên hình. Vuốt tắt hẳn app MediPOS rồi mở lại. (${track?.readyState || '-'}/${track?.muted ? 'muted' : 'live'}/${video.readyState})`;
+            }, 3000);
+
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            let lastBadAt = 0;
+
+            const tick = () => {
+              if (stopped || !el.isConnected || !active(el)) { stopCamera(); return; }
+              if (video.readyState >= 2 && video.videoWidth > 0 && video.videoHeight > 0 && typeof window.jsQR === 'function') {
+                const scale = Math.min(1, 640 / video.videoWidth);
+                const w = Math.max(1, Math.round(video.videoWidth * scale));
+                const h = Math.max(1, Math.round(video.videoHeight * scale));
+                if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+                ctx.drawImage(video, 0, 0, w, h);
+                const img = ctx.getImageData(0, 0, w, h);
+                const code = window.jsQR(img.data, w, h, { inversionAttempts: 'dontInvert' });
+                if (code && code.data) {
+                  const id = API.webLogin.parse(code.data);
+                  if (id) {
+                    stopCamera();
+                    frame.classList.add('wl-found');
+                    setTimeout(() => { if (active(el)) App.go('webConfirm', { id, from: 'scan' }, 'push'); }, 250);
+                    return;
+                  }
+                  if (Date.now() - lastBadAt >= 2000) {
+                    lastBadAt = Date.now();
+                    App.toast('Đây không phải mã đăng nhập MediPOS', 'alert');
+                  }
                 }
               }
-            }
+              timer = setTimeout(tick, 200);
+            };
             timer = setTimeout(tick, 200);
-          };
-          timer = setTimeout(tick, 200);
-        })
-        .catch(() => { if (active(el)) showDenied(); });
+          })
+          .catch((e) => {
+            if (stopped || !active(el)) return;
+            // Camera vừa nhả chưa kịp sẵn sàng (iOS) → thử lại; bị từ chối quyền thì mới báo cần quyền
+            if (e?.name !== 'NotAllowedError' && tries < 3) { watch = setTimeout(startCamera, 500); return; }
+            showDenied();
+          });
+      };
+      startCamera();
     },
   });
 
